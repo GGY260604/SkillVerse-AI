@@ -1,0 +1,82 @@
+{
+  "home": {
+    "hero": {
+      "tagline": "AI-POWERED WORKFORCE INTELLIGENCE",
+      "title_1": "Navigate from",
+      "title_highlight_1": "Who You Are",
+      "title_2": "to Where You",
+      "title_highlight_2": "Will Lead",
+      "title_3": "in the AI Era.",
+      "subtitle": "Empowering Malaysia's workforce for the AI era. Real-time intelligence, seamless cross-lingual reskilling, and sustainable career pathways for every professional.",
+      "cta_start_plan": "Start Your Plan"
+    },
+    "stats": {
+      "market_shift": "Market Shift",
+      "market_shift_desc": "AI skills gap evolution trend across 1,000+ job sectors within 12 months.",
+      "reskill_cycle": "Avg. Reskill Cycle",
+      "reskill_cycle_desc": "Median time for career transition across 50+ enterprise programs.",
+      "enterprise_partners": "Enterprise Partners",
+      "enterprise_partners_desc": "Malaysian employers syndicating real-time vacancy signals across 15+ sectors."
+    },
+    "market": {
+      "section_badge": "COMPETENCY MAPS & ACTIVE DIAGNOSTICS",
+      "title": "Real-Time Labor Market Dynamics",
+      "subtitle": "Malaysia & ASEAN Tech Corridor",
+      "description": "Live continuous mapping of emerging vs. diminishing core competencies across Software, Cloud, Data, and Industrial Automation.",
+      "coming_soon": "Real-time data visualization coming soon."
+    },
+    "plan": {
+      "title": "Start Your AI Transformation Plan",
+      "subtitle": "Choose your preferred diagnostic pathway to generate your personalized 18-month career progression roadmap.",
+      "option_1_tag": "OPTION 01 • INSTANT ANALYSIS",
+      "recommended": "RECOMMENDED",
+      "upload_title": "Upload Professional CV",
+      "upload_desc": "Extract semantic skill signatures directly from your existing resume in under 12 seconds.",
+      "drag_drop_text": "Upload Resume or CV File",
+      "drag_drop_subtext": "Supports PDF, DOCX or PNG scans (up to 20MB)",
+      "btn_select_file": "Select File & Launch Analysis",
+      "option_2_tag": "OPTION 02 • NO RESUME REQUIRED",
+      "time_estimate": "3 MINS",
+      "wizard_title": "Interactive Assessment Wizard",
+      "wizard_desc": "No updated resume? Complete a structured diagnostic covering your current tooling, stack, and target career echelon.",
+      "form_preview_title": "Guided Career Diagnostic Form",
+      "form_preview_subtext": "4 Quick Sections • Domain, Stack & Target Echelon",
+      "btn_launch_wizard": "Fill Form & Start Assessment"
+    }
+  },
+  "analysis": {
+    "title": "Analysis Dashboard",
+    "current_plan": "Current Plan",
+    "history_plan": "History Plan",
+    "coming_soon": "Analysis features are under development."
+  },
+  "shared": {
+    "title": "Shared Plans",
+    "subtitle": "Plans shared by other people to you",
+    "coming_soon": "Shared plan features are under development."
+  },
+  "other": {
+    "nav": {
+      "home": "Home",
+      "analysis": "Analysis",
+      "shared": "Shared",
+      "login": "Login",
+      "signup": "Sign Up",
+      "profile": "Profile",
+      "logout": "Log Out"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "Built for SDC Hackathon 2026",
+      "author": "Presented by \"I Love You 3000\"",
+      "tagline": "All content provided on this website is for reference purposes only; the final decision rests entirely with you.",
+      "github": "GitHub Repository"
+    },
+    "auth": {
+      "login_required": "Login Required",
+      "login_required_desc": "Please log in to access this page.",
+      "go_home": "Go to Home",
+      "login_to_continue": "Login to Continue"
+    }
+  }
+}

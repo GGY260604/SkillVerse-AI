@@ -1,0 +1,146 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
+// AI Transformation Plan Component
+// Dual diagnostic selection cards triggering upcoming upload and form overlay windows.
+export default function TransformationPlan() {
+  const t = useTranslations("home.plan");
+
+  // Handle pathway selection trigger for future overlay window modal.
+  const handleSelectPathway = (pathway: "upload" | "wizard") => {
+    // Placeholder trigger for overlay window modal integration.
+    console.log("Selected transformation pathway:", pathway);
+  };
+
+  // Split option tags into label prefix and highlight phrase to prevent mid-phrase line breaks.
+  const [opt1Prefix, opt1Label] = t("option_1_tag").split(" • ");
+  const [opt2Prefix, opt2Label] = t("option_2_tag").split(" • ");
+
+  return (
+    <section
+      id="transformation-plan"
+      className="animate-fade-in-up-delay-3 max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24"
+    >
+      {/* Section Header */}
+      <div className="text-center mb-8 sm:mb-12">
+        {/* Section Title */}
+        <h2 className="text-2xl sm:text-4xl font-extrabold text-text-primary tracking-tight mb-2 sm:mb-3">{t("title")}</h2>
+
+        {/* Section Subtitle */}
+        <p className="text-sm sm:text-base text-text-secondary max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
+      </div>
+
+      {/* Dual Options Grid */}
+      <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-6 sm:gap-8 items-stretch pb-4 lg:pb-0 snap-x snap-mandatory lg:snap-none scroll-smooth">
+        {/* Option 01: CV Upload Mode Selection Card */}
+        <div
+          onClick={() => handleSelectPathway("upload")}
+          className="group relative w-[86vw] max-w-125 lg:w-auto lg:max-w-none shrink-0 lg:shrink snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden"
+        >
+          {/* Subtle Ambient Hover Glow */}
+          <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+          <div className="relative z-10">
+            {/* Option Meta Header */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-mono uppercase tracking-wider text-text-muted">
+                <span className="whitespace-nowrap">{opt1Prefix} •</span>
+                <span className="whitespace-nowrap">{opt1Label}</span>
+              </div>
+              <span className="text-[10px] font-bold font-mono tracking-wider bg-accent/20 text-accent border border-accent/40 rounded px-2.5 py-0.5 uppercase whitespace-nowrap shrink-0">{t("recommended")}</span>
+            </div>
+
+            {/* Option Title & Description */}
+            <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors duration-200">{t("upload_title")}</h3>
+            <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-6">{t("upload_desc")}</p>
+
+            {/* Upload Visual Box */}
+            <div className="border-2 border-dashed border-border-subtle group-hover:border-accent bg-bg-secondary/40 group-hover:bg-bg-secondary/70 rounded-xl p-6 sm:p-8 text-center transition-all duration-300 flex flex-col items-center justify-center">
+              {/* Document SVG Icon */}
+              <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 group-hover:border-accent flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <svg
+                  className="w-6 h-6 text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+
+              {/* Instructions */}
+              <p className="text-sm font-semibold text-text-primary mb-1 group-hover:text-accent transition-colors">{t("drag_drop_text")}</p>
+              <p className="text-xs text-text-muted mb-4 font-mono">{t("drag_drop_subtext")}</p>
+
+              {/* Action Trigger Button */}
+              <div className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold bg-accent text-bg-primary rounded-xl tracking-wide flex items-center justify-center gap-1.5 shadow-[0_0_15px_var(--accent-glow)] group-hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300">
+                <span>{t("btn_select_file")}</span>
+                <span className="text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Option 02: Manual Form Wizard Mode Selection Card */}
+        <div
+          onClick={() => handleSelectPathway("wizard")}
+          className="group relative w-[86vw] max-w-125 lg:w-auto lg:max-w-none shrink-0 lg:shrink snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden"
+        >
+          {/* Subtle Ambient Hover Glow */}
+          <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+          <div className="relative z-10">
+            {/* Option Meta Header */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-mono uppercase tracking-wider text-text-muted">
+                <span className="whitespace-nowrap">{opt2Prefix} •</span>
+                <span className="whitespace-nowrap">{opt2Label}</span>
+              </div>
+              <span className="text-[10px] font-bold font-mono tracking-wider bg-bg-secondary text-text-secondary border border-border-subtle rounded px-2.5 py-0.5 uppercase whitespace-nowrap shrink-0">{t("time_estimate")}</span>
+            </div>
+
+            {/* Option Title & Description */}
+            <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2 group-hover:text-accent transition-colors duration-200">{t("wizard_title")}</h3>
+            <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-6">{t("wizard_desc")}</p>
+
+            {/* Form Preview Visual Box */}
+            <div className="border-2 border-dashed border-border-subtle group-hover:border-accent bg-bg-secondary/40 group-hover:bg-bg-secondary/70 rounded-xl p-6 sm:p-8 text-center transition-all duration-300 flex flex-col items-center justify-center">
+              {/* Clipboard Checklist SVG Icon */}
+              <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 group-hover:border-accent flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <svg
+                  className="w-6 h-6 text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              </div>
+
+              {/* Instructions */}
+              <p className="text-sm font-semibold text-text-primary mb-1 group-hover:text-accent transition-colors">{t("form_preview_title")}</p>
+              <p className="text-xs text-text-muted mb-4 font-mono">{t("form_preview_subtext")}</p>
+
+              {/* Action Trigger Button */}
+              <div className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold bg-accent text-bg-primary rounded-xl tracking-wide flex items-center justify-center gap-1.5 shadow-[0_0_15px_var(--accent-glow)] group-hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300">
+                <span>{t("btn_launch_wizard")}</span>
+                <span className="text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
