@@ -217,10 +217,10 @@ export default function Header() {
             <Link
               href="/"
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("home")}
@@ -231,10 +231,10 @@ export default function Header() {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/analysis");
               }}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/analysis")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("analysis")}
@@ -245,10 +245,10 @@ export default function Header() {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/shared");
               }}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/shared")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("shared")}
@@ -282,39 +282,39 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Auth Button */}
+          {/* Auth Controls in Mobile Drawer */}
           {isLoggedIn ? (
-            <div className="flex flex-col gap-2">
-              <div className="py-2.5 px-4 rounded-xl bg-bg-card border border-border-subtle flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary">
-                  {user?.email?.charAt(0).toUpperCase() || "U"}
-                </div>
-                <div className="truncate flex-1">
-                  <span className="block text-xs font-semibold text-text-primary truncate">{user?.email}</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              {/* Profile Button with (S) Avatar */}
               <button
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   openProfileModal();
                 }}
-                className="w-full py-2.5 text-xs font-semibold text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+                className="flex-1 h-12 px-3 rounded-xl bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent text-text-primary flex items-center gap-2.5 min-w-0 cursor-pointer transition-all"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>{t("profile")}</span>
+                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shrink-0 shadow-[0_0_10px_var(--accent-glow)]">
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <div className="flex flex-col text-left min-w-0 flex-1">
+                  <span className="text-xs font-bold text-text-primary truncate">{t("profile")}</span>
+                  <span className="text-[10px] text-text-muted font-mono truncate">{user?.email}</span>
+                </div>
               </button>
+
+              {/* Quick Logout Button */}
               <button
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   logout();
                 }}
-                className="w-full py-2.5 text-xs font-semibold text-negative hover:bg-negative/10 border border-negative/30 rounded-xl bg-transparent cursor-pointer transition-all font-mono flex items-center justify-center gap-2"
+                aria-label={t("logout")}
+                title={t("logout")}
+                className="w-12 h-12 rounded-xl bg-bg-card hover:bg-negative/15 border border-border-subtle hover:border-negative/40 text-text-muted hover:text-negative flex items-center justify-center cursor-pointer transition-all shrink-0"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -322,7 +322,6 @@ export default function Header() {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                <span>{t("logout")}</span>
               </button>
             </div>
           ) : (
