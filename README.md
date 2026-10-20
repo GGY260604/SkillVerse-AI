@@ -50,8 +50,8 @@ SkillVerse AI is designed to serve a broad range of workforce participants acros
    * Evaluates candidate skills against prospective roles in technology, green logistics, smart agriculture, and clean healthcare.
    * Generates a deterministic match percentage alongside an itemized inventory of **Matched Strengths**, **Skills to Acquire (Gap)**, and **At-Risk Competencies**.
 4. **Personalized Reskilling Pathway Generator:**
-   * Synthesizes an ordered, multi-phase curriculum complete with estimated completion durations.
-   * Restricts suggested learning modules to real-world, free, or low-cost resources (Coursera, edX, freeCodeCamp) and **HRD Corp-claimable programs** in Malaysia.
+   * Synthesizes an ordered, multi-phase curriculum complete with estimated completion durations[cite: 4, 5].
+   * Restricts suggested learning modules to real-world, free, or low-cost resources (Coursera, edX, freeCodeCamp) and **HRD Corp-claimable programs** in Malaysia[cite: 5, 6].
 5. **Semantic UN SDG Mapping:**
    * Evaluates the semantic alignment of each target role and skill against official UN SDG targets, presenting an interactive sustainability footprint for the user's selected path.
 6. **Multi-Scenario Uncertainty Engine:**
