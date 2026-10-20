@@ -5,6 +5,19 @@ from .profile import (
     ProfileIntakePayload,
     ExtractionResponse,
 )
+from .analysis import (
+    MacroScenario,
+    AnalyzeProfileData,
+    AnalyzeRequestPayload,
+    MatchedRole,
+    SdgAlignmentItem,
+    AtRiskSkillItem,
+    RecommendedCourse,
+    RoadmapMilestone,
+    SelectedRoleRoadmap,
+    RadarAxisItem,
+    AnalyzeResponsePayload,
+)
 
 __all__ = [
     "EmploymentStatus",
@@ -12,4 +25,15 @@ __all__ = [
     "UserSkillItem",
     "ProfileIntakePayload",
     "ExtractionResponse",
+    "MacroScenario",
+    "AnalyzeProfileData",
+    "AnalyzeRequestPayload",
+    "MatchedRole",
+    "SdgAlignmentItem",
+    "AtRiskSkillItem",
+    "RecommendedCourse",
+    "RoadmapMilestone",
+    "SelectedRoleRoadmap",
+    "RadarAxisItem",
+    "AnalyzeResponsePayload",
 ]

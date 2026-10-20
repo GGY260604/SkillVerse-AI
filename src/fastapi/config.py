@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
+    # RunPod GPU Inference Microservice (BAAI/bge-m3)
+    RUNPOD_API_ENDPOINT: str = os.getenv("RUNPOD_API_ENDPOINT", "")
+    RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY", "")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Collect all populated GEMINI_API_KEY_* keys from environment

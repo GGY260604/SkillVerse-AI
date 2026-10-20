@@ -1,0 +1,104 @@
+from enum import Enum
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
+from .profile import UserSkillItem
+
+
+class MacroScenario(str, Enum):
+    MODERATE = "moderate"
+    ACCELERATED_AI = "accelerated_ai"
+    GREEN_ECONOMY = "green_economy"
+
+
+class AnalyzeProfileData(BaseModel):
+    employmentStatus: str = Field(default="employed_at_risk")
+    currentJobTitle: Optional[str] = None
+    industry: Optional[str] = None
+    educationLevel: Optional[str] = None
+    yearsOfExperience: Optional[str] = None
+    skills: List[UserSkillItem] = Field(default_factory=list)
+    toolsAndSoftware: Optional[List[str]] = Field(default_factory=list)
+    languages: Optional[List[str]] = Field(default_factory=list)
+    careerGoal: Optional[str] = Field(default="explore")
+    targetSectors: Optional[List[str]] = Field(default_factory=list)
+    targetJobTitle: Optional[str] = None
+    workArrangement: Optional[str] = Field(default="any")
+    weeklyCommitmentHours: Optional[str] = Field(default="3-5")
+    learningProviders: Optional[List[str]] = Field(default_factory=lambda: ["free_open", "hrd_corp"])
+    outputLanguage: Optional[str] = Field(default="en")
+
+
+class AnalyzeRequestPayload(BaseModel):
+    sessionId: Optional[str] = Field(default=None, description="Client session UUID or local storage key")
+    userId: Optional[str] = Field(default=None, description="Authenticated Supabase user ID if logged in")
+    locale: str = Field(default="en", description="Active user interface language (en, ms, zh)")
+    macroScenario: MacroScenario = Field(
+        default=MacroScenario.MODERATE,
+        description="Macro scenario toggle: moderate, accelerated_ai, or green_economy",
+    )
+    profile: AnalyzeProfileData = Field(..., description="Verified profile intake payload")
+
+
+class SdgAlignmentItem(BaseModel):
+    targetCode: str = Field(description="UN SDG target identifier, e.g. SDG 8.2")
+    targetTitle: str = Field(description="Descriptive title of the target")
+    affinityScore: float = Field(description="Semantic affinity score (0.0 - 1.0)")
+
+
+class AtRiskSkillItem(BaseModel):
+    skillName: str = Field(description="Name of the skill facing automation pressure")
+    velocityScore: float = Field(description="Trend velocity Vs (negative indicates declining)")
+    riskReason: str = Field(description="Explanation of why this skill is at risk of displacement")
+
+
+class MatchedRole(BaseModel):
+    roleId: str = Field(description="Unique identifier for the prospective role")
+    title: str = Field(description="Canonical English role title")
+    titleLocalized: str = Field(description="Role title translated to user locale")
+    industry: str = Field(description="Industry sector, e.g. Clean Energy, Responsible AI")
+    matchScore: float = Field(description="Calculated deterministic match score (0.0 - 1.0)")
+    scenarioMultiplierApplied: float = Field(default=1.0, description="Multiplier from the active macro scenario")
+    sdgAlignments: List[SdgAlignmentItem] = Field(default_factory=list)
+    matchedStrengths: List[str] = Field(default_factory=list, description="Overlapping skills already possessed")
+    skillsGap: List[str] = Field(default_factory=list, description="Missing competencies required for role")
+    atRiskCompetencies: List[AtRiskSkillItem] = Field(default_factory=list)
+
+
+class RecommendedCourse(BaseModel):
+    title: str = Field(description="Course or certification title")
+    platform: str = Field(description="Provider platform, e.g. Coursera, edX, freeCodeCamp, HRD Corp")
+    url: str = Field(description="Direct URL to course details or enrollment")
+    isHrdCorpClaimable: bool = Field(default=False, description="Whether claimable under HRD Corp Malaysia")
+    isFree: bool = Field(default=True, description="Whether free / audit track is available")
+    durationHours: Optional[int] = Field(default=None, description="Estimated total study hours")
+
+
+class RoadmapMilestone(BaseModel):
+    phaseIndex: int = Field(description="Phase sequence (1 = Foundation, 2 = Applied, 3 = Capstone)")
+    phaseTitle: str = Field(description="Localized milestone title")
+    durationWeeks: int = Field(description="Estimated duration in weeks")
+    estimatedHours: int = Field(description="Total estimated learning hours")
+    learningObjectives: List[str] = Field(default_factory=list)
+    recommendedCourses: List[RecommendedCourse] = Field(default_factory=list)
+
+
+class SelectedRoleRoadmap(BaseModel):
+    targetRoleId: str = Field(description="Role ID this roadmap was synthesized for")
+    totalWeeks: int = Field(description="Total estimated roadmap completion time in weeks")
+    milestones: List[RoadmapMilestone] = Field(default_factory=list)
+
+
+class RadarAxisItem(BaseModel):
+    category: str = Field(description="Competency domain axis (e.g. AI & Digital, Data Literacy)")
+    userLevel: int = Field(description="User score out of 100")
+    requiredLevel: int = Field(description="Required role score out of 100")
+
+
+class AnalyzeResponsePayload(BaseModel):
+    assessmentId: str = Field(description="Unique assessment identifier")
+    sessionId: str = Field(description="Associated session UUID")
+    generatedAt: str = Field(description="ISO timestamp of analysis generation")
+    activeScenario: MacroScenario = Field(description="Active macro scenario")
+    radarData: List[RadarAxisItem] = Field(default_factory=list, description="Data points for Recharts radar chart")
+    topRoles: List[MatchedRole] = Field(default_factory=list, description="Ranked top 3-5 resilient future roles")
+    selectedRoleRoadmap: SelectedRoleRoadmap = Field(description="Synthesized reskilling roadmap for the top role")
