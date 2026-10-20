@@ -108,8 +108,22 @@
   },
   "shared": {
     "title": "Shared Plans",
-    "subtitle": "Plans shared by other people to you",
-    "coming_soon": "Shared plan features are under development."
+    "subtitle": "Explore and benchmark career transformation roadmaps shared with you by peers and colleagues.",
+    "active_connections": "Active Shared Roadmaps",
+    "search_placeholder": "Search by name, role, or department...",
+    "view_roadmap": "View Analysis Roadmap",
+    "remove_user": "Remove",
+    "remove_confirm_title": "Remove Shared Plan",
+    "remove_confirm_desc": "Are you sure you want to remove {name}'s roadmap from your shared list?",
+    "confirm_remove": "Remove",
+    "cancel": "Cancel",
+    "target_role": "Target Role",
+    "match_score": "Match Score",
+    "shared_on": "Shared",
+    "empty_title": "No Shared Plans Available",
+    "empty_desc": "You currently have no career roadmaps shared by other members, or all have been removed.",
+    "btn_reset_demo": "Restore Demo Shared Users",
+    "back_to_shared": "← Back to Shared Roadmaps"
   },
   "status": {
     "loading": {

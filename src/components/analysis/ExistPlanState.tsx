@@ -2,13 +2,40 @@
 
 import React, { useState } from "react";
 import { useTranslations } from "next-intl";
-import { PlanCard, PlanDetailView, CURRENT_PLAN, HISTORY_PLANS, type PlanData } from "./planCard";
+import PlanCard from "./planCard/PlanCard";
+import PlanDetailView from "./planCard/PlanDetailView";
+import { CURRENT_PLAN, HISTORY_PLANS, type PlanData } from "./planCard/planData";
 import { usePlanModal } from "@/context/PlanModalContext";
+
+export interface SharedUserInfo {
+  id: string;
+  name: string;
+  role: string;
+  email?: string;
+  avatar?: string;
+  sharedAt?: string;
+  department?: string;
+}
+
+export interface ExistPlanStateProps {
+  currentPlan?: PlanData;
+  historyPlans?: PlanData[];
+  isSharedView?: boolean;
+  sharedUser?: SharedUserInfo;
+  onBackToSharedList?: () => void;
+}
 
 // Exist Plan State Component
 // Rendered when an active career roadmap exists. Displays full dashboard, current prominent plan,
 // historical iterations archive with expand/collapse, and full plan detail view.
-export default function ExistPlanState() {
+// Supports custom current/history plan injection for shared peer views and future API hydration.
+export default function ExistPlanState({
+  currentPlan = CURRENT_PLAN,
+  historyPlans = HISTORY_PLANS,
+  isSharedView = false,
+  sharedUser,
+  onBackToSharedList,
+}: ExistPlanStateProps = {}) {
   const t = useTranslations("analysis.header");
   const tHistory = useTranslations("analysis.history");
   const { openPathwaySelect } = usePlanModal();
@@ -24,8 +51,8 @@ export default function ExistPlanState() {
       {/* Page Header Bar with Conditional Edit Plan Button and Return Button */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-8 sm:mb-10">
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Back button displayed on the LEFT of the title/subtitle when in detail mode */}
-          {selectedPlan && (
+          {/* Back button: returns to plan overview if in detail mode, or returns to shared users list if in shared overview mode */}
+          {selectedPlan ? (
             <button
               type="button"
               onClick={() => setSelectedPlan(null)}
@@ -47,21 +74,53 @@ export default function ExistPlanState() {
                 />
               </svg>
             </button>
-          )}
+          ) : isSharedView && onBackToSharedList ? (
+            <button
+              type="button"
+              onClick={onBackToSharedList}
+              className="p-2.5 sm:p-3 rounded-xl border border-border-subtle bg-bg-card hover:bg-bg-card-hover text-text-secondary hover:text-accent hover:border-accent transition-all duration-200 cursor-pointer shadow-sm shrink-0 flex items-center justify-center group"
+              aria-label="Back to shared plans list"
+              title="Back to shared plans list"
+            >
+              <svg
+                className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </button>
+          ) : null}
 
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
-              {t("title")}
-            </h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+                {isSharedView && sharedUser ? `${sharedUser.name}'s Roadmap` : t("title")}
+              </h1>
+              {isSharedView && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-semibold bg-accent/10 text-accent border border-accent/25">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                  Peer Shared View
+                </span>
+              )}
+            </div>
             <p className="text-xs sm:text-sm text-text-secondary mt-1">
-              {t("subtitle")}
+              {isSharedView && sharedUser
+                ? `Shared by ${sharedUser.name} • ${sharedUser.role}${sharedUser.department ? ` (${sharedUser.department})` : ""} • Read-only Peer View`
+                : t("subtitle")}
             </p>
           </div>
         </div>
 
         {/* Header Actions: Share Plan and Edit Plan Buttons */}
-        {/* Shown in Overview mode or Current plan detail mode. Hidden in History detail mode! */}
-        {(!selectedPlan || selectedPlan.isCurrent) && (
+        {/* Shown in non-shared view when in Overview or Current plan detail. Hidden in History mode and Shared mode. */}
+        {!isSharedView && (!selectedPlan || selectedPlan.isCurrent) && (
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Share Plan Action Button */}
             <button
@@ -101,14 +160,23 @@ export default function ExistPlanState() {
             </button>
           </div>
         )}
+
+        {/* Read-Only Pill Indicator for Shared View */}
+        {isSharedView && (
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border-subtle bg-bg-card/70 text-text-muted font-mono text-xs shadow-sm">
+            <span>🔒 Read-only Peer Access</span>
+          </div>
+        )}
       </div>
 
       {/* Main Analysis Body Content */}
       {selectedPlan ? (
         /* Detailed View Mode: Display only the selected plan's comprehensive details */
         <PlanDetailView
+          key={selectedPlan.id}
           plan={selectedPlan}
           onBack={() => setSelectedPlan(null)}
+          isSharedView={isSharedView}
         />
       ) : (
         /* Overview Mode: Display Current Plan and History Plan Cards */
@@ -123,56 +191,59 @@ export default function ExistPlanState() {
             </div>
 
             <PlanCard
-              plan={CURRENT_PLAN}
+              plan={currentPlan}
               onSelect={(plan) => setSelectedPlan(plan)}
             />
           </section>
 
           {/* Section 2: History Plan (Subdued Muted Gray) */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-text-secondary tracking-tight flex items-center gap-2">
-                <span className="text-text-muted">◇</span>
-                {t("history_plan")}
-              </h2>
-              <span className="text-xs font-mono text-text-muted">
-                {HISTORY_PLANS.length} Preserved
-              </span>
-            </div>
+          {historyPlans.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-text-secondary tracking-tight flex items-center gap-2">
+                  <span className="text-text-muted">◇</span>
+                  {t("history_plan")}
+                </h2>
+                <span className="text-xs font-mono text-text-muted">
+                  {historyPlans.length} Preserved
+                </span>
+              </div>
 
-            {/* History Cards List: Only first card shown by default if more than 1 */}
-            <div className="flex flex-col gap-4">
-              {(showAllHistory ? HISTORY_PLANS : HISTORY_PLANS.slice(0, 1)).map(
-                (historyPlan) => (
-                  <PlanCard
-                    key={historyPlan.id}
-                    plan={historyPlan}
-                    onSelect={(plan) => setSelectedPlan(plan)}
-                  />
-                )
-              )}
+              {/* History Cards List: Only first card shown by default if more than 1 */}
+              <div className="flex flex-col gap-4">
+                {(showAllHistory ? historyPlans : historyPlans.slice(0, 1)).map(
+                  (historyPlan) => (
+                    <PlanCard
+                      key={historyPlan.id}
+                      plan={historyPlan}
+                      onSelect={(plan) => setSelectedPlan(plan)}
+                    />
+                  )
+                )}
 
-              {/* View More / Collapse Toggle Button */}
-              {HISTORY_PLANS.length > 1 && (
-                <div className="flex justify-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAllHistory(!showAllHistory)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-mono font-semibold text-text-secondary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent/50 rounded-xl transition-all duration-200 cursor-pointer shadow-sm"
-                  >
-                    <span>
-                      {showAllHistory
-                        ? tHistory("collapse_history")
-                        : `${tHistory("view_more")} (${HISTORY_PLANS.length - 1})`}
-                    </span>
-                    <span>{showAllHistory ? "▲" : "▼"}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
+                {/* View More / Collapse Toggle Button */}
+                {historyPlans.length > 1 && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllHistory(!showAllHistory)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-mono font-semibold text-text-secondary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent/50 rounded-xl transition-all duration-200 cursor-pointer shadow-sm"
+                    >
+                      <span>
+                        {showAllHistory
+                          ? tHistory("collapse_history")
+                          : `${tHistory("view_more")} (${historyPlans.length - 1})`}
+                      </span>
+                      <span>{showAllHistory ? "▲" : "▼"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
   );
 }
+

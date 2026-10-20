@@ -108,8 +108,22 @@
   },
   "shared": {
     "title": "Pelan Dikongsi",
-    "subtitle": "Pelan dikongsi oleh orang lain kepada anda",
-    "coming_soon": "Ciri-ciri pelan dikongsi sedang dibangunkan."
+    "subtitle": "Terokai dan buat penanda aras pelan laluan transformasi kerjaya yang dikongsi oleh rakan sekerja.",
+    "active_connections": "Pelan Dikongsi Aktif",
+    "search_placeholder": "Cari mengikut nama, peranan atau jabatan...",
+    "view_roadmap": "Lihat Analisis Pelan",
+    "remove_user": "Keluarkan",
+    "remove_confirm_title": "Keluarkan Pelan Dikongsi",
+    "remove_confirm_desc": "Adakah anda pasti mahu mengeluarkan pelan {name} daripada senarai dikongsi anda?",
+    "confirm_remove": "Sahkan Keluar",
+    "cancel": "Batal",
+    "target_role": "Peranan Sasaran",
+    "match_score": "Skor Padanan",
+    "shared_on": "Dikongsi pada",
+    "empty_title": "Tiada Pelan Dikongsi Tersedia",
+    "empty_desc": "Anda kini tidak mempunyai sebarang pelan kerjaya yang dikongsi oleh pengguna lain, atau semua telah dikeluarkan.",
+    "btn_reset_demo": "Pulihkan Data Pengguna Demo",
+    "back_to_shared": "← Kembali ke Senarai Dikongsi"
   },
   "status": {
     "loading": {

@@ -107,9 +107,23 @@
     }
   },
   "shared": {
-    "title": "共享计划",
-    "subtitle": "他人与你共享的计划",
-    "coming_soon": "共享计划功能正在开发中。"
+    "title": "共享规划",
+    "subtitle": "查看并对标由同行、团队成员或导师与您共享的职业转型路线图。",
+    "active_connections": "份正在共享的路线图",
+    "search_placeholder": "按姓名、目标岗位或部门搜索...",
+    "view_roadmap": "查看规划分析",
+    "remove_user": "移除",
+    "remove_confirm_title": "移除共享规划",
+    "remove_confirm_desc": "确定要从您的共享列表中移除 {name} 的规划吗？",
+    "confirm_remove": "确认移除",
+    "cancel": "取消",
+    "target_role": "目标岗位",
+    "match_score": "契合度",
+    "shared_on": "共享时间",
+    "empty_title": "暂无共享规划",
+    "empty_desc": "目前没有任何用户与您共享规划，或所有共享记录均已被移除。",
+    "btn_reset_demo": "恢复演示用户数据",
+    "back_to_shared": "← 返回共享规划列表"
   },
   "status": {
     "loading": {

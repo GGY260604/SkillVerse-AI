@@ -8,12 +8,13 @@ import { FileFormatIcon } from "@/lib/fileIcons";
 interface PlanDetailViewProps {
   plan: PlanData;
   onBack?: () => void;
+  isSharedView?: boolean;
 }
 
 // Plan Detail View Component
 // Comprehensive presentation of the selected plan's metrics, skills inventory, phase milestones, and interactive AI artifact verification.
 // For history plans: completely sealed, read-only, non-interactive, and rendered in full grayscale ("全灰且不能操作").
-export default function PlanDetailView({ plan }: PlanDetailViewProps) {
+export default function PlanDetailView({ plan, isSharedView = false }: PlanDetailViewProps) {
   const tCurrent = useTranslations("analysis.current");
   const tHistory = useTranslations("analysis.history");
   const tVerification = useTranslations("analysis.verification");
@@ -522,6 +523,17 @@ export default function PlanDetailView({ plan }: PlanDetailViewProps) {
                                 style={{ width: `${(verificationStep / 3) * 100}%` }}
                               />
                             </div>
+                          </div>
+                        ) : isSharedView ? (
+                          /* State 2.5: Peer Read-Only View of In-Progress Milestone */
+                          <div className="p-4 rounded-lg bg-bg-secondary/40 border border-dashed border-border-subtle text-center py-6">
+                            <span className="text-xl mb-1.5 block">⏳</span>
+                            <span className="text-xs font-mono font-medium text-text-secondary block">
+                              Peer Milestone In Progress
+                            </span>
+                            <span className="text-[11px] text-text-muted font-mono mt-1 block">
+                              This milestone is awaiting artifact submission by the owner.
+                            </span>
                           </div>
                         ) : (
                           /* State 3: Ready for User Upload & Verification */
