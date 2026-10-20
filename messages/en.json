@@ -55,6 +55,28 @@
     "subtitle": "Plans shared by other people to you",
     "coming_soon": "Shared plan features are under development."
   },
+  "status": {
+    "loading": {
+      "title": "Loading Workforce Intelligence",
+      "subtitle": "Synchronizing labor market signals and skill pathways..."
+    },
+    "not_found": {
+      "code": "404",
+      "badge": "PAGE NOT FOUND // 0x404",
+      "title": "Lost in the Skill Universe",
+      "description": "The page you are looking for does not exist or has been relocated. Return to the homepage to explore AI transformation roadmaps and labor market signals.",
+      "btn_home": "Return Home",
+      "btn_back": "Go Back"
+    },
+    "error": {
+      "code": "500",
+      "badge": "SYSTEM ERROR // 0x500",
+      "title": "Something Went Wrong",
+      "description": "An unexpected error occurred while processing your request. You can try refreshing the page or return to the homepage.",
+      "btn_retry": "Try Again",
+      "btn_home": "Return Home"
+    }
+  },
   "other": {
     "nav": {
       "home": "Home",
@@ -76,7 +98,50 @@
       "login_required": "Login Required",
       "login_required_desc": "Please log in to access this page.",
       "go_home": "Go to Home",
-      "login_to_continue": "Login to Continue"
+      "login_to_continue": "Login to Continue",
+      "signin_title": "Welcome Back",
+      "signin_desc": "Sign in to your SkillVerse account with email and password",
+      "register_title": "Create Account",
+      "register_desc": "Join SkillVerse and start your AI workforce transformation",
+      "forgot_title": "Reset Password",
+      "forgot_desc": "Enter your email to receive a 6-digit verification code",
+      "verify_register_title": "Verify Email",
+      "verify_register_desc": "Enter the 6-digit verification code sent to your email",
+      "verify_forgot_title": "New Password",
+      "verify_forgot_desc": "Enter the 6-digit recovery code and set your new password",
+      "email_label": "Email Address",
+      "email_placeholder": "name@example.com",
+      "password_label": "Password",
+      "password_placeholder": "••••••••",
+      "confirm_password_label": "Confirm Password",
+      "new_password_label": "New Password",
+      "otp_label": "6-Digit Verification Code",
+      "otp_placeholder": "123456",
+      "btn_signin": "Sign In",
+      "btn_register": "Register & Send Code",
+      "btn_verify": "Verify & Complete",
+      "btn_send_code": "Send 6-Digit Code",
+      "btn_reset_password": "Update Password & Sign In",
+      "forgot_link": "Forgot password?",
+      "remember_me": "Remember Me",
+      "have_account": "Already have an account?",
+      "no_account": "Don't have an account?",
+      "register_link": "Register here",
+      "signin_link": "Sign in here",
+      "resend_code": "Resend Code",
+      "resend_countdown": "Resend in {seconds}s",
+      "code_sent": "6-digit code has been sent to",
+      "signing_in": "Signing In...",
+      "processing": "Processing...",
+      "err_invalid_credentials": "Invalid email or password. Please check your credentials.",
+      "err_email_not_confirmed": "Email not verified yet. Please check your inbox for the code.",
+      "err_user_already_exists": "An account with this email already exists.",
+      "err_password_mismatch": "Passwords do not match.",
+      "err_password_too_short": "Password must be at least 6 characters.",
+      "err_invalid_otp": "Invalid or expired 6-digit verification code.",
+      "err_network": "Network error occurred. Please check your connection and try again.",
+      "err_default": "An unexpected error occurred. Please try again.",
+      "err_email_required": "Please enter your email address."
     }
   }
 }

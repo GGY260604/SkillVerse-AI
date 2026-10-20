@@ -1,6 +1,14 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { routing } from "@/lib/i18n/routing";
 
-import AuthGate from "@/components/AuthGate";
+// Disable instant app shell prerendering to allow direct dynamic route parameter access.
+export const instant = false;
+
+// Static Locale Route Generation
+// Pre-render analysis pages for all supported language locales at build time.
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 // Career Analysis Dashboard Page
 // Display personalized career assessment, current plan progress, and historical paths.
@@ -19,33 +27,30 @@ export default async function AnalysisPage({
   const t = await getTranslations("analysis");
 
   return (
-    <AuthGate>
-      <div className="animate-fade-in-up max-w-7xl mx-auto py-12 px-6 w-full">
-        {/* Page Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-8">{t("title")}</h1>
+    <div className="animate-fade-in-up max-w-7xl mx-auto py-12 px-6 w-full">
+      {/* Page Title */}
+      <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-8">{t("title")}</h1>
 
-        {/* Plan Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Current Plan Card */}
-          <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
-              📋
-            </div>
-            <h2 className="text-xl font-semibold text-text-primary mb-3">{t("current_plan")}</h2>
-            <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
+      {/* Plan Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Current Plan Card */}
+        <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
+          <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
+            📋
           </div>
+          <h2 className="text-xl font-semibold text-text-primary mb-3">{t("current_plan")}</h2>
+          <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
+        </div>
 
-          {/* History Plan Card */}
-          <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
-            <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
-              🕐
-            </div>
-            <h2 className="text-xl font-semibold text-text-primary mb-3">{t("history_plan")}</h2>
-            <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
+        {/* History Plan Card */}
+        <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
+          <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
+            🕐
           </div>
+          <h2 className="text-xl font-semibold text-text-primary mb-3">{t("history_plan")}</h2>
+          <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
         </div>
       </div>
-    </AuthGate>
+    </div>
   );
 }
-

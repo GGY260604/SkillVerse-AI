@@ -1,0 +1,775 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { useAuth, AuthModalView } from "@/context/AuthContext";
+
+// Authentication Overlay Modal Component
+// Supports Email/Password Login, Registration with 6-digit OTP, and Password Recovery with 6-digit OTP.
+export default function AuthModal() {
+  const t = useTranslations("other.auth");
+  const locale = useLocale();
+  const {
+    isAuthModalOpen,
+    authModalView,
+    pendingEmail,
+    closeAuthModal,
+    setAuthModalView,
+    setPendingEmail,
+    checkAuth,
+  } = useAuth();
+
+  // Form Input State Variables
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // User Interface Status State Variables
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Sync pendingEmail into local email state whenever modal opens or view changes.
+  useEffect(() => {
+    if (pendingEmail) {
+      setEmail(pendingEmail);
+    }
+  }, [pendingEmail, authModalView]);
+
+  // Initialize remembered credentials and preferences from browser local storage.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedRemember = localStorage.getItem("skillverse_remember_me");
+    const storedEmail = localStorage.getItem("skillverse_remembered_email");
+    const storedPassword = localStorage.getItem("skillverse_remembered_password");
+    if (storedRemember !== null) {
+      setRememberMe(storedRemember === "true");
+    }
+    if (storedEmail && !pendingEmail) {
+      setEmail(storedEmail);
+    }
+    if (storedRemember === "true" && storedPassword) {
+      setPassword(storedPassword);
+    }
+  }, [pendingEmail]);
+
+  // Clear transient error and success notices when view transitions.
+  useEffect(() => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    setOtpToken("");
+  }, [authModalView]);
+
+  // Handle countdown timer for OTP resend action.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Handle Escape key to dismiss modal.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isAuthModalOpen) {
+        closeAuthModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAuthModalOpen, closeAuthModal]);
+
+  if (!isAuthModalOpen) return null;
+
+  // Map server error codes and fallback messages to localized strings.
+  const getLocalizedError = (code?: string, rawMsg?: string): string => {
+    if (code === "invalid_credentials") return t("err_invalid_credentials");
+    if (code === "email_not_confirmed") return t("err_email_not_confirmed");
+    if (code === "user_already_exists") return t("err_user_already_exists");
+    if (code === "password_mismatch") return t("err_password_mismatch");
+    if (code === "password_too_short") return t("err_password_too_short");
+    if (code === "invalid_otp") return t("err_invalid_otp");
+    if (code === "network_error") return t("err_network");
+    if (code === "email_required") return t("err_email_required");
+
+    const lower = (rawMsg || "").toLowerCase();
+    if (lower.includes("invalid login credentials")) return t("err_invalid_credentials");
+    if (lower.includes("email not confirmed")) return t("err_email_not_confirmed");
+    if (lower.includes("already registered") || lower.includes("already exists") || lower.includes("already in use")) {
+      return t("err_user_already_exists");
+    }
+    if (lower.includes("token has expired") || lower.includes("invalid token") || lower.includes("otp")) {
+      return t("err_invalid_otp");
+    }
+
+    return rawMsg || t("err_default");
+  };
+
+  // 1. Submit Handler: Email & Password Login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, rememberMe }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      // Persist or clear remembered credentials in browser storage based on preference.
+      if (typeof window !== "undefined") {
+        if (rememberMe) {
+          localStorage.setItem("skillverse_remember_me", "true");
+          localStorage.setItem("skillverse_remembered_email", email.trim());
+          localStorage.setItem("skillverse_remembered_password", password);
+        } else {
+          localStorage.setItem("skillverse_remember_me", "false");
+          localStorage.removeItem("skillverse_remembered_email");
+          localStorage.removeItem("skillverse_remembered_password");
+        }
+      }
+
+      await checkAuth();
+      closeAuthModal();
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Submit Handler: Account Registration (Dispatches 6-Digit OTP)
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (password !== confirmPassword) {
+      setErrorMsg(t("err_password_mismatch"));
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg(t("err_password_too_short"));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, locale }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      setPendingEmail(email.trim());
+      setResendCooldown(60);
+      setSuccessMsg("Verification code dispatched to your email.");
+      setAuthModalView("verify-register");
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Submit Handler: Verify Registration 6-Digit OTP
+  const handleVerifyRegisterOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (otpToken.trim().length !== 6 || !/^\d{6}$/.test(otpToken.trim())) {
+      setErrorMsg(t("err_invalid_otp"));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          token: otpToken.trim(),
+          type: "signup",
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      await checkAuth();
+      closeAuthModal();
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Submit Handler: Send Forgot Password 6-Digit OTP
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!email.trim()) {
+      setErrorMsg(t("err_email_required"));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), locale }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      setPendingEmail(email.trim());
+      setResendCooldown(60);
+      setSuccessMsg("Password recovery code sent to your email.");
+      setAuthModalView("verify-forgot");
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 5. Submit Handler: Verify Forgot OTP & Set New Password
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (otpToken.trim().length !== 6 || !/^\d{6}$/.test(otpToken.trim())) {
+      setErrorMsg(t("err_invalid_otp"));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrorMsg(t("err_password_mismatch"));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErrorMsg(t("err_password_too_short"));
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          token: otpToken.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      await checkAuth();
+      closeAuthModal();
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP code action for registration or recovery flows.
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const endpoint =
+        authModalView === "verify-register"
+          ? "/api/auth/register"
+          : "/api/auth/forgot-password";
+
+      const payload =
+        authModalView === "verify-register"
+          ? { email: email.trim(), password: password || "TempPassword123!", locale }
+          : { email: email.trim(), locale };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(getLocalizedError(data.errorCode, data.error));
+        return;
+      }
+
+      setResendCooldown(60);
+      setSuccessMsg("A fresh 6-digit code has been sent.");
+    } catch {
+      setErrorMsg(t("err_network"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeAuthModal();
+      }}
+    >
+      {/* Modal Container */}
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-md bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
+      >
+        {/* Subtle Ambient Radial Glow */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-36 pointer-events-none" />
+
+        {/* Modal Close Button */}
+        <button
+          type="button"
+          onClick={closeAuthModal}
+          className="absolute top-4 right-4 text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Brand Header */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <img
+            src="/favicon.ico"
+            alt="SkillVerse Auth"
+            width={22}
+            height={22}
+            className="rounded-md shrink-0 object-contain"
+          />
+          <span className="text-sm font-bold text-text-primary tracking-tight">SkillVerse Auth</span>
+        </div>
+
+        {/* View 1: Sign In View */}
+        {authModalView === "login" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("signin_title")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mb-6 leading-relaxed">{t("signin_desc")}</p>
+
+            {/* Error & Success Alerts */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-negative/10 border border-negative/30 text-negative text-xs leading-relaxed">
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("email_label")}
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("email_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("password_label")}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("password_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              {/* Remember Me Option and Forgot Password Link */}
+              <div className="flex items-center justify-between pt-0.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-border-subtle bg-bg-secondary text-accent accent-accent focus:ring-0 focus:outline-none cursor-pointer"
+                  />
+                  <span className="text-xs text-text-secondary group-hover:text-text-primary transition-colors font-medium">
+                    {t("remember_me")}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAuthModalView("forgot")}
+                  className="text-xs text-accent hover:underline border-none bg-transparent cursor-pointer p-0 font-medium"
+                >
+                  {t("forgot_link")}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 disabled:opacity-50 mt-2 font-mono"
+              >
+                {loading ? t("signing_in") : t("btn_signin")}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border-subtle text-center text-xs text-text-muted">
+              {t("no_account")}{" "}
+              <button
+                type="button"
+                onClick={() => setAuthModalView("register")}
+                className="text-accent hover:underline font-semibold border-none bg-transparent cursor-pointer p-0"
+              >
+                {t("register_link")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* View 2: Registration View */}
+        {authModalView === "register" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("register_title")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mb-6 leading-relaxed">{t("register_desc")}</p>
+
+            {/* Error Alert */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-negative/10 border border-negative/30 text-negative text-xs leading-relaxed">
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("email_label")}
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("email_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("password_label")}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("password_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("confirm_password_label")}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t("password_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 disabled:opacity-50 mt-2 font-mono"
+              >
+                {loading ? t("processing") : t("btn_register")}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border-subtle text-center text-xs text-text-muted">
+              {t("have_account")}{" "}
+              <button
+                type="button"
+                onClick={() => setAuthModalView("login")}
+                className="text-accent hover:underline font-semibold border-none bg-transparent cursor-pointer p-0"
+              >
+                {t("signin_link")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* View 3: Registration 6-Digit OTP Verification View */}
+        {authModalView === "verify-register" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("verify_register_title")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mb-1 leading-relaxed">{t("verify_register_desc")}</p>
+            <p className="text-xs font-mono text-accent mb-6 truncate">{email}</p>
+
+            {/* Error & Success Alerts */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-negative/10 border border-negative/30 text-negative text-xs leading-relaxed">
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-positive/10 border border-positive/30 text-positive text-xs leading-relaxed">
+                {successMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyRegisterOtp} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("otp_label")}
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={otpToken}
+                  onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  className="w-full px-3.5 py-3 text-center tracking-[0.4em] font-mono text-lg bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-accent placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otpToken.length !== 6}
+                className="w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 disabled:opacity-50 font-mono"
+              >
+                {loading ? t("processing") : t("btn_verify")}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border-subtle flex items-center justify-between text-xs text-text-muted">
+              <button
+                type="button"
+                onClick={() => setAuthModalView("register")}
+                className="hover:text-text-primary border-none bg-transparent cursor-pointer p-0"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={resendCooldown > 0 || loading}
+                className="text-accent hover:underline font-mono border-none bg-transparent cursor-pointer p-0 disabled:text-text-muted disabled:no-underline"
+              >
+                {resendCooldown > 0
+                  ? t("resend_countdown", { seconds: resendCooldown })
+                  : t("resend_code")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* View 4: Forgot Password Request View */}
+        {authModalView === "forgot" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("forgot_title")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mb-6 leading-relaxed">{t("forgot_desc")}</p>
+
+            {/* Error Alert */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-negative/10 border border-negative/30 text-negative text-xs leading-relaxed">
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("email_label")}
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("email_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 disabled:opacity-50 font-mono"
+              >
+                {loading ? t("processing") : t("btn_send_code")}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border-subtle text-center text-xs text-text-muted">
+              <button
+                type="button"
+                onClick={() => setAuthModalView("login")}
+                className="text-accent hover:underline font-semibold border-none bg-transparent cursor-pointer p-0"
+              >
+                ← {t("signin_link")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* View 5: Verify Recovery OTP & Reset Password View */}
+        {authModalView === "verify-forgot" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("verify_forgot_title")}</h2>
+            <p className="text-xs sm:text-sm text-text-secondary mb-1 leading-relaxed">{t("verify_forgot_desc")}</p>
+            <p className="text-xs font-mono text-accent mb-6 truncate">{email}</p>
+
+            {/* Error & Success Alerts */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-negative/10 border border-negative/30 text-negative text-xs leading-relaxed">
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div className="mb-4 p-3 rounded-lg bg-positive/10 border border-positive/30 text-positive text-xs leading-relaxed">
+                {successMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("otp_label")}
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={otpToken}
+                  onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  className="w-full px-3.5 py-2.5 text-center tracking-[0.4em] font-mono text-base bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-accent placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("new_password_label")}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={t("password_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-mono">
+                  {t("confirm_password_label")}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t("password_placeholder")}
+                  className="w-full px-3.5 py-2.5 bg-bg-secondary/70 border border-border-subtle focus:border-accent rounded-xl text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otpToken.length !== 6}
+                className="w-full py-3 px-4 text-xs font-semibold uppercase tracking-wider bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 disabled:opacity-50 font-mono"
+              >
+                {loading ? t("processing") : t("btn_reset_password")}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border-subtle flex items-center justify-between text-xs text-text-muted">
+              <button
+                type="button"
+                onClick={() => setAuthModalView("forgot")}
+                className="hover:text-text-primary border-none bg-transparent cursor-pointer p-0"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={resendCooldown > 0 || loading}
+                className="text-accent hover:underline font-mono border-none bg-transparent cursor-pointer p-0 disabled:text-text-muted disabled:no-underline"
+              >
+                {resendCooldown > 0
+                  ? t("resend_countdown", { seconds: resendCooldown })
+                  : t("resend_code")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

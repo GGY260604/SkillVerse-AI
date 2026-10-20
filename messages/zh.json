@@ -55,6 +55,28 @@
     "subtitle": "他人与你共享的计划",
     "coming_soon": "共享计划功能正在开发中。"
   },
+  "status": {
+    "loading": {
+      "title": "正在加载智能数据",
+      "subtitle": "正在同步劳动力市场信号与技能图谱..."
+    },
+    "not_found": {
+      "code": "404",
+      "badge": "PAGE NOT FOUND // 0x404",
+      "title": "页面迷失在技能星系中",
+      "description": "抱歉，您访问的页面不存在或已被迁移。您可以返回首页探索最新的 AI 转型计划与劳动力洞察。",
+      "btn_home": "返回首页",
+      "btn_back": "返回上一页"
+    },
+    "error": {
+      "code": "500",
+      "badge": "SYSTEM ERROR // 0x500",
+      "title": "遇到意外错误",
+      "description": "系统在处理您的请求时遭遇了临时故障。您可以尝试重新加载，或返回首页。",
+      "btn_retry": "重新尝试",
+      "btn_home": "返回首页"
+    }
+  },
   "other": {
     "nav": {
       "home": "首页",
@@ -76,7 +98,50 @@
       "login_required": "需要登录",
       "login_required_desc": "请登录以访问此页面。",
       "go_home": "返回首页",
-      "login_to_continue": "登录以继续"
+      "login_to_continue": "登录以继续",
+      "signin_title": "欢迎回来",
+      "signin_desc": "使用您的邮箱和密码登录 SkillVerse 平台",
+      "register_title": "创建账户",
+      "register_desc": "加入 SkillVerse，开启您的 AI 技能转型之旅",
+      "forgot_title": "找回密码",
+      "forgot_desc": "输入您的注册邮箱以接收 6 位数验证码",
+      "verify_register_title": "邮箱验证",
+      "verify_register_desc": "请输入已发送至您邮箱的 6 位数验证码",
+      "verify_forgot_title": "设置新密码",
+      "verify_forgot_desc": "输入 6 位数恢复验证码并设置您的全新密码",
+      "email_label": "电子邮箱",
+      "email_placeholder": "name@example.com",
+      "password_label": "密码",
+      "password_placeholder": "••••••••",
+      "confirm_password_label": "确认密码",
+      "new_password_label": "新密码",
+      "otp_label": "6 位数验证码",
+      "otp_placeholder": "123456",
+      "btn_signin": "登录",
+      "btn_register": "注册并发送验证码",
+      "btn_verify": "验证并完成",
+      "btn_send_code": "发送 6 位数验证码",
+      "btn_reset_password": "更新密码并登录",
+      "forgot_link": "忘记密码？",
+      "remember_me": "记住我",
+      "have_account": "已有账号？",
+      "no_account": "还没有账号？",
+      "register_link": "前往注册",
+      "signin_link": "前往登录",
+      "resend_code": "重新发送",
+      "resend_countdown": "{seconds} 秒后重新发送",
+      "code_sent": "6 位数验证码已发送至",
+      "signing_in": "登录中...",
+      "processing": "处理中...",
+      "err_invalid_credentials": "电子邮箱或密码错误，请检查您的输入。",
+      "err_email_not_confirmed": "该邮箱尚未完成验证，请查收邮箱中的验证码。",
+      "err_user_already_exists": "该电子邮箱已被注册，请直接登录。",
+      "err_password_mismatch": "两次输入的密码不一致。",
+      "err_password_too_short": "密码长度必须至少为 6 位字符。",
+      "err_invalid_otp": "6 位数验证码无效或已过期，请重试。",
+      "err_network": "网络连接异常，请检查网络后重试。",
+      "err_default": "发生意外错误，请稍后重试。",
+      "err_email_required": "请输入电子邮箱地址。"
     }
   }
 }
