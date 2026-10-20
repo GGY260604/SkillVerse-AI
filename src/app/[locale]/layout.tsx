@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
+import ProfileModal from "@/components/auth/ProfileModal";
 import { AuthProvider } from "@/context/AuthContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
@@ -77,6 +78,9 @@ export default async function LocaleLayout({
 
               {/* Global Auth Overlay Modal */}
               <AuthModal />
+
+              {/* Global Profile Overlay Modal */}
+              <ProfileModal />
             </AuthProvider>
           </Suspense>
         </NextIntlClientProvider>

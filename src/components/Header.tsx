@@ -23,9 +23,8 @@ export default function Header() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  const { user, isLoggedIn, openAuthModal, logout } = useAuth();
+  const { user, isLoggedIn, openAuthModal, openProfileModal, logout } = useAuth();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -122,34 +121,35 @@ export default function Header() {
               ))}
             </div>
 
-            {/* Login / Profile Button */}
+            {/* Login / Profile Avatar & Quick Logout Controls */}
             {isLoggedIn ? (
-              <div className="relative">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-transform hover:scale-105"
+                  onClick={openProfileModal}
+                  aria-label={t("profile")}
+                  title={t("profile")}
+                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
                 >
                   {user?.email?.charAt(0).toUpperCase() || "U"}
                 </button>
 
-                {/* Profile Dropdown Menu */}
-                {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-bg-card/95 backdrop-blur-xl border border-border-subtle rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
-                    <p className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1">Signed in as</p>
-                    <p className="text-xs font-semibold text-text-primary truncate mb-3">{user?.email}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileDropdownOpen(false);
-                        logout();
-                      }}
-                      className="w-full py-2 px-3 text-xs font-semibold text-negative hover:bg-negative/10 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-left font-mono"
-                    >
-                      {t("logout")}
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={logout}
+                  aria-label={t("logout")}
+                  title={t("logout")}
+                  className="w-9 h-9 rounded-full bg-bg-card hover:bg-negative/15 border border-border-subtle hover:border-negative/40 text-text-muted hover:text-negative flex items-center justify-center cursor-pointer transition-all duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </button>
               </div>
             ) : (
               <button
@@ -297,11 +297,32 @@ export default function Header() {
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
+                  openProfileModal();
+                }}
+                className="w-full py-2.5 text-xs font-semibold text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>{t("profile")}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
                   logout();
                 }}
-                className="w-full py-2.5 text-xs font-semibold text-negative hover:bg-negative/10 border border-negative/30 rounded-xl bg-transparent cursor-pointer transition-all font-mono"
+                className="w-full py-2.5 text-xs font-semibold text-negative hover:bg-negative/10 border border-negative/30 rounded-xl bg-transparent cursor-pointer transition-all font-mono flex items-center justify-center gap-2"
               >
-                {t("logout")}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                <span>{t("logout")}</span>
               </button>
             </div>
           ) : (

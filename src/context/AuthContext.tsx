@@ -22,9 +22,12 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthModalOpen: boolean;
   authModalView: AuthModalView;
+  isProfileModalOpen: boolean;
   pendingEmail: string;
   openAuthModal: (view?: AuthModalView, email?: string) => void;
   closeAuthModal: () => void;
+  openProfileModal: () => void;
+  closeProfileModal: () => void;
   setAuthModalView: (view: AuthModalView) => void;
   setPendingEmail: (email: string) => void;
   checkAuth: () => Promise<boolean>;
@@ -42,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>("login");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -96,6 +100,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthModalOpen(false);
   }, []);
 
+  // Open profile modal.
+  const openProfileModal = useCallback(() => {
+    setIsProfileModalOpen(true);
+  }, []);
+
+  // Close profile modal.
+  const closeProfileModal = useCallback(() => {
+    setIsProfileModalOpen(false);
+  }, []);
+
   // Sign out user session and clear active cookies.
   const logout = useCallback(async () => {
     try {
@@ -118,8 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthModalOpen,
         authModalView,
         pendingEmail,
+        isProfileModalOpen,
         openAuthModal,
         closeAuthModal,
+        openProfileModal,
+        closeProfileModal,
         setAuthModalView,
         setPendingEmail,
         checkAuth,
