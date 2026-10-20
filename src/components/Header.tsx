@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/Logo";
 
 // Supported Languages Configuration
 // Define available locales and visual labels for the header language switcher.
@@ -24,7 +25,7 @@ export default function Header() {
   const [isPending, startTransition] = useTransition();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const { user, isLoggedIn, openAuthModal, openProfileModal, logout } = useAuth();
+  const { user, isLoggedIn, isLoading, openAuthModal, openProfileModal, logout } = useAuth();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -59,10 +60,8 @@ export default function Header() {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
           {/* Brand & Logo */}
-          <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <img src="/favicon.ico" width={24} height={24} alt="SkillVerse AI" />
-            <span className="text-lg font-bold text-text-primary tracking-tight">SkillVerse AI</span>
-            <span className="text-[8px] font-semibold text-accent bg-accent-glow px-2 py-0.5 mr-auto rounded uppercase">Beta</span>
+          <Link href="/" className="no-underline">
+            <Logo showBeta size="lg" />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -122,7 +121,9 @@ export default function Header() {
             </div>
 
             {/* Login / Profile Avatar & Quick Logout Controls */}
-            {isLoggedIn ? (
+            {isLoading ? (
+              <div className="h-9 w-20 rounded-lg bg-bg-card/40 animate-pulse border border-border-subtle/50" />
+            ) : isLoggedIn ? (
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -199,10 +200,9 @@ export default function Header() {
         <div>
           {/* Sidebar Header */}
           <div className="flex items-center justify-between pb-5 border-b border-border-subtle mb-6">
-            <div className="flex items-center gap-2">
-              <img src="/favicon.ico" width={22} height={22} alt="SkillVerse AI" />
-              <span className="text-base font-bold text-text-primary tracking-tight">SkillVerse AI</span>
-            </div>
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="no-underline">
+              <Logo size="md" />
+            </Link>
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
@@ -283,7 +283,9 @@ export default function Header() {
           </div>
 
           {/* Auth Controls in Mobile Drawer */}
-          {isLoggedIn ? (
+          {isLoading ? (
+            <div className="w-full h-12 rounded-xl bg-bg-card/40 animate-pulse border border-border-subtle/50" />
+          ) : isLoggedIn ? (
             <div className="flex items-center gap-2">
               {/* Profile Button with (S) Avatar */}
               <button

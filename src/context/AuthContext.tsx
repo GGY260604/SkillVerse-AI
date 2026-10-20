@@ -37,11 +37,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_CACHE_KEY = "skillverse_auth_cache";
+
 // Authentication Provider Component
 // Manages global user authentication state, session validation, and auth modal visibility.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize user from session cache to preserve login across locale transitions.
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem(AUTH_CACHE_KEY);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return null;
+  });
+
+  // Start with loading true only when no cached session exists.
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return !sessionStorage.getItem(AUTH_CACHE_KEY);
+      } catch {}
+    }
+    return true;
+  });
+
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>("login");
   const [pendingEmail, setPendingEmail] = useState("");
@@ -58,13 +79,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (data.authenticated && data.user) {
           setUser(data.user);
+          if (typeof window !== "undefined") {
+            try {
+              sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(data.user));
+            } catch {}
+          }
           return true;
         }
       }
       setUser(null);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem(AUTH_CACHE_KEY);
+        } catch {}
+      }
       return false;
     } catch {
       setUser(null);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem(AUTH_CACHE_KEY);
+        } catch {}
+      }
       return false;
     } finally {
       setIsLoading(false);
@@ -116,12 +152,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       setUser(null);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem(AUTH_CACHE_KEY);
+        } catch {}
+      }
       // Redirect to home page when logging out from a protected route.
       if (pathname.includes("/analysis") || pathname.includes("/shared")) {
         window.location.href = "/";
       }
     }
   }, [pathname]);
+
+  // Helper to update user and cache synchronously.
+  const handleSetUser = useCallback((newUser: AuthUser | null) => {
+    setUser(newUser);
+    if (typeof window !== "undefined") {
+      try {
+        if (newUser) {
+          sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(newUser));
+        } else {
+          sessionStorage.removeItem(AUTH_CACHE_KEY);
+        }
+      } catch {}
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -141,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPendingEmail,
         checkAuth,
         logout,
-        setUser,
+        setUser: handleSetUser,
       }}
     >
       {children}

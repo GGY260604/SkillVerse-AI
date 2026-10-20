@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth, AuthModalView } from "@/context/AuthContext";
+import Logo from "@/components/Logo";
 
 // Authentication Overlay Modal Component
 // Supports Email/Password Login, Registration with 6-digit OTP, and Password Recovery with 6-digit OTP.
@@ -384,15 +385,8 @@ export default function AuthModal() {
         </button>
 
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 mb-4">
-          <img
-            src="/favicon.ico"
-            alt="SkillVerse Auth"
-            width={22}
-            height={22}
-            className="rounded-md shrink-0 object-contain"
-          />
-          <span className="text-sm font-bold text-text-primary tracking-tight">SkillVerse Auth</span>
+        <div className="mb-4">
+          <Logo size="md" />
         </div>
 
         {/* View 1: Sign In View */}

@@ -1,56 +1,85 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { routing } from "@/lib/i18n/routing";
+"use client";
 
-// Disable instant app shell prerendering to allow direct dynamic route parameter access.
-export const instant = false;
+import { useSearchParams } from "next/navigation";
+import EmptyPlanState from "@/components/analysis/EmptyPlanState";
+import ExistPlanState from "@/components/analysis/ExistPlanState";
 
-// Static Locale Route Generation
-// Pre-render analysis pages for all supported language locales at build time.
-export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
-}
+// =================================================================================================
+// Analysis Page UI Flow and State Architecture Overview
+// =================================================================================================
+// This overview documents the complete UI state transitions, modal workflows, and navigation logic.
+// While future backend API integrations may alter specific data fields, these core UI interactions will remain intact.
+//
+// 1. Top-Level Page State
+// - Empty Plan State:
+//   * Active when no career roadmap exists for the current session.
+//   * Mounts the EmptyPlanState component with centered prompt and call to action.
+//   * Clicking the Add New Plan button invokes openPathwaySelect() to launch the pathway selection modal.
+// - Exist Plan State:
+//   * Active when an active or historical roadmap is present.
+//   * Mounts the ExistPlanState component to display the overview dashboard or detailed inspection views.
+//
+// 2. Global Modal and Pathway Selection Flow
+// - Managed globally through PlanModalContext and mounted in PlanModals.
+// - Pathway Select Modal:
+//   * Offers two diagnostic paths: Option 1 (CV Upload) and Option 2 (Guided Diagnostic Wizard).
+// - Upload Option Modal:
+//   * Supports resume file drag-and-drop with staged parsing animation.
+//   * The back button in the header returns the user to the pathway selection modal.
+// - Wizard Option Modal:
+//   * Provides a four-step diagnostic questionnaire spanning background, skills, career target, and SDG alignment.
+//   * The back button on step one returns the user to the pathway selection modal.
+// - Modal Trigger Points:
+//   * Add New Plan button inside EmptyPlanState.
+//   * Edit Plan and Share Plan action buttons in the ExistPlanState header (hidden when viewing historical plan details).
+//   * Navigation entry points from the homepage hero and navigation bars.
+//
+// 3. Two-Tier Plan Inspection System
+// - Governed by the local selectedPlan state inside ExistPlanState.
+// - Overview Mode (selectedPlan is null):
+//   * Current Plan Section:
+//     - Highlights the primary active career roadmap with vibrant accent colors and match metrics.
+//     - Clicking the current plan card sets selectedPlan to CURRENT_PLAN and enters detail mode.
+//   * Historical Plans Archive:
+//     - Renders archived plans in subdued, translucent card styles.
+//     - Shows only the latest archived plan by default, with an expand/collapse toggle when more exist.
+//     - Clicking any historical card sets selectedPlan to that specific history plan and enters detail mode.
+// - Detail Mode (selectedPlan is not null):
+//   * Displays a prominent back button to the left of the page title to return to overview mode.
+//   * Mounts the PlanDetailView component with deep telemetry, gap analysis, and milestone roadmaps.
+//   * When viewing the current plan, the Edit Plan and Share Plan buttons remain accessible and artifact verification is interactive.
+//   * When viewing historical plans, the Edit Plan and Share Plan buttons are hidden and the view is rendered in full read-only grayscale.
+// =================================================================================================
+
+// Temporary Plan Existence Flag for Testing and Prototyping
+// Toggle this flag or append ?plan=true or ?plan=false to the URL to simulate different states.
+export const HAS_PLAN: boolean = true;
 
 // Career Analysis Dashboard Page
-// Display personalized career assessment, current plan progress, and historical paths.
-export default async function AnalysisPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  // Await locale parameter from dynamic route.
-  const { locale } = await params;
 
-  // Bind locale for static generation.
-  setRequestLocale(locale);
+// Handles conditional presentation between EmptyPlanState and ExistPlanState.
+export default function AnalysisPage() {
+  const searchParams = useSearchParams();
 
-  // Fetch translation strings for analysis section.
-  const t = await getTranslations("analysis");
+  // Check URL query override or fallback to HAS_PLAN constant.
+  const planQuery = searchParams.get("plan");
+  const planExists =
+    planQuery === "false" ? false : planQuery === "true" ? true : HAS_PLAN;
 
-  return (
-    <div className="animate-fade-in-up max-w-7xl mx-auto py-12 px-6 w-full">
-      {/* Page Title */}
-      <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-8">{t("title")}</h1>
 
-      {/* Plan Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Current Plan Card */}
-        <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
-          <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
-            📋
-          </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-3">{t("current_plan")}</h2>
-          <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
-        </div>
-
-        {/* History Plan Card */}
-        <div className="glass-card rounded-2xl p-8 hover:border-border-accent hover:bg-bg-card-hover/90 transition-all duration-300">
-          <div className="w-12 h-12 rounded-xl bg-accent-glow border border-border-accent/40 flex items-center justify-center text-2xl mb-5">
-            🕐
-          </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-3">{t("history_plan")}</h2>
-          <p className="text-sm text-text-muted italic">{t("coming_soon")}</p>
-        </div>
+  // Render blank state if no plan exists.
+  if (!planExists) {
+    return (
+      <div className="animate-fade-in max-w-7xl mx-auto py-12 px-4 sm:px-6 w-full flex-1 flex flex-col justify-center">
+        <EmptyPlanState />
       </div>
+    );
+  }
+
+  // Render full dashboard when plan exists.
+  return (
+    <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
+      <ExistPlanState />
     </div>
   );
 }

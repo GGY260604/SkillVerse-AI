@@ -41,14 +41,70 @@
       "wizard_desc": "No updated resume? Complete a structured diagnostic covering your current tooling, stack, and target career echelon.",
       "form_preview_title": "Guided Career Diagnostic Form",
       "form_preview_subtext": "4 Quick Sections • Domain, Stack & Target Echelon",
-      "btn_launch_wizard": "Fill Form & Start Assessment"
+      "btn_launch_wizard": "Fill Form & Start Assessment",
+      "file_ready": "Ready for Semantic Ingestion",
+      "remove_file": "Remove",
+      "btn_back": "Back",
+      "btn_close": "Close",
+      "btn_prev_step": "Prev",
+      "btn_next_step": "Next",
+      "btn_add_skill": "Add",
+      "analyzing_state": "Processing...",
+      "generating_state": "Generating...",
+      "btn_submit": "Submit"
     }
   },
   "analysis": {
-    "title": "Analysis Dashboard",
-    "current_plan": "Current Plan",
-    "history_plan": "History Plan",
-    "coming_soon": "Analysis features are under development."
+    "header": {
+      "title": "Career Analysis Dashboard",
+      "subtitle": "Personalized workforce intelligence, skills gap diagnostics, and grounded reskilling trajectories.",
+      "current_plan": "Current Plan",
+      "history_plan": "History Plan",
+      "edit_plan": "Edit Plan",
+      "share_plan": "Share Plan",
+      "back_to_overview": "← Back to Plans Overview",
+      "coming_soon": "Analysis features are under development."
+    },
+    "empty": {
+      "title": "No Career Plans Available Currently",
+      "desc": "You haven't generated an AI transformation roadmap yet. Start your diagnostic to unlock personalized reskilling pathways.",
+      "btn_add_plan": "+ Add New Plan"
+    },
+    "current": {
+      "badge": "CURRENT ACTIVE ROADMAP",
+      "match_score": "Match Score",
+      "scenario": "Macro Scenario",
+      "sdg_alignment": "SDG Alignment",
+      "matched_strengths": "Matched Strengths",
+      "skills_gap": "Skills to Acquire",
+      "at_risk_skills": "Automation Alerts",
+      "roadmap_timeline": "3-Phase Reskilling Roadmap",
+      "view_details": "View Full Details",
+      "collapse_details": "Collapse Details"
+    },
+    "history": {
+      "badge": "SUPERSEDED • ARCHIVED",
+      "note": "This plan was discarded in favor of a newer roadmap, but is retained for historical skill telemetry.",
+      "view_details": "View Historical Details",
+      "collapse_details": "Collapse Details",
+      "view_more": "View More Historical Plans",
+      "collapse_history": "Collapse Historical Plans",
+      "locked_banner_title": "Archived Roadmap • Permanently Sealed",
+      "locked_banner_desc": "This roadmap has been superseded and is preserved as an immutable telemetry snapshot. All operations, file uploads, and AI verifications are disabled.",
+      "locked_phase_label": "Sealed Historical Node (Read-Only)"
+    },
+    "verification": {
+      "phase_tasks": "Required Phase Milestones",
+      "upload_proof": "Upload Proof for AI Verification",
+      "upload_hint": "Supports PDF certificate, code repository (.zip), or image proof (up to 15MB)",
+      "btn_verify": "Submit for AI Verification",
+      "verifying": "AI Verifying Competencies...",
+      "passed": "AI Verification Passed • Milestone Completed",
+      "completed_badge": "Completed",
+      "in_progress_badge": "In Progress",
+      "pending_badge": "Pending Verification",
+      "audit_score": "Verification Score"
+    }
   },
   "shared": {
     "title": "Shared Plans",

@@ -41,14 +41,70 @@
       "wizard_desc": "Tiada resume terkini? Lengkapkan diagnostik berstruktur yang merangkumi peralatan, timbunan, dan sasaran kerjaya anda.",
       "form_preview_title": "Borang Diagnostik Kerjaya Berpandu",
       "form_preview_subtext": "4 Bahagian Pantas • Domain, Tindanan & Sasaran Echelon",
-      "btn_launch_wizard": "Isi Borang & Mulakan Penilaian"
+      "btn_launch_wizard": "Isi Borang & Mulakan Penilaian",
+      "file_ready": "Sedia untuk Penyerapan Semantik",
+      "remove_file": "Keluarkan",
+      "btn_back": "Kembali",
+      "btn_close": "Tutup",
+      "btn_prev_step": "Sebelumnya",
+      "btn_next_step": "Seterusnya",
+      "btn_add_skill": "Tambah",
+      "analyzing_state": "Memproses...",
+      "generating_state": "Menjana...",
+      "btn_submit": "Hantar"
     }
   },
   "analysis": {
-    "title": "Papan Pemuka Analisis",
-    "current_plan": "Pelan Semasa",
-    "history_plan": "Pelan Sejarah",
-    "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
+    "header": {
+      "title": "Papan Pemuka Analisis Kerjaya",
+      "subtitle": "Kecerdasan tenaga kerja diperibadikan, diagnostik jurang kemahiran, dan trajektori peningkatan kemahiran berasas.",
+      "current_plan": "Pelan Semasa",
+      "history_plan": "Pelan Sejarah",
+      "edit_plan": "Sunting Pelan",
+      "share_plan": "Kongsi Pelan",
+      "back_to_overview": "← Kembali ke Gambaran Keseluruhan",
+      "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
+    },
+    "empty": {
+      "title": "Tiada Sebarang Pelan Buat Masa Ini",
+      "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",
+      "btn_add_plan": "+ Tambah Pelan Baharu"
+    },
+    "current": {
+      "badge": "PELAN AKTIF SEMASA",
+      "match_score": "Skor Padanan",
+      "scenario": "Senario Makro",
+      "sdg_alignment": "Penjajaran SDG PBB",
+      "matched_strengths": "Kekuatan Sepadan",
+      "skills_gap": "Kemahiran Perlu Diperoleh",
+      "at_risk_skills": "Amaran Automasi Berisiko",
+      "roadmap_timeline": "Pelan Hala Tuju 3 Fasa",
+      "view_details": "Lihat Butiran Penuh",
+      "collapse_details": "Tutup Butiran"
+    },
+    "history": {
+      "badge": "DITINGGALKAN • DIARKIBKAN",
+      "note": "Pelan ini telah digantikan dan ditinggalkan, namun sistem tetap mengekalkan rekod untuk audit trajektori kemahiran.",
+      "view_details": "Lihat Butiran Sejarah",
+      "collapse_details": "Tutup Butiran",
+      "view_more": "Lihat Lagi Pelan Sejarah",
+      "collapse_history": "Tutup Pelan Sejarah",
+      "locked_banner_title": "Pelan Sejarah • Dikunci Sepenuhnya",
+      "locked_banner_desc": "Pelan ini telah digantikan dan disimpan sebagai snapshot telemetri yang tidak boleh diubah. Semua operasi, muat naik fail, dan pengesahan AI telah disekat.",
+      "locked_phase_label": "Nod Sejarah Dikunci (Paparan Sahaja)"
+    },
+    "verification": {
+      "phase_tasks": "Tugasan & Perkara Perlu Dilakukan",
+      "upload_proof": "Muat Naik Bukti untuk Pengesahan AI",
+      "upload_hint": "Menyokong sijil PDF, fail kod (.zip) atau imbasan bukti (sehingga 15MB)",
+      "btn_verify": "Hantar untuk Pengesahan AI",
+      "verifying": "AI Sedang Mengesahkan Kompetensi...",
+      "passed": "Pengesahan AI Lulus • Nod Telah Ditandakan Selesai",
+      "completed_badge": "Selesai",
+      "in_progress_badge": "Sedang Berjalan",
+      "pending_badge": "Menunggu Pengesahan",
+      "audit_score": "Skor Pengesahan AI"
+    }
   },
   "shared": {
     "title": "Pelan Dikongsi",

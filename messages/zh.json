@@ -41,14 +41,70 @@
       "wizard_desc": "暂无最新简历？通过结构化诊断涵盖您当前的工具栈、技术架构及目标职业层级。",
       "form_preview_title": "引导式职业诊断问卷",
       "form_preview_subtext": "4 个快速小节 • 涵盖技术栈、经验与晋升目标",
-      "btn_launch_wizard": "填写问卷并启动评估"
+      "btn_launch_wizard": "填写问卷并启动评估",
+      "file_ready": "准备就绪，可启动语义分析",
+      "remove_file": "移除",
+      "btn_back": "返回",
+      "btn_close": "关闭",
+      "btn_prev_step": "上一步",
+      "btn_next_step": "下一步",
+      "btn_add_skill": "添加",
+      "analyzing_state": "处理中...",
+      "generating_state": "生成中...",
+      "btn_submit": "提交"
     }
   },
   "analysis": {
-    "title": "分析仪表板",
-    "current_plan": "当前计划",
-    "history_plan": "历史计划",
-    "coming_soon": "分析功能正在开发中。"
+    "header": {
+      "title": "职业规划分析仪表板",
+      "subtitle": "个性化劳动力智能、技能差距诊断与扎实的技能重塑成长轨迹。",
+      "current_plan": "当前生效规划",
+      "history_plan": "历史归档规划",
+      "edit_plan": "编辑规划",
+      "share_plan": "分享规划",
+      "back_to_overview": "← 返回规划总览",
+      "coming_soon": "分析功能正在开发中。"
+    },
+    "empty": {
+      "title": "目前没有任何规划",
+      "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",
+      "btn_add_plan": "+ 添加新的规划"
+    },
+    "current": {
+      "badge": "当前活跃规划",
+      "match_score": "岗位匹配度",
+      "scenario": "宏观情景",
+      "sdg_alignment": "联合国 SDG 对齐",
+      "matched_strengths": "已掌握核心优势",
+      "skills_gap": "待补充技能缺口",
+      "at_risk_skills": "高自动化风险技能",
+      "roadmap_timeline": "3阶段能力重塑路线图",
+      "view_details": "查看完整详情",
+      "collapse_details": "收起详情"
+    },
+    "history": {
+      "badge": "已废弃 • 历史归档",
+      "note": "该计划已被新规划取代并抛弃，但系统仍为您完整保留历史数据供成长轨迹审计。",
+      "view_details": "查看历史详情",
+      "collapse_details": "收起详情",
+      "view_more": "查看更多历史归档规划",
+      "collapse_history": "收起历史规划",
+      "locked_banner_title": "历史规划 • 已完全封锁锁定",
+      "locked_banner_desc": "该规划已被新规划取代并作为不可变成长快照保留。所有操作、文件上传与 AI 验证已全部封锁禁用。",
+      "locked_phase_label": "已封锁历史节点（只读）"
+    },
+    "verification": {
+      "phase_tasks": "本阶段需要完成的事项",
+      "upload_proof": "上传成果凭证给 AI 验证",
+      "upload_hint": "支持证书 PDF、代码压缩包 (.zip) 或扫描凭证（最大 15MB）",
+      "btn_verify": "提交 AI 智能审核",
+      "verifying": "AI 正在审核技能特征与成果...",
+      "passed": "AI 验证通过 • 阶段节点已记录为完成",
+      "completed_badge": "已完成",
+      "in_progress_badge": "进行中",
+      "pending_badge": "等待验证",
+      "audit_score": "AI 审核契合度"
+    }
   },
   "shared": {
     "title": "共享计划",

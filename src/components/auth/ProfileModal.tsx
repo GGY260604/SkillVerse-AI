@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/Logo";
 
 // Profile Overlay Modal Component
 // Provide dedicated user profile workspace overlay window.
@@ -41,52 +42,46 @@ export default function ProfileModal() {
         {/* Subtle Ambient Radial Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-36 pointer-events-none" />
 
-        {/* Modal Top Actions: Logout & Close Button */}
-        <div className="absolute top-4 right-4 flex items-center gap-1 z-10">
-          <button
-            type="button"
-            onClick={() => {
-              closeProfileModal();
-              logout();
-            }}
-            className="text-text-muted hover:text-negative p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
-            title={t("logout")}
-            aria-label={t("logout")}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </button>
+        {/* Top Controls: Brand & Actions Bar (Separated by border-b line) */}
+        <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6">
+          {/* Brand Header (Top-Left) */}
+          <Logo size="sm" />
 
-          <button
-            type="button"
-            onClick={closeProfileModal}
-            className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
-            aria-label="Close"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+          {/* Modal Top Actions: Logout & Close Button (Top-Right) */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                closeProfileModal();
+                logout();
+              }}
+              className="text-text-muted hover:text-negative p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
+              title={t("logout")}
+              aria-label={t("logout")}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+            </button>
 
-        {/* Brand Header */}
-        <div className="flex items-center gap-2.5 mb-4">
-          <img
-            src="/favicon.ico"
-            alt="SkillVerse Profile"
-            width={22}
-            height={22}
-            className="rounded-md shrink-0 object-contain"
-          />
-          <span className="text-sm font-bold text-text-primary tracking-tight">
-            SkillVerse Profile
-          </span>
+            <div className="h-4 w-px bg-border-subtle" />
+
+            <button
+              type="button"
+              onClick={closeProfileModal}
+              className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Title & Description */}

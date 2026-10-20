@@ -1,16 +1,21 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { usePlanModal } from "@/context/PlanModalContext";
 
 // AI Transformation Plan Component
 // Dual diagnostic selection cards triggering upcoming upload and form overlay windows.
 export default function TransformationPlan() {
   const t = useTranslations("home.plan");
+  const { openUploadOption, openWizardOption } = usePlanModal();
 
-  // Handle pathway selection trigger for future overlay window modal.
+  // Handle pathway selection trigger, auto-navigating to /analysis and opening option modal.
   const handleSelectPathway = (pathway: "upload" | "wizard") => {
-    // Placeholder trigger for overlay window modal integration.
-    console.log("Selected transformation pathway:", pathway);
+    if (pathway === "upload") {
+      openUploadOption();
+    } else {
+      openWizardOption();
+    }
   };
 
   // Split option tags into label prefix and highlight phrase to prevent mid-phrase line breaks.
@@ -31,8 +36,8 @@ export default function TransformationPlan() {
         <p className="text-sm sm:text-base text-text-secondary max-w-2xl mx-auto leading-relaxed">{t("subtitle")}</p>
       </div>
 
-      {/* Dual Options Grid */}
-      <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-6 sm:gap-8 items-stretch pb-4 lg:pb-0 snap-x snap-mandatory lg:snap-none scroll-smooth">
+      {/* Dual Options Grid - Headroom pt-3 prevents hover -translate-y-1 from clipping top border */}
+      <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-6 sm:gap-8 items-stretch pt-3 pb-4 lg:pt-3 lg:pb-3 -mt-3 snap-x snap-mandatory lg:snap-none scroll-smooth">
         {/* Option 01: CV Upload Mode Selection Card */}
         <div
           onClick={() => handleSelectPathway("upload")}
