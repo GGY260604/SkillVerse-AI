@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { GITHUB_REPO_URL, LICENSE_URL } from "@/constants/footer";
+import Logo from "@/components/Logo";
 
 // Footer Navigation & Copyright Component
 // Render platform brand identity, author attribution, open-source links, and legal notice.
@@ -16,16 +17,7 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pb-6 border-b border-border-subtle">
           {/* Brand & Authorship */}
           <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <img
-                src="/favicon.ico"
-                alt="SkillVerse AI Logo"
-                width={22}
-                height={22}
-                className="rounded-md shrink-0 object-contain"
-              />
-              <span className="text-sm font-bold text-text-primary tracking-tight">{t("copyright")}</span>
-            </div>
+            <Logo text={t("copyright")} size="md" />
 
             {/* Hackathon & Author Info */}
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-text-muted">

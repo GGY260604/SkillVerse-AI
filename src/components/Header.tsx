@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Logo from "@/components/Logo";
 
 // Supported Languages Configuration
 // Define available locales and visual labels for the header language switcher.
@@ -23,9 +24,8 @@ export default function Header() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  const { user, isLoggedIn, openAuthModal, logout } = useAuth();
+  const { user, isLoggedIn, isLoading, openAuthModal, openProfileModal, logout } = useAuth();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -60,10 +60,8 @@ export default function Header() {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
           {/* Brand & Logo */}
-          <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <img src="/favicon.ico" width={24} height={24} alt="SkillVerse AI" />
-            <span className="text-lg font-bold text-text-primary tracking-tight">SkillVerse AI</span>
-            <span className="text-[8px] font-semibold text-accent bg-accent-glow px-2 py-0.5 mr-auto rounded uppercase">Beta</span>
+          <Link href="/" className="no-underline">
+            <Logo showBeta size="lg" />
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -122,34 +120,37 @@ export default function Header() {
               ))}
             </div>
 
-            {/* Login / Profile Button */}
-            {isLoggedIn ? (
-              <div className="relative">
+            {/* Login / Profile Avatar & Quick Logout Controls */}
+            {isLoading ? (
+              <div className="h-9 w-20 rounded-lg bg-bg-card/40 animate-pulse border border-border-subtle/50" />
+            ) : isLoggedIn ? (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-transform hover:scale-105"
+                  onClick={openProfileModal}
+                  aria-label={t("profile")}
+                  title={t("profile")}
+                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
                 >
                   {user?.email?.charAt(0).toUpperCase() || "U"}
                 </button>
 
-                {/* Profile Dropdown Menu */}
-                {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-bg-card/95 backdrop-blur-xl border border-border-subtle rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
-                    <p className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1">Signed in as</p>
-                    <p className="text-xs font-semibold text-text-primary truncate mb-3">{user?.email}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileDropdownOpen(false);
-                        logout();
-                      }}
-                      className="w-full py-2 px-3 text-xs font-semibold text-negative hover:bg-negative/10 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-left font-mono"
-                    >
-                      {t("logout")}
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={logout}
+                  aria-label={t("logout")}
+                  title={t("logout")}
+                  className="w-9 h-9 rounded-full bg-bg-card hover:bg-negative/15 border border-border-subtle hover:border-negative/40 text-text-muted hover:text-negative flex items-center justify-center cursor-pointer transition-all duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </button>
               </div>
             ) : (
               <button
@@ -199,10 +200,9 @@ export default function Header() {
         <div>
           {/* Sidebar Header */}
           <div className="flex items-center justify-between pb-5 border-b border-border-subtle mb-6">
-            <div className="flex items-center gap-2">
-              <img src="/favicon.ico" width={22} height={22} alt="SkillVerse AI" />
-              <span className="text-base font-bold text-text-primary tracking-tight">SkillVerse AI</span>
-            </div>
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="no-underline">
+              <Logo size="md" />
+            </Link>
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
@@ -217,10 +217,10 @@ export default function Header() {
             <Link
               href="/"
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("home")}
@@ -231,10 +231,10 @@ export default function Header() {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/analysis");
               }}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/analysis")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("analysis")}
@@ -245,10 +245,10 @@ export default function Header() {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/shared");
               }}
-              className={`px-4 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider transition-all ${
+              className={`px-4 py-3 rounded-r-xl text-sm font-semibold uppercase tracking-wider transition-all border-l-2 ${
                 isActive("/shared")
-                  ? "bg-accent/15 text-accent border border-accent/30"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-card"
+                  ? "border-accent text-text-primary font-bold bg-transparent"
+                  : "border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-card"
               }`}
             >
               {t("shared")}
@@ -282,26 +282,48 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Auth Button */}
-          {isLoggedIn ? (
-            <div className="flex flex-col gap-2">
-              <div className="py-2.5 px-4 rounded-xl bg-bg-card border border-border-subtle flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary">
+          {/* Auth Controls in Mobile Drawer */}
+          {isLoading ? (
+            <div className="w-full h-12 rounded-xl bg-bg-card/40 animate-pulse border border-border-subtle/50" />
+          ) : isLoggedIn ? (
+            <div className="flex items-center gap-2">
+              {/* Profile Button with (S) Avatar */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  openProfileModal();
+                }}
+                className="flex-1 h-12 px-3 rounded-xl bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent text-text-primary flex items-center gap-2.5 min-w-0 cursor-pointer transition-all"
+              >
+                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shrink-0 shadow-[0_0_10px_var(--accent-glow)]">
                   {user?.email?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <div className="truncate flex-1">
-                  <span className="block text-xs font-semibold text-text-primary truncate">{user?.email}</span>
+                <div className="flex flex-col text-left min-w-0 flex-1">
+                  <span className="text-xs font-bold text-text-primary truncate">{t("profile")}</span>
+                  <span className="text-[10px] text-text-muted font-mono truncate">{user?.email}</span>
                 </div>
-              </div>
+              </button>
+
+              {/* Quick Logout Button */}
               <button
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   logout();
                 }}
-                className="w-full py-2.5 text-xs font-semibold text-negative hover:bg-negative/10 border border-negative/30 rounded-xl bg-transparent cursor-pointer transition-all font-mono"
+                aria-label={t("logout")}
+                title={t("logout")}
+                className="w-12 h-12 rounded-xl bg-bg-card hover:bg-negative/15 border border-border-subtle hover:border-negative/40 text-text-muted hover:text-negative flex items-center justify-center cursor-pointer transition-all shrink-0"
               >
-                {t("logout")}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
               </button>
             </div>
           ) : (

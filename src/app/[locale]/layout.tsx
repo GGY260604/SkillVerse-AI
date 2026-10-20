@@ -7,7 +7,10 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
+import ProfileModal from "@/components/auth/ProfileModal";
+import PlanModals from "@/components/analysis/options/PlanModals";
 import { AuthProvider } from "@/context/AuthContext";
+import { PlanModalProvider } from "@/context/PlanModalContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
@@ -66,17 +69,25 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages}>
           <Suspense fallback={<div className="min-h-screen bg-bg-primary" />}>
             <AuthProvider>
-              {/* Global Header Navigation */}
-              <Header />
+              <PlanModalProvider>
+                {/* Global Header Navigation */}
+                <Header />
 
-              {/* Main Content Area */}
-              <main className="flex-1 flex flex-col">{children}</main>
+                {/* Main Content Area */}
+                <main className="flex-1 flex flex-col">{children}</main>
 
-              {/* Global Footer */}
-              <Footer />
+                {/* Global Footer */}
+                <Footer />
 
-              {/* Global Auth Overlay Modal */}
-              <AuthModal />
+                {/* Global Auth Overlay Modal */}
+                <AuthModal />
+
+                {/* Global Profile Overlay Modal */}
+                <ProfileModal />
+
+                {/* Global Plan & Option Overlay Modals */}
+                <PlanModals />
+              </PlanModalProvider>
             </AuthProvider>
           </Suspense>
         </NextIntlClientProvider>

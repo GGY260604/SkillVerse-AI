@@ -58,7 +58,7 @@ export default function Hero() {
           <button
             type="button"
             onClick={handleScrollToPlan}
-            className="w-full sm:w-auto px-9 py-3.5 text-sm font-semibold bg-accent text-bg-primary rounded-xl border-none cursor-pointer tracking-wide hover:opacity-95 hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300"
+            className="px-9 py-3.5 text-sm font-semibold bg-accent text-bg-primary rounded-xl border-none cursor-pointer tracking-wide hover:opacity-95 hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300"
           >
             {t("cta_start_plan")}
           </button>

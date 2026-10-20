@@ -1,5 +1,6 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/lib/i18n/routing";
+import SharedPlansView from "@/components/shared/SharedPlansView";
 
 // Disable instant app shell prerendering to allow direct dynamic route parameter access.
 export const instant = false;
@@ -11,7 +12,7 @@ export function generateStaticParams() {
 }
 
 // Community Shared Plans Page
-// Provide peer learning pathways, mentor-guided roadmaps, and community sharing.
+// Displays list of peers who shared their career roadmap and mounts peer analysis interfaces.
 export default async function SharedPage({
   params,
 }: {
@@ -23,20 +24,6 @@ export default async function SharedPage({
   // Bind locale for static generation.
   setRequestLocale(locale);
 
-  // Fetch translation strings for community shared section.
-  const t = await getTranslations("shared");
-
-  return (
-    <div className="animate-fade-in-up max-w-7xl mx-auto py-12 px-6 w-full">
-      {/* Header Title & Subtitle */}
-      <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">{t("title")}</h1>
-      <p className="text-base text-text-secondary mb-10">{t("subtitle")}</p>
-
-      {/* Community Showcase Placeholder */}
-      <div className="glass-card rounded-2xl py-20 px-6 text-center border-dashed">
-        <div className="text-5xl mb-4 animate-float inline-block">🤝</div>
-        <p className="text-base text-text-muted italic">{t("coming_soon")}</p>
-      </div>
-    </div>
-  );
+  return <SharedPlansView />;
 }
+

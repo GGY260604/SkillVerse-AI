@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Logo from "@/components/Logo";
 
 // Localized Route Loading Shell
 // Render instant high-tech telemetry skeleton and orbital glow while content resolves.
@@ -22,13 +23,7 @@ export default function Loading() {
 
         {/* Center Pulsing SkillVerse Logo */}
         <div className="absolute w-10 h-10 rounded-xl bg-bg-card border border-border-accent/40 flex items-center justify-center shadow-[0_0_20px_var(--accent-glow-strong)] animate-pulse-glow">
-          <img
-            src="/favicon.ico"
-            alt="SkillVerse AI Loading"
-            width={20}
-            height={20}
-            className="rounded shrink-0 object-contain"
-          />
+          <Logo showText={false} iconSize={20} />
         </div>
       </div>
 
