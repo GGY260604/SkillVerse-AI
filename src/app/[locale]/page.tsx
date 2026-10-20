@@ -1,8 +1,16 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-
+import { routing } from "@/lib/i18n/routing";
 import Hero from "@/components/home/Hero";
 import TransformationPlan from "@/components/home/TransformationPlan";
 
+// Disable instant app shell prerendering to allow direct dynamic route parameter access.
+export const instant = false;
+
+// Static Locale Route Generation
+// Pre-render home pages for all supported language locales at build time.
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 // Home Page Component
 // Render the landing hero section, real-time market signals, and AI transformation plan.
@@ -17,6 +25,18 @@ export default async function HomePage({
   // Bind locale for static generation.
   setRequestLocale(locale);
 
+  // -------------------------------------------------------------------------------------
+  // Debugging / Testing Purpose Only (Ensure All Commented Out for Live Deployment)
+  // -------------------------------------------------------------------------------------
+
+  // Simulate a network delay (30 seconds) for testing the loading state. (Uncomment to test.)
+  // await new Promise((resolve) => setTimeout(resolve, 30000));
+
+  // Simulate a error for testing the error state. (Uncomment to test.)
+  // throw new Error("Test Error");
+
+  // -------------------------------------------------------------------------------------
+  
   // Fetch translation strings for home market data section.
   const t = await getTranslations("home.market");
 
@@ -43,5 +63,3 @@ export default async function HomePage({
     </>
   );
 }
-
-

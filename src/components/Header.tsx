@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
-import { IS_LOGGED_IN } from "@/constants/auth";
+import { useAuth } from "@/context/AuthContext";
 
 // Supported Languages Configuration
 // Define available locales and visual labels for the header language switcher.
@@ -23,6 +23,9 @@ export default function Header() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  const { user, isLoggedIn, openAuthModal, logout } = useAuth();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -40,17 +43,21 @@ export default function Header() {
   // Guard protected navigation links when unauthenticated.
   const handleProtectedNav = (
     e: React.MouseEvent<HTMLAnchorElement>,
-    href: string
+    _href: string
   ) => {
-    if (!IS_LOGGED_IN) {
+    if (!isLoggedIn) {
       e.preventDefault();
-      router.push(href);
+      openAuthModal("login");
     }
   };
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border-subtle bg-bg-primary/85 backdrop-blur-xl">
+      <header
+        className={`sticky top-0 z-40 w-full border-b border-border-subtle bg-bg-primary/85 backdrop-blur-xl transition-all duration-300 ${
+          isMobileMenuOpen ? "blur-sm opacity-60 md:blur-none md:opacity-100" : ""
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
           {/* Brand & Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
@@ -116,12 +123,40 @@ export default function Header() {
             </div>
 
             {/* Login / Profile Button */}
-            {IS_LOGGED_IN ? (
-              <div className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer">
-                U
+            {isLoggedIn ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-transform hover:scale-105"
+                >
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-bg-card/95 backdrop-blur-xl border border-border-subtle rounded-xl p-3 shadow-2xl z-50 animate-fade-in">
+                    <p className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1">Signed in as</p>
+                    <p className="text-xs font-semibold text-text-primary truncate mb-3">{user?.email}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        logout();
+                      }}
+                      className="w-full py-2 px-3 text-xs font-semibold text-negative hover:bg-negative/10 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-left font-mono"
+                    >
+                      {t("logout")}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <button className="px-5 py-2 text-xs font-semibold bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300">
+              <button
+                type="button"
+                onClick={() => openAuthModal("login")}
+                className="px-5 py-2 text-xs font-semibold bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 hover:shadow-[0_0_20px_var(--accent-glow-strong)] transition-all duration-300 font-mono"
+              >
                 {t("login")}
               </button>
             )}
@@ -150,14 +185,14 @@ export default function Header() {
       {/* Mobile Sidebar Overlay Backdrop */}
       <div
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-md transition-opacity duration-300 md:hidden ${
           isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       />
 
       {/* Mobile Navigation Sidebar Drawer */}
       <aside
-        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] bg-bg-secondary/95 backdrop-blur-2xl border-l border-border-subtle p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed top-0 right-0 z-60 h-full w-72 max-w-[85vw] bg-bg-secondary/95 backdrop-blur-2xl border-l border-border-subtle p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -248,15 +283,36 @@ export default function Header() {
           </div>
 
           {/* Auth Button */}
-          {IS_LOGGED_IN ? (
-            <div className="py-2.5 px-4 rounded-xl bg-bg-card border border-border-subtle flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary">
-                U
+          {isLoggedIn ? (
+            <div className="flex flex-col gap-2">
+              <div className="py-2.5 px-4 rounded-xl bg-bg-card border border-border-subtle flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary">
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <div className="truncate flex-1">
+                  <span className="block text-xs font-semibold text-text-primary truncate">{user?.email}</span>
+                </div>
               </div>
-              <span className="text-xs font-semibold text-text-primary">User Profile</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                className="w-full py-2.5 text-xs font-semibold text-negative hover:bg-negative/10 border border-negative/30 rounded-xl bg-transparent cursor-pointer transition-all font-mono"
+              >
+                {t("logout")}
+              </button>
             </div>
           ) : (
-            <button className="w-full py-3 text-xs font-semibold bg-accent text-bg-primary rounded-xl border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_15px_var(--accent-glow)] transition-all">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                openAuthModal("login");
+              }}
+              className="w-full py-3 text-xs font-semibold bg-accent text-bg-primary rounded-xl border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_15px_var(--accent-glow)] transition-all font-mono"
+            >
               {t("login")}
             </button>
           )}
