@@ -103,16 +103,17 @@ def get_local_embedding_model():
     if _local_embedding_model is not None:
         return _local_embedding_model
     try:
-        from fastembed import TextEmbedding
-        _local_embedding_model = TextEmbedding(model_name="BAAI/bge-m3")
+        from sentence_transformers import SentenceTransformer
+        _local_embedding_model = SentenceTransformer("BAAI/bge-m3")
         return _local_embedding_model
     except Exception:
         try:
-            from sentence_transformers import SentenceTransformer
-            _local_embedding_model = SentenceTransformer("BAAI/bge-m3")
+            from fastembed import TextEmbedding
+            _local_embedding_model = TextEmbedding(model_name="BAAI/bge-m3")
             return _local_embedding_model
         except Exception:
             return None
+
 
 
 def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
