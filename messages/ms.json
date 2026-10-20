@@ -1,0 +1,82 @@
+{
+  "home": {
+    "hero": {
+      "tagline": "KEPINTARAN TENAGA KERJA BERKUASA AI",
+      "title_1": "Navigasi dari",
+      "title_highlight_1": "Siapa Anda",
+      "title_2": "ke Tempat Anda",
+      "title_highlight_2": "Akan Memimpin",
+      "title_3": "dalam Era AI.",
+      "subtitle": "Memperkasakan tenaga kerja Malaysia untuk era AI. Pintar masa nyata, peningkatan kemahiran merentas bahasa yang lancar, dan laluan kerjaya yang mampan untuk setiap profesional.",
+      "cta_start_plan": "Mulakan Pelan Anda"
+    },
+    "stats": {
+      "market_shift": "Peralihan Pasaran",
+      "market_shift_desc": "Evolusi jurang kemahiran AI merentas 1,000+ sektor pekerjaan dalam 12 bulan.",
+      "reskill_cycle": "Purata Kitaran Kemahiran",
+      "reskill_cycle_desc": "Masa median untuk peralihan kerjaya merentas 50+ program perusahaan.",
+      "enterprise_partners": "Rakan Perusahaan",
+      "enterprise_partners_desc": "Majikan Malaysia yang menyiarkan isyarat kekosongan masa nyata merentas 15+ sektor."
+    },
+    "market": {
+      "section_badge": "PETA KOMPETENSI & DIAGNOSTIK AKTIF",
+      "title": "Dinamik Pasaran Buruh Masa Nyata",
+      "subtitle": "Koridor Teknologi Malaysia & ASEAN",
+      "description": "Pemetaan berterusan kompetensi teras yang berkembang vs. berkurangan merentas Perisian, Awan, Data, dan Automasi Industri.",
+      "coming_soon": "Visualisasi data masa nyata akan datang."
+    },
+    "plan": {
+      "title": "Mulakan Pelan Transformasi AI Anda",
+      "subtitle": "Pilih laluan diagnostik pilihan anda untuk menjana pelan hala tuju kerjaya 18 bulan yang diperibadikan.",
+      "option_1_tag": "PILIHAN 01 • ANALISIS SEGERA",
+      "recommended": "DISYORKAN",
+      "upload_title": "Muat Naik CV Profesional",
+      "upload_desc": "Ekstrak tandatangan kemahiran semantik terus dari resume sedia ada anda dalam masa kurang 12 saat.",
+      "drag_drop_text": "Muat Naik Fail Resume atau CV",
+      "drag_drop_subtext": "Menyokong imbasan PDF, DOCX atau PNG (sehingga 20MB)",
+      "btn_select_file": "Pilih Fail & Mulakan Analisis",
+      "option_2_tag": "PILIHAN 02 • TIADA RESUME DIPERLUKAN",
+      "time_estimate": "3 MINIT",
+      "wizard_title": "Bestari Penilaian Interaktif",
+      "wizard_desc": "Tiada resume terkini? Lengkapkan diagnostik berstruktur yang merangkumi peralatan, timbunan, dan sasaran kerjaya anda.",
+      "form_preview_title": "Borang Diagnostik Kerjaya Berpandu",
+      "form_preview_subtext": "4 Bahagian Pantas • Domain, Tindanan & Sasaran Echelon",
+      "btn_launch_wizard": "Isi Borang & Mulakan Penilaian"
+    }
+  },
+  "analysis": {
+    "title": "Papan Pemuka Analisis",
+    "current_plan": "Pelan Semasa",
+    "history_plan": "Pelan Sejarah",
+    "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
+  },
+  "shared": {
+    "title": "Pelan Dikongsi",
+    "subtitle": "Pelan dikongsi oleh orang lain kepada anda",
+    "coming_soon": "Ciri-ciri pelan dikongsi sedang dibangunkan."
+  },
+  "other": {
+    "nav": {
+      "home": "Laman Utama",
+      "analysis": "Analisis",
+      "shared": "Dikongsi",
+      "login": "Log Masuk",
+      "signup": "Daftar",
+      "profile": "Profil",
+      "logout": "Log Keluar"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "Dibina untuk SDC Hackathon 2026",
+      "author": "Dipersembahkan oleh \"I Love You 3000\"",
+      "tagline": "Semua kandungan yang disediakan di laman web ini adalah untuk rujukan sahaja; keputusan muktamad terletak sepenuhnya pada anda.",
+      "github": "Repositori GitHub"
+    },
+    "auth": {
+      "login_required": "Log Masuk Diperlukan",
+      "login_required_desc": "Sila log masuk untuk mengakses halaman ini.",
+      "go_home": "Ke Laman Utama",
+      "login_to_continue": "Log Masuk untuk Meneruskan"
+    }
+  }
+}

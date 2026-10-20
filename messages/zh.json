@@ -1,0 +1,82 @@
+{
+  "home": {
+    "hero": {
+      "tagline": "AI 驱动的劳动力智能平台",
+      "title_1": "从",
+      "title_highlight_1": "你是谁",
+      "title_2": "导航到你将",
+      "title_highlight_2": "引领未来",
+      "title_3": "的 AI 时代。",
+      "subtitle": "以人工智能赋能马来西亚职场。为每位专业人士提供实时智能、无缝的跨语言技能重塑与可持续的职业发展路径。",
+      "cta_start_plan": "开启你的规划"
+    },
+    "stats": {
+      "market_shift": "市场变化",
+      "market_shift_desc": "12 个月内 1,000+ 职业领域的 AI 技能差距演变趋势。",
+      "reskill_cycle": "平均再技能周期",
+      "reskill_cycle_desc": "50+ 企业培训项目的职业转型中位数时间。",
+      "enterprise_partners": "企业合作伙伴",
+      "enterprise_partners_desc": "马来西亚雇主跨 15+ 领域实时同步职位空缺信号。"
+    },
+    "market": {
+      "section_badge": "能力地图与主动诊断",
+      "title": "实时劳动力市场动态",
+      "subtitle": "马来西亚与东盟科技走廊",
+      "description": "对软件、云计算、数据和工业自动化领域的新兴与衰退核心能力进行实时持续映射。",
+      "coming_soon": "实时数据可视化即将推出。"
+    },
+    "plan": {
+      "title": "开启你的 AI 转型规划",
+      "subtitle": "选择您偏好的诊断路径，生成专属的 18 个月职业发展晋升路线图。",
+      "option_1_tag": "选项 01 • 即时语义分析",
+      "recommended": "推荐",
+      "upload_title": "上传专业简历 / CV",
+      "upload_desc": "在 12 秒内直接从现有简历中提取语义技能特征与能力图谱。",
+      "drag_drop_text": "上传简历或 CV 文件",
+      "drag_drop_subtext": "支持 PDF、DOCX 或 PNG 扫描件（最大 20MB）",
+      "btn_select_file": "选择文件并启动分析",
+      "option_2_tag": "选项 02 • 无需提供简历",
+      "time_estimate": "3 分钟",
+      "wizard_title": "交互式评估向导",
+      "wizard_desc": "暂无最新简历？通过结构化诊断涵盖您当前的工具栈、技术架构及目标职业层级。",
+      "form_preview_title": "引导式职业诊断问卷",
+      "form_preview_subtext": "4 个快速小节 • 涵盖技术栈、经验与晋升目标",
+      "btn_launch_wizard": "填写问卷并启动评估"
+    }
+  },
+  "analysis": {
+    "title": "分析仪表板",
+    "current_plan": "当前计划",
+    "history_plan": "历史计划",
+    "coming_soon": "分析功能正在开发中。"
+  },
+  "shared": {
+    "title": "共享计划",
+    "subtitle": "他人与你共享的计划",
+    "coming_soon": "共享计划功能正在开发中。"
+  },
+  "other": {
+    "nav": {
+      "home": "首页",
+      "analysis": "分析",
+      "shared": "共享",
+      "login": "登录",
+      "signup": "注册",
+      "profile": "个人资料",
+      "logout": "退出登录"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "为 SDC Hackathon 2026 打造",
+      "author": "由 \"I Love You 3000\" 呈现",
+      "tagline": "本网站提供的所有内容仅供参考；最终决定权完全在您手中。",
+      "github": "GitHub 仓库"
+    },
+    "auth": {
+      "login_required": "需要登录",
+      "login_required_desc": "请登录以访问此页面。",
+      "go_home": "返回首页",
+      "login_to_continue": "登录以继续"
+    }
+  }
+}
