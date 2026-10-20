@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import AuthModal from "@/components/auth/AuthModal";
+import { AuthProvider } from "@/context/AuthContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
@@ -22,6 +24,9 @@ export const metadata: Metadata = {
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
+
+// Disable instant app shell prerendering to allow direct dynamic route parameter access.
+export const instant = false;
 
 // Localized Shell Layout
 // Provide internationalization context, global header, footer, and font styles.
@@ -59,17 +64,21 @@ export default async function LocaleLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
-          {/* Global Header Navigation */}
-          <Suspense fallback={<div className="h-16 bg-bg-primary" />}>
-            <Header />
+          <Suspense fallback={<div className="min-h-screen bg-bg-primary" />}>
+            <AuthProvider>
+              {/* Global Header Navigation */}
+              <Header />
+
+              {/* Main Content Area */}
+              <main className="flex-1 flex flex-col">{children}</main>
+
+              {/* Global Footer */}
+              <Footer />
+
+              {/* Global Auth Overlay Modal */}
+              <AuthModal />
+            </AuthProvider>
           </Suspense>
-
-          {/* Main Content Area */}
-          <main className="flex-1 flex flex-col">{children}</main>
-
-
-          {/* Global Footer */}
-          <Footer />
         </NextIntlClientProvider>
       </body>
     </html>

@@ -11,6 +11,7 @@
     "db:generate": "prisma generate"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "@prisma/client": "^7.10.1",
     "next": "16.4.2",
     "next-intl": "^4.14.9",

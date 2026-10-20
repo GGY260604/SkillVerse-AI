@@ -55,6 +55,28 @@
     "subtitle": "Pelan dikongsi oleh orang lain kepada anda",
     "coming_soon": "Ciri-ciri pelan dikongsi sedang dibangunkan."
   },
+  "status": {
+    "loading": {
+      "title": "Memuatkan Data Kecerdasan",
+      "subtitle": "Menyelaras isyarat pasaran buruh dan laluan kemahiran..."
+    },
+    "not_found": {
+      "code": "404",
+      "badge": "PAGE NOT FOUND // 0x404",
+      "title": "Tersasar dalam Alam Kemahiran",
+      "description": "Halaman yang anda cari tidak wujud atau telah dipindahkan. Kembali ke laman utama untuk meneroka pelan transformasi AI dan isyarat pasaran buruh.",
+      "btn_home": "Kembali ke Laman Utama",
+      "btn_back": "Kembali"
+    },
+    "error": {
+      "code": "500",
+      "badge": "SYSTEM ERROR // 0x500",
+      "title": "Berlaku Masalah Tidak Dijangka",
+      "description": "Ralat berlaku semasa memproses permintaan anda. Anda boleh cuba muat semula halaman atau kembali ke laman utama.",
+      "btn_retry": "Cuba Lagi",
+      "btn_home": "Kembali ke Laman Utama"
+    }
+  },
   "other": {
     "nav": {
       "home": "Laman Utama",
@@ -76,7 +98,50 @@
       "login_required": "Log Masuk Diperlukan",
       "login_required_desc": "Sila log masuk untuk mengakses halaman ini.",
       "go_home": "Ke Laman Utama",
-      "login_to_continue": "Log Masuk untuk Meneruskan"
+      "login_to_continue": "Log Masuk untuk Meneruskan",
+      "signin_title": "Selamat Kembali",
+      "signin_desc": "Log masuk ke akaun SkillVerse anda dengan emel dan kata laluan",
+      "register_title": "Daftar Akaun",
+      "register_desc": "Sertai SkillVerse dan mulakan transformasi tenaga kerja AI anda",
+      "forgot_title": "Tetapkan Semula Kata Laluan",
+      "forgot_desc": "Masukkan emel anda untuk menerima kod pengesahan 6 digit",
+      "verify_register_title": "Pengesahan Emel",
+      "verify_register_desc": "Masukkan kod pengesahan 6 digit yang dihantar ke emel anda",
+      "verify_forgot_title": "Kata Laluan Baharu",
+      "verify_forgot_desc": "Masukkan kod pemulihan 6 digit dan tetapkan kata laluan baharu anda",
+      "email_label": "Alamat Emel",
+      "email_placeholder": "nama@contoh.com",
+      "password_label": "Kata Laluan",
+      "password_placeholder": "••••••••",
+      "confirm_password_label": "Sahkan Kata Laluan",
+      "new_password_label": "Kata Laluan Baharu",
+      "otp_label": "Kod Pengesahan 6 Digit",
+      "otp_placeholder": "123456",
+      "btn_signin": "Log Masuk",
+      "btn_register": "Daftar & Hantar Kod",
+      "btn_verify": "Sahkan & Selesai",
+      "btn_send_code": "Hantar Kod 6 Digit",
+      "btn_reset_password": "Kemas Kini & Log Masuk",
+      "forgot_link": "Lupa kata laluan?",
+      "remember_me": "Ingat Saya",
+      "have_account": "Sudah mempunyai akaun?",
+      "no_account": "Belum mempunyai akaun?",
+      "register_link": "Daftar di sini",
+      "signin_link": "Log masuk di sini",
+      "resend_code": "Hantar Semula Kod",
+      "resend_countdown": "Hantar semula dalam {seconds}s",
+      "code_sent": "Kod 6 digit telah dihantar ke",
+      "signing_in": "Sedang Log Masuk...",
+      "processing": "Sedang Memproses...",
+      "err_invalid_credentials": "Emel atau kata laluan tidak sah. Sila semak kelayakan anda.",
+      "err_email_not_confirmed": "Emel belum disahkan lagi. Sila semak peti masuk anda untuk kod.",
+      "err_user_already_exists": "Akaun dengan emel ini sudah wujud.",
+      "err_password_mismatch": "Kata laluan tidak sepadan.",
+      "err_password_too_short": "Kata laluan mestilah sekurang-kurangnya 6 aksara.",
+      "err_invalid_otp": "Kod pengesahan 6 digit tidak sah atau telah tamat tempoh.",
+      "err_network": "Ralat rangkaian berlaku. Sila semak sambungan anda dan cuba lagi.",
+      "err_default": "Ralat tidak dijangka berlaku. Sila cuba lagi.",
+      "err_email_required": "Sila masukkan alamat emel anda."
     }
   }
 }
