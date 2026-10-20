@@ -89,65 +89,203 @@ async def get_embedding_from_runpod(text: str) -> Optional[List[float]]:
 
 
 
+_local_embedding_model = None
+
+
+def get_local_embedding_model():
+    """
+    Lazy-loads the in-process BAAI/bge-m3 model using fastembed or sentence-transformers
+    when running directly inside the RunPod GPU container (ENABLE_LOCAL_BGE_M3=true).
+    """
+    global _local_embedding_model
+    if not settings.ENABLE_LOCAL_BGE_M3:
+        return None
+    if _local_embedding_model is not None:
+        return _local_embedding_model
+    try:
+        from fastembed import TextEmbedding
+        _local_embedding_model = TextEmbedding(model_name="BAAI/bge-m3")
+        return _local_embedding_model
+    except Exception:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _local_embedding_model = SentenceTransformer("BAAI/bge-m3")
+            return _local_embedding_model
+        except Exception:
+            return None
+
+
+def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
+    """
+    Computes 1024-dimensional semantic embedding in-process using BAAI/bge-m3
+    when FastAPI is deployed on a RunPod GPU instance.
+    """
+    model = get_local_embedding_model()
+    if not model:
+        return None
+    try:
+        if hasattr(model, "embed"):
+            embeddings = list(model.embed([text]))
+            if embeddings and len(embeddings) > 0:
+                return [float(x) for x in embeddings[0]]
+        if hasattr(model, "encode"):
+            vec = model.encode(text)
+            return [float(x) for x in vec]
+    except Exception:
+        return None
+    return None
+
+
+_EMBEDDING_CACHE: Dict[str, List[float]] = {}
+_active_embedding_key_index = 4
+_cache_dirty = False
+
+# Auto-load precomputed skill embeddings cache on startup
+try:
+    import json
+    import os
+    _cache_file = os.path.join(os.path.dirname(__file__), "..", "db", "skill_embeddings_cache.json")
+    if os.path.exists(_cache_file):
+        with open(_cache_file, "r", encoding="utf-8") as _f:
+            _loaded_cache = json.load(_f)
+            for _k, _v in _loaded_cache.items():
+                _EMBEDDING_CACHE[_k.lower().strip()] = _v
+except Exception:
+    pass
+
+
+def persist_embedding_cache():
+    """Flushes newly generated embeddings to the persistent JSON cache on disk."""
+    global _cache_dirty
+    if not _cache_dirty:
+        return
+    try:
+        import json
+        import os
+        _cache_file = os.path.join(os.path.dirname(__file__), "..", "db", "skill_embeddings_cache.json")
+        with open(_cache_file, "w", encoding="utf-8") as _f:
+            json.dump(_EMBEDDING_CACHE, _f)
+        _cache_dirty = False
+    except Exception:
+        pass
+
+
 async def get_embedding_from_gemini(text: str) -> Optional[List[float]]:
     """
-    Fallback embedding generator using Google's text-embedding-004 model.
-    Cycles through available GEMINI_API_KEYS in the pool.
+    Fallback embedding generator using Google's modern embedding models.
+    Tries gemini-embedding-001 with outputDimensionality=1024.
+    Cycles through available GEMINI_API_KEYS in the pool, remembering the last working key.
     """
+    global _active_embedding_key_index
     if not settings.GEMINI_API_KEYS:
         return None
 
-    model_name = "text-embedding-004"
-    payload = {
-        "model": f"models/{model_name}",
-        "content": {
-            "parts": [{"text": text}]
-        }
-    }
+    candidate_models = ["gemini-embedding-001", "gemini-embedding-2"]
+    total_keys = len(settings.GEMINI_API_KEYS)
 
-    for api_key in settings.GEMINI_API_KEYS:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:embedContent?key={api_key}"
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(url, json=payload)
-                if response.status_code == 200:
-                    result = response.json()
-                    values = result.get("embedding", {}).get("values", [])
-                    if values:
-                        # Pad or normalize to 1024 dimensions if needed
-                        if len(values) < 1024:
-                            padded = values + [0.0] * (1024 - len(values))
-                            return padded
-                        return values[:1024]
-        except Exception:
-            continue
+    for model_name in candidate_models:
+        payload = {
+            "model": f"models/{model_name}",
+            "content": {
+                "parts": [{"text": text}]
+            },
+            "outputDimensionality": 1024,
+        }
+
+        for offset in range(total_keys):
+            key_index = (_active_embedding_key_index + offset) % total_keys
+            api_key = settings.GEMINI_API_KEYS[key_index]
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:embedContent?key={api_key}"
+            try:
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    response = await client.post(url, json=payload)
+                    if response.status_code == 200:
+                        result = response.json()
+                        values = result.get("embedding", {}).get("values", [])
+                        if values:
+                            _active_embedding_key_index = key_index  # Remember working key!
+                            if len(values) < 1024:
+                                return values + [0.0] * (1024 - len(values))
+                            return values[:1024]
+                    elif response.status_code in [402, 429]:
+                        continue
+            except Exception:
+                continue
 
     return None
 
 
 async def generate_embedding(text: str) -> List[float]:
     """
-    Generates a dense semantic vector representation for the given text.
-    1. Tries Primary: RunPod GPU Pod (BAAI/bge-m3, 1024-dim).
-    2. Falls back: Google text-embedding-004 API.
-    3. Failsafe fallback: Deterministic hash pseudo-vector (guarantees zero crashes).
+    Generates a dense 1024-dimensional semantic vector representation for the given text.
+    Uses in-memory LRU cache to make repeated calls instantaneous (0.000ms).
+    1. Primary (RunPod In-Process GPU): Local BAAI/bge-m3 model.
+    2. Primary (External RunPod URL): RunPod GPU Endpoint if configured.
+    3. Fallback: Google Gemini Embedding API (gemini-embedding-001 / 1024-dim).
+    4. Failsafe fallback: Deterministic hash pseudo-vector (guarantees zero crashes).
     """
-    clean_text = text.strip()
+    global _cache_dirty
+    clean_text = text.lower().strip()
     if not clean_text:
         return [0.0] * 1024
 
-    # 1. Primary: RunPod GPU Pod
-    runpod_vector = await get_embedding_from_runpod(clean_text)
-    if runpod_vector and len(runpod_vector) > 0:
-        return runpod_vector
+    # Check in-memory cache first (sub-millisecond instant hit)
+    cached = _EMBEDDING_CACHE.get(clean_text)
+    if cached is not None:
+        return cached
 
-    # 2. Fallback: Google Gemini Embedding API
-    gemini_vector = await get_embedding_from_gemini(clean_text)
-    if gemini_vector and len(gemini_vector) > 0:
-        return gemini_vector
+    vector: Optional[List[float]] = None
 
-    # 3. Deterministic pseudo-vector fallback (zero downtime guarantee)
-    return generate_deterministic_vector(clean_text)
+    # 1. Primary: In-process GPU BAAI/bge-m3 (FastAPI on RunPod)
+    local_vector = get_embedding_from_local_bge_m3(clean_text)
+    if local_vector and len(local_vector) > 0:
+        vector = local_vector
+
+    # 2. Remote RunPod GPU endpoint (if configured)
+    if vector is None:
+        runpod_vector = await get_embedding_from_runpod(clean_text)
+        if runpod_vector and len(runpod_vector) > 0:
+            vector = runpod_vector
+
+    # 3. Fallback: Google Gemini Embedding API
+    if vector is None:
+        gemini_vector = await get_embedding_from_gemini(clean_text)
+        if gemini_vector and len(gemini_vector) > 0:
+            vector = gemini_vector
+
+    # 4. Deterministic pseudo-vector fallback (zero downtime guarantee)
+    if vector is None:
+        vector = generate_deterministic_vector(clean_text)
+
+    # Store in memory cache
+    _EMBEDDING_CACHE[clean_text] = vector
+    _cache_dirty = True
+
+    return vector
+
+
+async def is_skill_semantically_matched(
+    user_skill: str,
+    req_skill: str,
+    threshold: float = 0.55,
+) -> bool:
+    """
+    Computes dynamic semantic similarity between a candidate skill and a required role skill.
+    Eliminates reliance on hardcoded synonym dictionaries.
+    """
+    u_norm = user_skill.lower().strip()
+    r_norm = req_skill.lower().strip()
+
+    # Fast-path: exact or substring containment
+    if u_norm == r_norm or u_norm in r_norm or r_norm in u_norm:
+        return True
+
+    # Vector cosine similarity
+    vec_u = await generate_embedding(user_skill)
+    vec_r = await generate_embedding(req_skill)
+    sim = cosine_similarity(vec_u, vec_r)
+    return sim >= threshold
+
 
 
 def generate_deterministic_vector(text: str, dim: int = 1024) -> List[float]:

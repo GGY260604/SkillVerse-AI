@@ -8,7 +8,8 @@ from ..config import settings
 from ..schemas.profile import ProfileIntakePayload, UserSkillItem, EmploymentStatus, SkillProficiency
 
 
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]
+GEMINI_MODEL = GEMINI_MODELS[0]
 API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 
 SYSTEM_INSTRUCTION = """
@@ -61,11 +62,23 @@ JSON Structure Required:
 """
 
 
-async def call_gemini_with_fallback(contents: List[Dict[str, Any]]) -> Dict[str, Any]:
+_active_key_index = 4
+
+# To test the function with different model names, change the model names in the settings.GEMINI_API_KEYS list.
+async def call_gemini_with_fallback(
+    contents: List[Dict[str, Any]],
+    timeout: float = 12.0,
+    system_instruction: Optional[str] = None,
+    max_output_tokens: int = 6000,
+) -> Dict[str, Any]:
     """
-    Executes a Gemini 1.5 Flash request with automatic API key rotation
-    across the configured key pool if rate limits (HTTP 429) or errors occur.
+    Robust Gemini API caller implementing:
+    1. Circular active key indexing (starts with the last known working key).
+    2. Multi-model rotation across modern 2026 model names.
+    3. Immediate rotation on 402/429/403 errors.
+    4. Strict JSON parsing with flexible max output tokens.
     """
+    global _active_key_index
     if not settings.GEMINI_API_KEYS:
         raise HTTPException(
             status_code=500,
@@ -73,49 +86,68 @@ async def call_gemini_with_fallback(contents: List[Dict[str, Any]]) -> Dict[str,
         )
 
     last_error = None
-    for key_index, api_key in enumerate(settings.GEMINI_API_KEYS):
-        url = API_URL_TEMPLATE.format(model=GEMINI_MODEL, key=api_key)
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": SYSTEM_INSTRUCTION}]
-            },
-            "contents": contents,
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 3000,
-            },
-        }
+    total_keys = len(settings.GEMINI_API_KEYS)
+    sys_text = system_instruction if system_instruction is not None else SYSTEM_INSTRUCTION
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(url, json=payload)
-                if response.status_code == 200:
-                    result = response.json()
-                    candidates = result.get("candidates", []) #candidates - potential responses from the model
-                    if candidates and "content" in candidates[0]: #content - the actual response from the model
-                        parts = candidates[0]["content"].get("parts", []) #parts - the actual response from the model
-                        if parts and "text" in parts[0]: #text - the actual response from the model
-                            raw_text = parts[0]["text"]
-                            return json.loads(raw_text)
-                    raise ValueError("Empty or malformed candidate in Gemini response.")
+    for offset in range(total_keys):
+        key_index = (_active_key_index + offset) % total_keys
+        api_key = settings.GEMINI_API_KEYS[key_index]
 
-                # If rate limited (429) or forbidden (403), cycle to the next API key in the pool
-                if response.status_code in [429, 403]:
-                    last_error = f"API Key #{key_index + 1} returned HTTP {response.status_code}: {response.text}"
-                    continue
+        for model in GEMINI_MODELS:
+            url = API_URL_TEMPLATE.format(model=model, key=api_key)
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": sys_text}]
+                },
+                "contents": contents,
+                "generationConfig": {
+                    "response_mime_type": "application/json",
+                    "temperature": 0.2,
+                    "maxOutputTokens": max_output_tokens,
+                },
+            }
 
-                # Other HTTP errors
-                last_error = f"Gemini HTTP {response.status_code}: {response.text}"
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(url, json=payload)
+                    if response.status_code == 200:
+                        result = response.json()
+                        candidates = result.get("candidates", [])
+                        if candidates and "content" in candidates[0]:
+                            parts = candidates[0]["content"].get("parts", [])
+                            if parts and "text" in parts[0]:
+                                raw_text = parts[0]["text"].strip()
+                                if raw_text.startswith("```json"):
+                                    raw_text = raw_text[7:]
+                                if raw_text.startswith("```"):
+                                    raw_text = raw_text[3:]
+                                if raw_text.endswith("```"):
+                                    raw_text = raw_text[:-3]
+                                _active_key_index = key_index  # Remember this working key!
+                                return json.loads(raw_text.strip())
+                        raise ValueError("Empty or malformed candidate in Gemini response.")
 
-        except Exception as e:
-            last_error = str(e)
-            continue
+                    last_error = f"API Key #{key_index + 1} ({model}) returned HTTP {response.status_code}: {response.text[:150]}"
+                    if response.status_code == 404:
+                        # Model not supported on this version, try next model
+                        continue
+                    else:
+                        # Key has quota/rate issue (402, 429, 403), immediately try next key
+                        break
+
+            except Exception as e:
+                last_error = f"{type(e).__name__}: {str(e)}"
+                continue
 
     raise HTTPException(
         status_code=502,
         detail=f"All Gemini API keys in pool failed or exhausted. Last error: {last_error}",
     )
+
+
+# Function aliases for backward and cross-service compatibility
+call_gemini_json = call_gemini_with_fallback
+call_gemini_with_rotation = call_gemini_with_fallback
 
 
 async def normalize_profile_with_gemini(

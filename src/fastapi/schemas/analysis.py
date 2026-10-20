@@ -40,9 +40,9 @@ class AnalyzeRequestPayload(BaseModel):
 
 
 class SdgAlignmentItem(BaseModel):
-    targetCode: str = Field(description="UN SDG target identifier, e.g. SDG 8.2")
-    targetTitle: str = Field(description="Descriptive title of the target")
-    affinityScore: float = Field(description="Semantic affinity score (0.0 - 1.0)")
+    targetCode: str = Field(default="SDG 8.2", description="UN SDG target identifier, e.g. SDG 8.2")
+    targetTitle: str = Field(default="Technological upgrading & economic productivity", description="Descriptive title of the target")
+    affinityScore: float = Field(default=0.85, description="Semantic affinity score (0.0 - 1.0)")
 
 
 class AtRiskSkillItem(BaseModel):

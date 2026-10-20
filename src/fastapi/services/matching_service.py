@@ -97,126 +97,53 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
     return FALLBACK_DECLINING_SKILLS
 
 
-# Comprehensive cross-domain synonym and variation mapping
-SYNONYM_MAP = {
-    # Data & Analytics
-    "excel": "spreadsheet data manipulation",
-    "vlookup": "spreadsheet data manipulation",
-    "pivot table": "spreadsheet data manipulation",
-    "google sheets": "spreadsheet data manipulation",
-    "tableau": "data visualization",
-    "power bi": "business intelligence dashboards",
-    "powerbi": "business intelligence dashboards",
-    "sql": "apply statistical analysis techniques",
-    "mysql": "manage database software",
-    "postgres": "manage database software",
-    "postgresql": "manage database software",
-    "pandas": "data analysis",
-    "jupyter": "python scripting",
-    "python": "python scripting",
-    "coding": "software development",
-    "programming": "software development",
-    
-    # AI, Cloud & Infrastructure
-    "prompting": "generative ai prompting",
-    "prompt engineering": "generative ai prompting",
-    "chatgpt": "generative ai prompting",
-    "claude": "generative ai prompting",
-    "llm": "machine learning",
-    "aws": "cloud infrastructure",
-    "azure": "cloud infrastructure",
-    "gcp": "cloud infrastructure",
-    "docker": "containerized deployment",
-    "kubernetes": "cloud orchestration",
-    "git": "version control systems",
-    "devops": "continuous integration pipelines",
-    
-    # ESG, Clean Energy & Environment
-    "esg": "esg compliance reporting",
-    "sustainability": "environmental impact assessment",
-    "carbon": "scope 1 2 3 carbon accounting",
-    "carbon footprint": "scope 1 2 3 carbon accounting",
-    "solar": "solar energy systems",
-    "renewable": "renewable energy technologies",
-    "waste": "waste management strategies",
-    
-    # Logistics, Supply Chain & Operations
-    "inventory": "inventory analytics",
-    "stock taking": "inventory analytics",
-    "warehouse": "warehouse management systems (wms)",
-    "wms": "warehouse management systems",
-    "procurement": "strategic purchasing and procurement",
-    "purchasing": "strategic purchasing and procurement",
-    "shipping": "freight and logistics coordination",
-    "freight": "freight and logistics coordination",
-    
-    # Business, Customer Care & Management
-    "customer service": "customer relationship management",
-    "customer support": "customer relationship management",
-    "client relation": "customer relationship management",
-    "complaint handling": "customer relationship management",
-    "conflict resolution": "interpersonal communication and negotiation",
-    "negotiation": "interpersonal communication and negotiation",
-    "invoicing": "simple bookkeeping reconciliation",
-    "bookkeeping": "simple bookkeeping reconciliation",
-    "data entry": "manual data entry",
-    "filing": "routine document filing",
-
-    # UI/UX & Design
-    "figma": "user interface design",
-    "ui design": "user interface design",
-    "ux design": "user experience design",
-    "photoshop": "digital media creation",
-    "canva": "digital media creation",
-    "wireframing": "user interface design",
-    
-    # Agritech & Health
-    "sensor": "agricultural sensor systems",
-    "drone": "drone mapping data",
-    "telehealth": "telemedicine platform management",
-    "telemedicine": "telemedicine platform management",
-    "clinic": "clinical workflow coordination",
-    "patient": "patient service optimization",
-    "audit": "data collection & auditing",
-}
+from .embedding_service import generate_embedding, cosine_similarity
 
 
 def compute_string_similarity(s1: str, s2: str) -> float:
     """Computes token Jaccard similarity between two skill strings."""
-    tokens1 = set(s1.lower().split()) 
+    tokens1 = set(s1.lower().split())
     tokens2 = set(s2.lower().split())
     if not tokens1 or not tokens2:
         return 0.0
-    intersection = tokens1.intersection(tokens2) 
+    intersection = tokens1.intersection(tokens2)
     union = tokens1.union(tokens2)
     return len(intersection) / len(union)
 
 
-def check_soft_match(user_skill_name: str, required_skill_name: str) -> bool:
+def check_skill_match_sync(
+    user_skill_name: str,
+    required_skill_name: str,
+    user_vec: Optional[List[float]] = None,
+    req_vec: Optional[List[float]] = None,
+    semantic_threshold: float = 0.55,
+) -> bool:
     """
-    Evaluates whether a user's skill matches a required role skill
-    using direct inclusion, synonym dictionary mapping, or token similarity >= 0.60.
+    Evaluates whether a candidate skill matches a required ESCO skill dynamically.
+    Combines:
+    1. Exact string match or substring containment (e.g., 'python' in 'python scripting').
+    2. Token Jaccard similarity >= 0.60.
+    3. Dense Vector Cosine Similarity (BGE-M3 / Gemini 1024-dim embedding) >= 0.55.
+    Completely eliminates hardcoded synonym dictionaries.
     """
     u_norm = user_skill_name.lower().strip()
     r_norm = required_skill_name.lower().strip()
 
-    # Exact match
-    if u_norm == r_norm:
+    # Exact or substring containment
+    if u_norm == r_norm or u_norm in r_norm or r_norm in u_norm:
         return True
 
-    # Substring inclusion
-    if u_norm in r_norm or r_norm in u_norm:
+    # Token overlap
+    if compute_string_similarity(u_norm, r_norm) >= 0.60:
         return True
 
-    # Check synonym mapping
-    mapped_u = SYNONYM_MAP.get(u_norm, u_norm)
-    mapped_r = SYNONYM_MAP.get(r_norm, r_norm)
-    if mapped_u == mapped_r or mapped_u in mapped_r or mapped_r in mapped_u:
-        return True
+    # Dynamic Dense Vector Semantic Proximity (BGE-M3 / Gemini)
+    if user_vec and req_vec:
+        sim = cosine_similarity(user_vec, req_vec)
+        if sim >= semantic_threshold:
+            return True
 
-    # Token-level soft similarity threshold
-    similarity = compute_string_similarity(u_norm, r_norm)
-    return similarity >= 0.60
+    return False
 
 
 
@@ -316,6 +243,114 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     return FALLBACK_ROLES_CATALOG
 
 
+async def synthesize_on_demand_role(
+    title: str,
+    industry: Optional[str] = None,
+    user_skills: Optional[List[str]] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Zero-shot on-demand role synthesis (User-Driven):
+    If a user specifies a target career goal that doesn't yet exist in the database,
+    this hook synthesizes its canonical competency profile, computes its 1024-dim
+    embedding vector with BGE-M3/Gemini, and persists it into Supabase esco_roles.
+    """
+    from .gemini_service import call_gemini_json
+
+    prompt = (
+        f"You are an expert occupational taxonomist and future-workforce analyst for the UN Sustainable Development Goals.\n"
+        f"A user has requested a career trajectory for an emerging or specialized occupational title:\n"
+        f"Role Title: \"{title}\"\n"
+        f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
+        f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
+        f"Generate a canonical competency profile for this role in strict JSON format:\n"
+        f"{{\n"
+        f'  "title": "{title}",\n'
+        f'  "title_ms": "Bahasa Melayu translation of title",\n'
+        f'  "title_zh": "Simplified Chinese translation of title",\n'
+        f'  "industry": "Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance / etc.",\n'
+        f'  "required_skills": ["top 6-8 essential professional skills required for this job"],\n'
+        f'  "sdg_alignments": [\n'
+        f'    {{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}}\n'
+        f"  ],\n"
+        f'  "radar_requirements": {{\n'
+        f'    "AI & Digital Tools": 80,\n'
+        f'    "Data Literacy & Analytics": 75,\n'
+        f'    "Domain Operations": 80,\n'
+        f'    "Human Communication": 75,\n'
+        f'    "ESG & Sustainability": 70\n'
+        f"  }}\n"
+        f"}}\n"
+        f"Return ONLY valid JSON."
+    )
+
+    clean_slug = title.lower().strip().replace(" ", "-").replace("/", "-")
+    role_id = f"custom-{clean_slug}"
+
+    try:
+        contents = [{"role": "user", "parts": [{"text": prompt}]}]
+        data = await call_gemini_json(contents=contents)
+
+        parsed_title = data.get("title", title)
+        skills = data.get("required_skills", [f"{title} Operations", "Problem Solving", "Digital Collaboration"])
+        industry_val = data.get("industry", industry or "Cross-Industry")
+
+        # 1024-dim embedding
+        emb_text = f"Occupational Title: {parsed_title}. Sector: {industry_val}. Essential Competencies: {', '.join(skills)}."
+        vector = await generate_embedding(emb_text)
+
+        # Build role record
+        role_record = {
+            "role_id": role_id,
+            "title": parsed_title,
+            "title_ms": data.get("title_ms", parsed_title),
+            "title_zh": data.get("title_zh", parsed_title),
+            "industry": industry_val,
+            "required_skills": skills,
+            "sdg_alignments": data.get("sdg_alignments", [{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}]),
+            "scenario_multipliers": {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.15},
+            "radar_requirements": data.get("radar_requirements", {
+                "AI & Digital Tools": 80,
+                "Data Literacy & Analytics": 75,
+                "Domain Operations": 80,
+                "Human Communication": 75,
+                "ESG & Sustainability": 70,
+            }),
+            "embedding": vector,
+        }
+
+        # Async persist to Supabase esco_roles
+        if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+            base_url = settings.SUPABASE_URL.rstrip("/")
+            if base_url.endswith("/rest/v1"):
+                base_url = base_url[:-8]
+            endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
+            headers = {
+                "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates",
+            }
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                await client.post(endpoint, json=role_record, headers=headers)
+
+        return {
+            "roleId": role_id,
+            "title": parsed_title,
+            "titleLocalized": {
+                "en": parsed_title,
+                "ms": role_record["title_ms"],
+                "zh": role_record["title_zh"],
+            },
+            "industry": industry_val,
+            "requiredSkills": skills,
+            "sdgAlignments": role_record["sdg_alignments"],
+            "scenarioMultipliers": role_record["scenario_multipliers"],
+            "radarRequirement": role_record["radar_requirements"],
+        }
+    except Exception:
+        return None
+
+
 async def evaluate_roles(
     profile: AnalyzeProfileData,
     scenario: MacroScenario,
@@ -325,6 +360,7 @@ async def evaluate_roles(
     Computes deterministic role match scores, itemizes strengths/gaps/at-risk skills,
     applies scenario multipliers, and computes radar chart dimensions.
     Integrates live ML vector embeddings from RunPod/Gemini and Supabase pgvector.
+    Supports zero-shot on-demand role synthesis when users explore novel career goals.
     """
     user_skills_list = [s.name for s in profile.skills]
     # Add tools/software into user skill set for broader matching
@@ -333,6 +369,19 @@ async def evaluate_roles(
 
     # 1. Fetch live active ESCO roles dynamically from Supabase
     active_roles = await fetch_active_roles_from_supabase()
+
+    # Zero-Shot On-Demand Role Ingestion (User-Driven)
+    if profile.targetJobTitle and profile.targetJobTitle.strip():
+        target_norm = profile.targetJobTitle.strip().lower()
+        exists = any(target_norm in r["title"].lower() or r["title"].lower() in target_norm for r in active_roles)
+        if not exists:
+            custom_role = await synthesize_on_demand_role(
+                title=profile.targetJobTitle.strip(),
+                industry=profile.industry,
+                user_skills=user_skills_list,
+            )
+            if custom_role:
+                active_roles.insert(0, custom_role)
 
     # 2. Generate live 1024-dim ML semantic embedding for candidate profile
     profile_summary = (
@@ -364,28 +413,61 @@ async def evaluate_roles(
                 )
                 break
 
+    # Pre-embed user skills for dynamic semantic similarity (cached in memory)
+    user_skill_vectors: Dict[str, List[float]] = {}
+    for u_skill in user_skills_list:
+        user_skill_vectors[u_skill] = await generate_embedding(u_skill)
+
     for role_def in active_roles:
         required_skills = role_def["requiredSkills"]
         matched_strengths: List[str] = []
         skills_gap: List[str] = []
 
         for req_skill in required_skills:
+            r_norm = req_skill.lower().strip()
             matched = False
+
+            # 1. Fast-path: Exact match, substring containment, or token Jaccard overlap (0.000ms)
             for user_skill in user_skills_list:
-                if check_soft_match(user_skill, req_skill):
+                u_norm = user_skill.lower().strip()
+                if (
+                    u_norm == r_norm
+                    or u_norm in r_norm
+                    or r_norm in u_norm
+                    or compute_string_similarity(u_norm, r_norm) >= 0.60
+                ):
                     matched = True
                     matched_strengths.append(req_skill)
                     break
+
+            # 2. Semantic vector similarity fallback (BGE-M3 / Gemini dense embedding)
+            if not matched:
+                req_vec = await generate_embedding(req_skill)
+                for user_skill in user_skills_list:
+                    u_vec = user_skill_vectors.get(user_skill)
+                    if u_vec and req_vec and cosine_similarity(u_vec, req_vec) >= 0.58:
+                        matched = True
+                        matched_strengths.append(req_skill)
+                        break
+
             if not matched:
                 skills_gap.append(req_skill)
 
         # Mathematical scoring: BaseMatch = 0.60 * Cosine + 0.40 * SoftOverlap
-        soft_overlap_ratio = len(matched_strengths) / max(len(required_skills), 1)
+        # Denominator normalized to minimum 5 to prevent single-skill roles from falsely scoring 100%
+        effective_req_count = max(len(required_skills), 5)
+        soft_overlap_ratio = len(matched_strengths) / effective_req_count
         estimated_cosine = min(1.0, 0.40 + (0.60 * soft_overlap_ratio))
 
         # If Supabase pgvector returned real cosine similarity for this role, use it!
         cosine_val = pgvector_similarity_map.get(role_def["roleId"], estimated_cosine)
         base_match = (0.60 * cosine_val) + (0.40 * soft_overlap_ratio)
+
+        # Apply target job title affinity bonus if user explicitly chose this target career
+        if profile.targetJobTitle and profile.targetJobTitle.strip():
+            target_norm = profile.targetJobTitle.strip().lower()
+            if target_norm in role_def["title"].lower() or role_def["title"].lower() in target_norm:
+                base_match = min(1.0, base_match + 0.15)
 
         # Apply macro scenario multiplier
         multiplier = role_def["scenarioMultipliers"].get(scenario, 1.0)
@@ -393,6 +475,14 @@ async def evaluate_roles(
 
         # Pick localized title
         loc_title = role_def["titleLocalized"].get(locale, role_def["title"])
+
+        sdg_items: List[SdgAlignmentItem] = []
+        for sdg in role_def.get("sdgAlignments", []):
+            if isinstance(sdg, dict):
+                code = sdg.get("targetCode") or sdg.get("code") or sdg.get("sdg") or "SDG 8.2"
+                title = sdg.get("targetTitle") or sdg.get("title") or sdg.get("sdg_title") or "Decent Work & Economic Growth"
+                score = float(sdg.get("affinityScore") or sdg.get("score") or 0.85)
+                sdg_items.append(SdgAlignmentItem(targetCode=code, targetTitle=title, affinityScore=score))
 
         matched_roles.append(
             MatchedRole(
@@ -402,7 +492,7 @@ async def evaluate_roles(
                 industry=role_def["industry"],
                 matchScore=final_score,
                 scenarioMultiplierApplied=multiplier,
-                sdgAlignments=[SdgAlignmentItem(**sdg) for sdg in role_def["sdgAlignments"]],
+                sdgAlignments=sdg_items,
                 matchedStrengths=matched_strengths,
                 skillsGap=skills_gap,
                 atRiskCompetencies=at_risk_items,
@@ -431,5 +521,12 @@ async def evaluate_roles(
                 requiredLevel=req_val,
             )
         )
+
+    # Flush newly generated skill vectors to persistent disk cache
+    try:
+        from .embedding_service import persist_embedding_cache
+        persist_embedding_cache()
+    except Exception:
+        pass
 
     return matched_roles, radar_data

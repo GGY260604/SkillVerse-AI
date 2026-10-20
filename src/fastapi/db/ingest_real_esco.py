@@ -51,11 +51,34 @@ TARGET_SEARCH_QUERIES = [
     {"query": "health informatics", "industry": "Clean Healthcare", "sdg": "SDG 3.8", "sdg_title": "Universal quality healthcare access"},
     {"query": "clinical data manager", "industry": "Clean Healthcare", "sdg": "SDG 3.8", "sdg_title": "Modern clinical healthcare operations"},
     {"query": "biomedical engineer", "industry": "Clean Healthcare", "sdg": "SDG 3.b", "sdg_title": "Medical devices and health tech research"},
+    {"query": "bioinformatics", "industry": "Clean Healthcare", "sdg": "SDG 3.b", "sdg_title": "Genomic and biological data analysis"},
+    {"query": "telehealth", "industry": "Clean Healthcare", "sdg": "SDG 3.8", "sdg_title": "Remote digital medical care"},
 
     # 7. FinTech & Corporate Governance
     {"query": "financial analyst", "industry": "FinTech & Governance", "sdg": "SDG 8.10", "sdg_title": "Strengthen financial and banking institutions"},
     {"query": "risk manager", "industry": "FinTech & Governance", "sdg": "SDG 8.2", "sdg_title": "Risk mitigation and financial stability"},
     {"query": "compliance officer", "industry": "FinTech & Governance", "sdg": "SDG 16.6", "sdg_title": "Accountable and transparent regulatory compliance"},
+    {"query": "investment analyst", "industry": "FinTech & Governance", "sdg": "SDG 8.10", "sdg_title": "Sustainable capital allocation"},
+    {"query": "fraud analyst", "industry": "FinTech & Governance", "sdg": "SDG 16.6", "sdg_title": "Financial crime and fraud prevention"},
+
+    # 8. Modern Software, Cloud & AI Expansion
+    {"query": "devops engineer", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 9.c", "sdg_title": "Universal digital infrastructure"},
+    {"query": "full stack developer", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 8.2", "sdg_title": "Productivity through digital systems"},
+    {"query": "natural language processing", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 9.5", "sdg_title": "Scientific research & AI innovation"},
+    {"query": "computer vision", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 9.5", "sdg_title": "Autonomous visual inspection"},
+    {"query": "mobile application developer", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 9.c", "sdg_title": "Mobile access to services"},
+    {"query": "penetration tester", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 16.6", "sdg_title": "Cyber defense and resilience"},
+
+    # 9. Green Transition & Circular Economy Expansion
+    {"query": "carbon footprint analyst", "industry": "Clean Energy & ESG", "sdg": "SDG 13.1", "sdg_title": "Climate action & carbon reduction"},
+    {"query": "circular economy", "industry": "Clean Energy & ESG", "sdg": "SDG 12.5", "sdg_title": "Waste reduction & circular economy"},
+    {"query": "wind energy engineer", "industry": "Clean Energy & ESG", "sdg": "SDG 7.2", "sdg_title": "Renewable wind power"},
+    {"query": "sustainable building consultant", "industry": "Clean Energy & ESG", "sdg": "SDG 11.c", "sdg_title": "Sustainable and resilient buildings"},
+
+    # 10. Robotics & Autonomous Logistics Expansion
+    {"query": "drone pilot", "industry": "Smart Logistics & Automation", "sdg": "SDG 9.1", "sdg_title": "Aerial logistics and surveying"},
+    {"query": "mechatronics engineer", "industry": "Advanced Manufacturing & Robotics", "sdg": "SDG 9.5", "sdg_title": "Advanced electromechanical systems"},
+    {"query": "digital content strategist", "industry": "Responsible AI & Digital Transformation", "sdg": "SDG 8.2", "sdg_title": "Digital marketing & content systems"},
 ]
 
 # Title localization dictionary for official ESCO titles
@@ -198,12 +221,35 @@ async def ingest_official_esco_to_supabase():
     print("=================================================================", flush=True)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
+        existing_role_ids = set()
+        try:
+            get_resp = await client.get(f"{base_url}/rest/v1/esco_roles?select=role_id", headers=headers)
+            if get_resp.status_code == 200:
+                existing_role_ids = {r["role_id"] for r in get_resp.json()}
+                print(f"[*] Found {len(existing_role_ids)} existing roles in Supabase. Skipping duplicates.", flush=True)
+        except Exception:
+            pass
+
         for index, query_spec in enumerate(TARGET_SEARCH_QUERIES, 1):
             query = query_spec["query"]
+            approx_slug = query.lower().replace(" ", "-")
+            if any(approx_slug in rid or rid.replace("esco-", "") in approx_slug for rid in existing_role_ids):
+                print(f"[{index}/{len(TARGET_SEARCH_QUERIES)}] Query '{query}' already covered in Supabase. Skipping.", flush=True)
+                continue
+
             print(f"\n[{index}/{len(TARGET_SEARCH_QUERIES)}] Fetching canonical ESCO role: '{query}'...", flush=True)
-            role_data = await fetch_real_esco_occupation(client, query_spec)
+            try:
+                role_data = await fetch_real_esco_occupation(client, query_spec)
+            except Exception as e:
+                print(f"    [!] Error fetching ESCO resource for '{query}': {e}. Skipping.", flush=True)
+                continue
+
             if not role_data:
                 print(f"    [!] Could not fetch ESCO resource for '{query}'. Skipping.", flush=True)
+                continue
+
+            if role_data["role_id"] in existing_role_ids:
+                print(f"    [=] '{role_data['role_id']}' already exists in Supabase. Skipping.", flush=True)
                 continue
 
             title = role_data["title"]

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # RunPod GPU Inference Microservice (BAAI/bge-m3)
     RUNPOD_API_ENDPOINT: str = os.getenv("RUNPOD_API_ENDPOINT", "")
     RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY", "")
+    ENABLE_LOCAL_BGE_M3: bool = os.getenv("ENABLE_LOCAL_BGE_M3", "false").lower() in ["1", "true", "yes"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
