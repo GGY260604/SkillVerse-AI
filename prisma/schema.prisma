@@ -1,0 +1,192 @@
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+// ==========================================
+// 1. User & Profile Management
+// ==========================================
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique
+  name           String?
+  locale         String    @default("en") // 'en' | 'ms' | 'zh'
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  profile        UserProfile?
+  assessments    Assessment[]
+  sharedRoadmaps SharedRoadmap[]
+  auditLogs      SkillMismatchAuditLog[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id                    String        @id @default(uuid()) @db.Uuid
+  userId                String        @unique @db.Uuid
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  employmentStatus      String        // employed_at_risk, fresh_grad_student, career_switcher, jobseeker
+  currentJobTitle       String?
+  industry              String?
+  educationLevel        String?
+  yearsOfExperience     String?
+  
+  skills                Json          // Stores user skill structure array (UserSkillItem[])
+  toolsAndSoftware      String[]      // List of common tools and software
+  casualDescription     String?       // User's free-form description of daily work tasks
+  languages             String[]      // Languages spoken/written
+  
+  careerGoal            String?       // upskill, reskill, explore
+  targetSectors         String[]      // Target future sectors
+  targetJobTitle        String?
+  workArrangement       String?       // remote, hybrid, onsite, any
+  
+  weeklyCommitmentHours String        @default("3-5") // 1-3, 3-5, 5-10, 10+
+  learningProviders     String[]      // free_open, hrd_corp, industry_cert
+  outputLanguage        String        @default("en")
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  assessments           Assessment[]
+
+  @@map("user_profiles")
+}
+
+// ==========================================
+// 2. ESCO Taxonomy & Trend Signals
+// ==========================================
+
+model EscoRole {
+  id                  String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId              String                       @unique @map("role_id")
+  title               String
+  titleMs             String                       @map("title_ms")
+  titleZh             String                       @map("title_zh")
+  industry            String
+  requiredSkills      String[]                     @map("required_skills")
+  sdgAlignments       Json                         @default("[]") @map("sdg_alignments")
+  scenarioMultipliers Json                         @default("{\"moderate\": 1.0, \"accelerated_ai\": 1.0, \"green_economy\": 1.0}") @map("scenario_multipliers")
+  radarRequirements   Json                         @default("{}") @map("radar_requirements")
+  embedding           Unsupported("vector(1024)")? // bge-m3 1024-dimensional vector
+  createdAt           DateTime                     @default(now()) @map("created_at")
+  updatedAt           DateTime                     @default(now()) @updatedAt @map("updated_at")
+
+  @@map("esco_roles")
+}
+
+model SdgTarget {
+  id          String                       @id @default(uuid()) @db.Uuid
+  targetCode  String                       @unique @map("target_code") // e.g. "SDG 8.2", "SDG 9.4"
+  goalNumber  Int                          @map("goal_number")        // 1 to 17
+  title       String
+  description String
+  embedding   Unsupported("vector(1024)")?
+  createdAt   DateTime                     @default(now()) @map("created_at")
+
+  @@map("sdg_targets")
+}
+
+model TrendSignal {
+  id             String   @id @default(uuid()) @db.Uuid
+  skillName      String   @unique
+  category       String
+  currentWindowC Float    @default(0.0) // Current window frequency Ct
+  pastWindowC    Float    @default(0.0) // Historical window frequency Ct-1
+  velocityVs     Float    @default(0.0) // Signal velocity Vs
+  status         String   // emerging, stable, declining
+  sources        Json     // Ingestion sources and timestamps [{sourceName, url, timestamp}]
+  updatedAt      DateTime @updatedAt
+
+  @@map("trend_signals")
+}
+
+model CustomEmergingSkill {
+  id              String                       @id @default(uuid()) @db.Uuid
+  canonicalEn     String                       @unique
+  localizedLabels Json                         // {"en": "...", "ms": "...", "zh": "..."}
+  embedding       Unsupported("vector(1024)")? // bge-m3 1024-dimensional vector
+  firstSeenAt     DateTime                     @default(now())
+  frequencyCount  Int                          @default(1)
+  isPromoted      Int                          @default(0)
+
+  @@map("custom_emerging_skills")
+}
+
+model SkillMismatchAuditLog {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @db.Uuid
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rawUserInput         String
+  aiSuggestedCanonical String
+  userAction           String   // deleted, renamed, replaced
+  userReplacement      String?
+  locale               String
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
+  @@map("skill_mismatch_audit_logs")
+}
+
+// ==========================================
+// 3. Assessment & Analysis Engine
+// ==========================================
+
+model Assessment {
+  id                   String           @id @default(uuid()) @db.Uuid
+  sessionId            String?          @map("session_id") // For anonymous session tracking
+  userId               String?          @db.Uuid
+  user                 User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileId            String?          @db.Uuid
+  profile              UserProfile?     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  activeScenario       String           @default("moderate") // moderate, accelerated_ai, green_economy
+  radarData            Json             // Multi-dimensional radar chart comparison data
+  topRoles             Json             // Matched role rankings, scores, SDG affinity, and skill gaps
+  
+  selectedRoleRoadmap  Json             // Complete 3-phase dynamic reskilling roadmap for the selected role
+  
+  // Certificate name(s) stored directly alongside the plan/assessment
+  certificatesEarned   String?          // e.g. "Google Data Analytics, HRD Corp Certified AI Practitioner"
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  sharedAsTarget       SharedRoadmap[]
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([profileId])
+  @@map("assessments")
+}
+
+// ==========================================
+// 4. Collaboration & Shared Roadmaps
+// ==========================================
+
+model SharedRoadmap {
+  id             String     @id @default(uuid()) @db.Uuid
+  ownerId        String     @db.Uuid
+  owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  assessmentId   String     @db.Uuid
+  assessment     Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  
+  title          String     // Roadmap display title
+  isPublic       Boolean    @default(true)
+  synergyData    Json?      // Cross-profile vector delta and complementarity insights
+  
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([ownerId])
+  @@index([assessmentId])
+  @@map("shared_roadmaps")
+}
