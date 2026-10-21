@@ -99,6 +99,24 @@
       "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",
       "btn_add_plan": "+ Tambah Pelan Baharu"
     },
+    "share_modal": {
+      "title": "Kongsi Pelan Hala Tuju",
+      "subtitle": "Cari rakan melalui UID atau Emel untuk memberikan kebenaran melihat atau mengedit pelan hala tuju ini.",
+      "search_placeholder": "Cari melalui ID Pengguna (UID) atau Emel...",
+      "filter_label": "Tapis",
+      "filter_none": "Mod Carian",
+      "filter_all": "Semua Yang Dikongsi",
+      "filter_viewable": "Boleh Lihat (Viewable)",
+      "filter_editable": "Boleh Edit (Editable)",
+      "access_no_access": "Tiada Akses (No Access)",
+      "access_viewable": "Boleh Lihat (Viewable)",
+      "access_editable": "Boleh Edit (Editable)",
+      "empty_initial": "Cari pengguna melalui UID atau Emel, atau pilih penapis akses di atas.",
+      "empty_no_results": "Tiada pengguna ditemui yang sepadan dengan carian atau penapis anda.",
+      "updating": "Mengemas kini akses...",
+      "updated_success": "Kebenaran berjaya dikemas kini.",
+      "btn_close": "Tutup"
+    },
     "current": {
       "badge": "PELAN AKTIF SEMASA",
       "match_score": "Skor Padanan",

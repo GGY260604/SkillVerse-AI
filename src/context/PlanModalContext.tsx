@@ -6,17 +6,19 @@ import { useAuth } from "@/context/AuthContext";
 import { ProfileIntakePayload } from "@/lib/fastapi/client";
 import { PlanData } from "@/components/analysis/planCard/planData";
 
-export type PlanModalType = "pathway_select" | "upload" | "wizard" | "role_select" | null;
+export type PlanModalType = "pathway_select" | "upload" | "wizard" | "role_select" | "share" | null;
 
 interface PlanModalContextType {
   activeModal: PlanModalType;
   activeProfile: ProfileIntakePayload | null;
   activePlan: PlanData | null;
   wizardPrefillData: any | null;
+  shareRoadmapData: { id?: string; title?: string } | null;
   openPathwaySelect: () => void;
   openUploadOption: () => void;
   openWizardOption: (prefillData?: any) => void;
   openRoleSelect: (profile: ProfileIntakePayload) => void;
+  openShareModal: (roadmapId?: string, roadmapTitle?: string) => void;
   closeModals: () => void;
   saveActivePlan: (plan: PlanData) => void;
   clearActivePlan: () => void;
@@ -29,6 +31,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activeProfile, setActiveProfile] = useState<ProfileIntakePayload | null>(null);
   const [activePlan, setActivePlan] = useState<PlanData | null>(null);
   const [wizardPrefillData, setWizardPrefillData] = useState<any | null>(null);
+  const [shareRoadmapData, setShareRoadmapData] = useState<{ id?: string; title?: string } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { isLoggedIn, openAuthModal } = useAuth();
@@ -77,6 +80,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Open role discovery & selection modal with normalized profile data
+  // Open role discovery & selection modal with normalized profile data
   const openRoleSelect = useCallback(
     (profile: ProfileIntakePayload) => {
       setActiveProfile(profile);
@@ -86,10 +90,24 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     [navigateToAnalysisIfNeeded]
   );
 
+  // Open share roadmap overlay window
+  const openShareModal = useCallback(
+    (roadmapId?: string, roadmapTitle?: string) => {
+      if (!isLoggedIn) {
+        openAuthModal("login");
+        return;
+      }
+      setShareRoadmapData({ id: roadmapId, title: roadmapTitle });
+      setActiveModal("share");
+    },
+    [isLoggedIn, openAuthModal]
+  );
+
   // Dismiss any currently active option or pathway modal.
   const closeModals = useCallback(() => {
     setActiveModal(null);
     setWizardPrefillData(null);
+    setShareRoadmapData(null);
   }, []);
 
   // Save active synthesized plan
@@ -107,6 +125,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
       setActiveModal(null);
       setWizardPrefillData(null);
       setActiveProfile(null);
+      setShareRoadmapData(null);
     }
   }, [isLoggedIn, activeModal]);
 
@@ -117,10 +136,12 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
         activeProfile,
         activePlan,
         wizardPrefillData,
+        shareRoadmapData,
         openPathwaySelect,
         openUploadOption,
         openWizardOption,
         openRoleSelect,
+        openShareModal,
         closeModals,
         saveActivePlan,
         clearActivePlan,

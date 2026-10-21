@@ -5,6 +5,7 @@ import PathwaySelectModal from "./PathwaySelectModal";
 import UploadOptionModal from "./UploadOptionModal";
 import WizardOptionModal from "./WizardOptionModal";
 import RoleSelectorModal from "./RoleSelectorModal";
+import SharedPlansModal from "../SharedPlansModal";
 
 // Plan Modals Orchestrator Component
 // Mount and manage lifecycle of all option and pathway overlay windows.
@@ -29,6 +30,9 @@ export default function PlanModals() {
 
       {/* Top 5 Role Discovery & Reskilling Selection Overlay */}
       <RoleSelectorModal />
+
+      {/* Collaboration: Shared Plans Modal Overlay */}
+      <SharedPlansModal />
     </>
   );
 }

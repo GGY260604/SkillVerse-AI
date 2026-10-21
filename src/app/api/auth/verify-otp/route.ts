@@ -39,6 +39,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, errorCode: "invalid_otp" }, { status: 400 });
     }
 
+    // Ensure user record exists in prisma user table
+    if (data.user?.id && data.user.email) {
+      try {
+        const { prisma } = await import("@/lib/prisma");
+        await prisma.user.upsert({
+          where: { id: data.user.id },
+          create: {
+            id: data.user.id,
+            email: data.user.email.toLowerCase(),
+            locale: (data.user.user_metadata?.locale as string) || "en",
+          },
+          update: {},
+        });
+      } catch (dbErr) {
+        console.error("Failed to sync user in verify-otp:", dbErr);
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
       message: "Verification successful.",

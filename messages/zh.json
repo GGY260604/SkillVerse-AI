@@ -99,6 +99,24 @@
       "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",
       "btn_add_plan": "+ 添加新的规划"
     },
+    "share_modal": {
+      "title": "共享职业转型路线图",
+      "subtitle": "通过用户 ID (UID) 或 Email 检索同伴，并为其授权该路线图的查看或编辑权限。",
+      "search_placeholder": "通过用户 ID (UID) 或 Email 搜索用户...",
+      "filter_label": "筛选",
+      "filter_none": "搜索模式",
+      "filter_all": "所有已授权成员",
+      "filter_viewable": "仅可查看 (Viewable)",
+      "filter_editable": "可编辑 (Editable)",
+      "access_no_access": "无权限 (No Access)",
+      "access_viewable": "可查看 (Viewable)",
+      "access_editable": "可编辑 (Editable)",
+      "empty_initial": "请输入用户 UID 或 Email 进行搜索，或选择上方权限筛选查看已授权成员。",
+      "empty_no_results": "未检索到匹配的用户或已授权记录。",
+      "updating": "更新权限中...",
+      "updated_success": "权限已成功更新。",
+      "btn_close": "关闭"
+    },
     "current": {
       "badge": "当前活跃规划",
       "match_score": "岗位匹配度",

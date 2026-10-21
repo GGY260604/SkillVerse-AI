@@ -46,7 +46,8 @@ model User {
   updatedAt             DateTime      @updatedAt
 
   roadmaps              Roadmap[]
-  sharedRoadmaps        SharedRoadmap[]
+  sharedRoadmaps        SharedRoadmap[] @relation("SharedRoadmapOwner")
+  receivedRoadmaps      SharedRoadmap[] @relation("SharedRoadmapTarget")
   auditLogs             SkillMismatchAuditLog[]
 
   @@map("users")
@@ -215,18 +216,23 @@ model RoadmapPhase {
 model SharedRoadmap {
   id             String     @id @default(uuid()) @db.Uuid
   ownerId        String     @db.Uuid @map("owner_id")
-  owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner          User       @relation("SharedRoadmapOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  targetUserId   String     @db.Uuid @map("target_user_id")
+  targetUser     User       @relation("SharedRoadmapTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
   roadmapId      String     @db.Uuid @map("roadmap_id")
   roadmap        Roadmap    @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
   
-  title          String     // Roadmap display title
+  accessLevel    String     @default("viewable") @map("access_level") // "viewable" | "editable"
+  title          String?    // Roadmap display title
   isPublic       Boolean    @default(true) @map("is_public")
   synergyData    Json?      @map("synergy_data") // Cross-profile vector delta and complementarity insights
   
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
+  @@index([roadmapId, targetUserId])
   @@index([ownerId])
+  @@index([targetUserId])
   @@index([roadmapId])
   @@map("shared_roadmaps")
 }

@@ -63,6 +63,27 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Automatically record new user in user table with email and locale
+    if (data.user?.id) {
+      try {
+        const { prisma } = await import("@/lib/prisma");
+        await prisma.user.upsert({
+          where: { id: data.user.id },
+          create: {
+            id: data.user.id,
+            email: normalizedEmail,
+            locale: userLocale,
+          },
+          update: {
+            email: normalizedEmail,
+            locale: userLocale,
+          },
+        });
+      } catch (dbErr) {
+        console.error("Failed to insert user into database upon registration:", dbErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "6-digit verification code has been dispatched to your email.",

@@ -40,7 +40,7 @@ export default function ExistPlanState({
 }: ExistPlanStateProps = {}) {
   const t = useTranslations("analysis.header");
   const tHistory = useTranslations("analysis.history");
-  const { openPathwaySelect } = usePlanModal();
+  const { openPathwaySelect, openShareModal } = usePlanModal();
 
   // Internal state tracking for plans so UI immediately reflects phase completion updates
   const [activeCurrentPlan, setActiveCurrentPlan] = useState<PlanData>(currentPlan);
@@ -177,6 +177,12 @@ export default function ExistPlanState({
             {/* Share Plan Action Button */}
             <button
               type="button"
+              onClick={() =>
+                openShareModal(
+                  selectedPlan?.id || activeCurrentPlan.id,
+                  selectedPlan?.targetRole || activeCurrentPlan.targetRole
+                )
+              }
               className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
               title={t("share_plan")}
             >

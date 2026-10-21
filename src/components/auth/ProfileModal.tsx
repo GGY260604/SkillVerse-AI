@@ -16,6 +16,7 @@ export default function ProfileModal() {
   const [initialName, setInitialName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [copiedUid, setCopiedUid] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -149,9 +150,6 @@ export default function ProfileModal() {
         ref={modalRef}
         className="relative w-full max-w-lg bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up"
       >
-        {/* Subtle Ambient Radial Glow */}
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-36 bg-accent/10 blur-3xl pointer-events-none rounded-full" />
-
         {/* Top Controls: Brand & Actions Bar */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6">
           {/* Brand Header */}
@@ -212,13 +210,44 @@ export default function ProfileModal() {
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold text-text-primary truncate mb-1">
+            <h3 className="text-base font-bold text-text-primary truncate mb-0.5">
               {currentDisplayName}
             </h3>
 
-            <p className="text-xs font-mono text-text-muted truncate">
+            <p className="text-xs font-mono text-text-muted truncate mb-1">
               {user?.email || "No email linked"}
             </p>
+
+            {user?.id && (
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-500">
+                <span className="uppercase text-[10px] tracking-wider text-zinc-500 font-semibold">UID:</span>
+                <span className="text-zinc-400 select-all truncate">{user.id}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.id);
+                    setCopiedUid(true);
+                    setTimeout(() => setCopiedUid(false), 2000);
+                  }}
+                  className="p-1 text-zinc-400 hover:text-accent transition-colors bg-transparent border-none cursor-pointer rounded flex items-center justify-center shrink-0"
+                  title="Copy UID"
+                  aria-label="Copy UID"
+                >
+                  {copiedUid ? (
+                    <span className="text-[10px] text-accent font-semibold">Copied!</span>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
