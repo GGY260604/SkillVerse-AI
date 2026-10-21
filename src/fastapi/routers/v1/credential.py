@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
-from ...schemas.credential import CertificateVerificationResult
-from ...services.credential_service import verify_certificate_document
+from schemas.credential import CertificateVerificationResult
+from services.credential_service import verify_certificate_document
 
 router = APIRouter(prefix="/verify-certificate", tags=["Module 5: Milestone Proof & Credential Verification"])
 

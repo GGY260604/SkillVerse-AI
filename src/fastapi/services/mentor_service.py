@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 from .gemini_service import call_gemini_with_fallback
-from ..schemas.mentor import MentorQueryPayload, MentorResponsePayload, QuickCheckQuiz
+from schemas.mentor import MentorQueryPayload, MentorResponsePayload, QuickCheckQuiz
 
 logger = logging.getLogger("skillverse.mentor")
 

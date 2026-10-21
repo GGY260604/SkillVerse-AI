@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 import httpx
 from typing import List, Dict, Any
-from ..config import settings
+from config import settings
 
 # Curated labor market trend signals grounded in World Economic Forum (WEF) Future of Jobs Report 2025
 # and Malaysian TalentCorp Critical Occupations List (COL).

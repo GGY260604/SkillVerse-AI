@@ -2,9 +2,9 @@ import math
 import time
 import httpx
 from typing import List, Dict, Any, Tuple, Optional
-from ..config import settings
+from config import settings
 from .embedding_service import generate_embedding
-from ..schemas.analysis import (
+from schemas.analysis import (
     MacroScenario,
     MatchedRole,
     SdgAlignmentItem,

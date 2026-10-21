@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Any
-from ..schemas.analysis import (
+from schemas.analysis import (
     SelectedRoleRoadmap,
     RoadmapMilestone,
     RecommendedCourse,

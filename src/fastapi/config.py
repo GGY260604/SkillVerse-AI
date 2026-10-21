@@ -4,7 +4,12 @@ from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
 # Load root .env or local environment variables
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
+_fastapi_env = os.path.join(os.path.dirname(__file__), ".env")
+_root_env = os.path.join(os.path.dirname(__file__), "../../.env")
+if os.path.exists(_root_env):
+    load_dotenv(dotenv_path=_root_env)
+if os.path.exists(_fastapi_env):
+    load_dotenv(dotenv_path=_fastapi_env, override=True)
 
 
 class Settings(BaseSettings):

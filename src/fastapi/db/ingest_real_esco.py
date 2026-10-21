@@ -3,8 +3,8 @@ import uuid
 from datetime import datetime, timezone
 import httpx
 from typing import List, Dict, Any
-from ..config import settings
-from ..services.embedding_service import generate_embedding
+from config import settings
+from services.embedding_service import generate_embedding
 
 # Official European Commission ESCO API Endpoints
 ESCO_SEARCH_API = "https://ec.europa.eu/esco/api/search"

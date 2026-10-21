@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter
-from ...schemas.analysis import (
+from schemas.analysis import (
     AnalyzeRequestPayload,
     AnalyzeResponsePayload,
 )
-from ...services.matching_service import evaluate_roles
-from ...services.pathway_service import synthesize_pathway
+from services.matching_service import evaluate_roles
+from services.pathway_service import synthesize_pathway
 
 router = APIRouter()
 

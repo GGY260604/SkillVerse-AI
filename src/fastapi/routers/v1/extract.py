@@ -1,9 +1,9 @@
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from ...schemas.profile import ExtractionResponse
-from ...services.pdf_service import extract_text_from_pdf
-from ...services.ocr_service import validate_and_prepare_image
-from ...services.gemini_service import normalize_profile_with_gemini
+from schemas.profile import ExtractionResponse
+from services.pdf_service import extract_text_from_pdf
+from services.ocr_service import validate_and_prepare_image
+from services.gemini_service import normalize_profile_with_gemini
 
 router = APIRouter()
 

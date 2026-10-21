@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from .gemini_service import call_gemini_with_fallback
 from .pdf_service import extract_text_from_pdf
 from .ocr_service import validate_and_prepare_image
-from ..schemas.credential import (
+from schemas.credential import (
     CertificateVerificationResult,
     ExtractedCertificateDetails,
     IssuedBadge,
