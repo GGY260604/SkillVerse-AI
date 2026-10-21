@@ -1,17 +1,16 @@
 # SkillVerse AI - Database & Prisma ORM Architecture
 
-This directory houses the complete database schema, migrations, and seeding infrastructure for SkillVerse AI.
+This directory houses the complete database schema, SQL migrations, and seeding infrastructure for SkillVerse AI.
 
 ## Directory Structure
 
 ```
 prisma/
 ├── schema.prisma              # Master Prisma schema with PostgreSQL extensions (vector, uuid-ossp)
+├── seed.sql                   # Standalone, standard SQL seed (110 trend signals, 104 embedded roles, 17 SDG targets)
 ├── migrations/
 │   ├── 01_vector_schema.sql   # Core pgvector tables (esco_roles, sdg_targets, trend_signals) & match_roles RPC
 │   └── 02_cron_jobs.sql       # Automated nightly signal ingestion cron jobs (pg_cron, pg_net)
-├── seed.mjs                   # Node.js seed wrapper for npm run db:seed
-├── seed_dataset.py            # Deep dataset engine generating 110+ trend signals and 104+ embedded roles
 └── README.md                  # Database documentation
 ```
 
@@ -45,7 +44,7 @@ prisma/
   ```bash
   npm run db:push
   ```
-- **Seed Datasets (110+ signals & 104+ embedded roles):**
+- **Seed Datasets (110+ signals & 104+ embedded roles via seed.sql):**
   ```bash
   npm run db:seed
   ```
