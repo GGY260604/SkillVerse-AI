@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import PlanCard from "./planCard/PlanCard";
 import PlanDetailView from "./planCard/PlanDetailView";
-import { CURRENT_PLAN, HISTORY_PLANS, type PlanData } from "./planCard/planData";
+import { CURRENT_PLAN, HISTORY_PLANS, type PlanData, type PlanPhase } from "./planCard/planData";
 import { usePlanModal } from "@/context/PlanModalContext";
 
 export interface SharedUserInfo {
@@ -23,6 +23,7 @@ export interface ExistPlanStateProps {
   isSharedView?: boolean;
   sharedUser?: SharedUserInfo;
   onBackToSharedList?: () => void;
+  onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
 // Exist Plan State Component
@@ -35,16 +36,67 @@ export default function ExistPlanState({
   isSharedView = false,
   sharedUser,
   onBackToSharedList,
+  onPhaseToggle,
 }: ExistPlanStateProps = {}) {
   const t = useTranslations("analysis.header");
   const tHistory = useTranslations("analysis.history");
   const { openPathwaySelect } = usePlanModal();
+
+  // Internal state tracking for plans so UI immediately reflects phase completion updates
+  const [activeCurrentPlan, setActiveCurrentPlan] = useState<PlanData>(currentPlan);
+  const [activeHistoryPlans, setActiveHistoryPlans] = useState<PlanData[]>(historyPlans);
+
+  // Sync internal state when props change
+  useEffect(() => {
+    setActiveCurrentPlan(currentPlan);
+  }, [currentPlan]);
+
+  useEffect(() => {
+    setActiveHistoryPlans(historyPlans);
+  }, [historyPlans]);
 
   // State for navigating between Overview and Individual Plan Details.
   const [selectedPlan, setSelectedPlan] = useState<PlanData | null>(null);
 
   // State for collapsing / expanding multiple historical cards.
   const [showAllHistory, setShowAllHistory] = useState<boolean>(false);
+
+  // Handle phase completion toggle and update both current plan and selected plan in real-time
+  const handleInternalPhaseToggle = (phaseId: string, isCompleted: boolean) => {
+    const updatePhasesList = (phases?: PlanPhase[]) => {
+      if (!phases) return [];
+      return phases.map((p) => (p.id === phaseId ? { ...p, isCompleted } : p));
+    };
+
+    setActiveCurrentPlan((prev) => {
+      if (prev.phases?.some((p) => p.id === phaseId)) {
+        const updated = {
+          ...prev,
+          phases: updatePhasesList(prev.phases),
+        };
+        setSelectedPlan((sp) => (sp && sp.id === prev.id ? updated : sp));
+        return updated;
+      }
+      return prev;
+    });
+
+    setActiveHistoryPlans((prev) =>
+      prev.map((hp) => {
+        if (hp.phases?.some((p) => p.id === phaseId)) {
+          const updated = {
+            ...hp,
+            phases: updatePhasesList(hp.phases),
+          };
+          setSelectedPlan((sp) => (sp && sp.id === hp.id ? updated : sp));
+          return updated;
+        }
+        return hp;
+      })
+    );
+
+    // Call external handler if provided
+    onPhaseToggle?.(phaseId, isCompleted);
+  };
 
   return (
     <div className="w-full flex-1">
@@ -177,6 +229,7 @@ export default function ExistPlanState({
           plan={selectedPlan}
           onBack={() => setSelectedPlan(null)}
           isSharedView={isSharedView}
+          onPhaseToggle={handleInternalPhaseToggle}
         />
       ) : (
         /* Overview Mode: Display Current Plan and History Plan Cards */
@@ -191,13 +244,14 @@ export default function ExistPlanState({
             </div>
 
             <PlanCard
-              plan={currentPlan}
+              plan={activeCurrentPlan}
+              variant="current"
               onSelect={(plan) => setSelectedPlan(plan)}
             />
           </section>
 
           {/* Section 2: History Plan (Subdued Muted Gray) */}
-          {historyPlans.length > 0 && (
+          {activeHistoryPlans.length > 0 && (
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg sm:text-xl font-bold text-text-secondary tracking-tight flex items-center gap-2">
@@ -205,17 +259,18 @@ export default function ExistPlanState({
                   {t("history_plan")}
                 </h2>
                 <span className="text-xs font-mono text-text-muted">
-                  {historyPlans.length} Preserved
+                  {activeHistoryPlans.length} Preserved
                 </span>
               </div>
 
               {/* History Cards List: Only first card shown by default if more than 1 */}
               <div className="flex flex-col gap-4">
-                {(showAllHistory ? historyPlans : historyPlans.slice(0, 1)).map(
+                {(showAllHistory ? activeHistoryPlans : activeHistoryPlans.slice(0, 1)).map(
                   (historyPlan) => (
                     <PlanCard
                       key={historyPlan.id}
                       plan={historyPlan}
+                      variant="history"
                       onSelect={(plan) => setSelectedPlan(plan)}
                     />
                   )

@@ -12,9 +12,10 @@ interface PlanModalContextType {
   activeModal: PlanModalType;
   activeProfile: ProfileIntakePayload | null;
   activePlan: PlanData | null;
+  wizardPrefillData: any | null;
   openPathwaySelect: () => void;
   openUploadOption: () => void;
-  openWizardOption: () => void;
+  openWizardOption: (prefillData?: any) => void;
   openRoleSelect: (profile: ProfileIntakePayload) => void;
   closeModals: () => void;
   saveActivePlan: (plan: PlanData) => void;
@@ -23,31 +24,14 @@ interface PlanModalContextType {
 
 const PlanModalContext = createContext<PlanModalContextType | undefined>(undefined);
 
-const STORAGE_PLAN_KEY = "skillverse_active_plan";
-
 export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activeModal, setActiveModal] = useState<PlanModalType>(null);
   const [activeProfile, setActiveProfile] = useState<ProfileIntakePayload | null>(null);
   const [activePlan, setActivePlan] = useState<PlanData | null>(null);
-
+  const [wizardPrefillData, setWizardPrefillData] = useState<any | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { isLoggedIn, openAuthModal } = useAuth();
-
-  // Load saved plan from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_PLAN_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && parsed.id) {
-          setActivePlan(parsed);
-        }
-      }
-    } catch {
-      // ignore JSON parse error
-    }
-  }, []);
 
   // Redirect to analysis page when user triggers a plan creation or option workflow.
   const navigateToAnalysisIfNeeded = useCallback(() => {
@@ -76,51 +60,53 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     setActiveModal("upload");
   }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
 
-  // Directly open guided diagnostic wizard option overlay window.
-  const openWizardOption = useCallback(() => {
-    if (!isLoggedIn) {
-      openAuthModal("login");
-      return;
-    }
-    navigateToAnalysisIfNeeded();
-    setActiveModal("wizard");
-  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
+  // Directly open guided diagnostic wizard option overlay window with optional prefill data.
+  const openWizardOption = useCallback(
+    (prefillData?: any) => {
+      if (!isLoggedIn) {
+        openAuthModal("login");
+        return;
+      }
+      if (prefillData) {
+        setWizardPrefillData(prefillData);
+      }
+      navigateToAnalysisIfNeeded();
+      setActiveModal("wizard");
+    },
+    [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
+  );
 
   // Open role discovery & selection modal with normalized profile data
-  const openRoleSelect = useCallback((profile: ProfileIntakePayload) => {
-    setActiveProfile(profile);
-    navigateToAnalysisIfNeeded();
-    setActiveModal("role_select");
-  }, [navigateToAnalysisIfNeeded]);
+  const openRoleSelect = useCallback(
+    (profile: ProfileIntakePayload) => {
+      setActiveProfile(profile);
+      navigateToAnalysisIfNeeded();
+      setActiveModal("role_select");
+    },
+    [navigateToAnalysisIfNeeded]
+  );
 
   // Dismiss any currently active option or pathway modal.
   const closeModals = useCallback(() => {
     setActiveModal(null);
+    setWizardPrefillData(null);
   }, []);
 
   // Save active synthesized plan
   const saveActivePlan = useCallback((plan: PlanData) => {
     setActivePlan(plan);
-    try {
-      localStorage.setItem(STORAGE_PLAN_KEY, JSON.stringify(plan));
-    } catch {
-      // ignore storage error
-    }
   }, []);
 
   const clearActivePlan = useCallback(() => {
     setActivePlan(null);
-    try {
-      localStorage.removeItem(STORAGE_PLAN_KEY);
-    } catch {
-      // ignore
-    }
   }, []);
 
   // Dismiss any active plan modal immediately when user logs out or session is unauthenticated.
   useEffect(() => {
     if (!isLoggedIn && activeModal !== null) {
       setActiveModal(null);
+      setWizardPrefillData(null);
+      setActiveProfile(null);
     }
   }, [isLoggedIn, activeModal]);
 
@@ -130,6 +116,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
         activeModal,
         activeProfile,
         activePlan,
+        wizardPrefillData,
         openPathwaySelect,
         openUploadOption,
         openWizardOption,

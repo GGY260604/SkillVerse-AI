@@ -97,6 +97,8 @@ export interface ExtractionResponse {
   message: string;
   extractedProfile: ProfileIntakePayload;
   rawTextPreview?: string;
+  extractionMethod?: "gemini" | "local" | string;
+  usedKey?: string | null;
 }
 
 export interface SdgAlignmentItem {
@@ -127,6 +129,7 @@ export interface MatchedRole {
 
 export interface RecommendedCourse {
   title: string;
+  titleLocalized?: { en?: string; ms?: string; zh?: string };
   platform: string;
   url: string;
   isHrdCorpClaimable: boolean;
@@ -137,9 +140,13 @@ export interface RecommendedCourse {
 export interface RoadmapMilestone {
   phaseIndex: number;
   phaseTitle: string;
+  titleLocalized?: { en?: string; ms?: string; zh?: string };
+  description?: string;
+  descriptionLocalized?: { en?: string; ms?: string; zh?: string };
   durationWeeks: number;
   estimatedHours: number;
   learningObjectives: string[];
+  objectivesLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   recommendedCourses: RecommendedCourse[];
 }
 
@@ -271,11 +278,15 @@ export async function analyzeWorkforceProfileStream(
   payload: AnalyzeRequestPayload,
   onProgress: (event: StreamProgressEvent) => void
 ): Promise<AnalyzeResponsePayload> {
-  const config = getFastApiConfig();
-  const response = await fetch(`${config.baseUrl}/api/v1/analyze/stream`, {
+  const isClient = typeof window !== "undefined";
+  const url = isClient ? "/api/analysis/analyze" : `${getFastApiConfig().baseUrl}/api/v1/analyze/stream`;
+  const body = isClient ? JSON.stringify({ action: "stream", ...payload }) : JSON.stringify(payload);
+  const headers = isClient ? { "Content-Type": "application/json" } : getFastApiConfig().headers;
+
+  const response = await fetch(url, {
     method: "POST",
-    headers: config.headers,
-    body: JSON.stringify(payload),
+    headers,
+    body,
   });
 
   if (!response.ok) {
@@ -331,11 +342,17 @@ export async function analyzeWorkforceProfileStream(
 export async function synthesizeSelectedRoadmap(
   payload: SynthesizeRoadmapRequest
 ): Promise<SynthesizeRoadmapResponse> {
-  const config = getFastApiConfig();
-  const response = await fetch(`${config.baseUrl}/api/v1/analyze/synthesize-roadmap`, {
+  const isClient = typeof window !== "undefined";
+  const url = isClient ? "/api/analysis/analyze" : `${getFastApiConfig().baseUrl}/api/v1/analyze/synthesize-roadmap`;
+  const body = isClient ? JSON.stringify({ action: "synthesize", ...payload }) : JSON.stringify(payload);
+  const headers = isClient ? { "Content-Type": "application/json" } : getFastApiConfig().headers;
+
+  const response = await fetch(url, {
     method: "POST",
-    headers: config.headers,
-    body: JSON.stringify(payload),
+    headers,
+    body,
+    // Include cookies so the server-side route can resolve the authenticated user.
+    credentials: isClient ? "include" : "omit",
   });
 
   if (!response.ok) {
@@ -358,32 +375,25 @@ export function convertAssessmentToPlanData(
   const milestones = roadmap?.milestones || [];
 
   const phases: PlanPhase[] = milestones.map((m) => {
-    const hasClaimable = m.recommendedCourses?.some((c) => c.isHrdCorpClaimable);
-    const badge = hasClaimable
-      ? "HRD Corp Claimable"
-      : m.phaseIndex === 3
-      ? "Capstone Defense"
-      : "Free Audit";
-    const badgeType = hasClaimable
-      ? ("claimable" as const)
-      : m.phaseIndex === 3
-      ? ("capstone" as const)
-      : ("free" as const);
-
     const courseDetails = (m.recommendedCourses || [])
       .map((c) => `${c.title} (${c.platform})`)
       .join(" • ");
 
     return {
       id: `phase-${m.phaseIndex}`,
+      phaseIndex: m.phaseIndex,
       phase: `Phase ${m.phaseIndex} • ${m.durationWeeks} Weeks`,
       weeks: `${m.durationWeeks} Weeks`,
-      badge,
-      badgeType,
+      durationWeeks: m.durationWeeks,
+      estimatedHours: m.estimatedHours,
       title: m.phaseTitle,
-      desc: m.learningObjectives?.[0] || "Foundational competency acquisition",
+      titleLocalized: m.titleLocalized,
+      desc: m.description || m.learningObjectives?.[0] || "Foundational competency acquisition",
+      descriptionLocalized: m.descriptionLocalized,
       detail: courseDetails || "Verified course track",
       tasks: m.learningObjectives || [],
+      objectivesLocalized: m.objectivesLocalized,
+      recommendedCourses: m.recommendedCourses,
       isCompleted: false,
     };
   });
@@ -392,8 +402,8 @@ export function convertAssessmentToPlanData(
   const totalWeeks = roadmap?.totalWeeks || milestones.reduce((sum, m) => sum + (m.durationWeeks || 3), 0) || 10;
 
   const now = new Date();
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const dateStr = `${monthNames[now.getMonth()]} ${now.getFullYear()} • Live Telemetry Active`;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
   const roleCodeSuffix = selectedRole.roleId.replace(/^role-|^custom-/, "").slice(0, 6).toUpperCase();
 
@@ -402,6 +412,7 @@ export function convertAssessmentToPlanData(
     isCurrent: true,
     code: `SV-${now.getFullYear()}-${roleCodeSuffix}`,
     date: dateStr,
+    createdAt: dateStr,
     targetRole: selectedRole.titleLocalized || selectedRole.title,
     roleCategory: selectedRole.industry || "Target Horizon Role",
     description: `Targeting ${selectedRole.titleLocalized || selectedRole.title} in ${selectedRole.industry}. Aligned with UN ${selectedRole.sdgAlignments?.map((s) => s.targetCode).join(", ") || "SDG 8.2"}.`,
@@ -414,19 +425,6 @@ export function convertAssessmentToPlanData(
     atRiskSkills: selectedRole.atRiskCompetencies?.map((a) => a.skillName) || [],
     roadmapWeeks: `${totalWeeks} Weeks`,
     roadmapHours: `${totalHours} Total Hours`,
-    phases: phases.length > 0 ? phases : [
-      {
-        id: "phase-1",
-        phase: "Phase 1 • 3 Weeks",
-        weeks: "3 Weeks",
-        badge: "Free Audit",
-        badgeType: "free",
-        title: "Foundation Core",
-        desc: "Master essential concepts and digital workflows.",
-        detail: "Course: Coursera (Free Audit)",
-        tasks: ["Complete core competency modules", "Demonstrate basic workflow skills"],
-        isCompleted: false,
-      }
-    ],
+    phases: phases.length > 0 ? phases : [],
   };
 }

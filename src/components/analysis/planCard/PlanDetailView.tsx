@@ -1,97 +1,124 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { useTranslations } from "next-intl";
-import { PlanData, PlanPhase } from "./planData";
-import { FileFormatIcon } from "@/lib/fileIcons";
+import React, { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { PlanData, PlanPhase, CourseItem, LocalizedStringMap, LocalizedListMap } from "./planData";
 
 interface PlanDetailViewProps {
   plan: PlanData;
   onBack?: () => void;
   isSharedView?: boolean;
+  onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
-// Plan Detail View Component
-// Comprehensive presentation of the selected plan's metrics, skills inventory, phase milestones, and interactive AI artifact verification.
-// For history plans: completely sealed, read-only, non-interactive, and rendered in full grayscale ("全灰且不能操作").
-export default function PlanDetailView({ plan, isSharedView = false }: PlanDetailViewProps) {
+// Helper to pick localized text according to active system locale
+function getLocalized(
+  localizedMap: LocalizedStringMap | undefined,
+  currentLang: string,
+  fallbackText: string = ""
+): string {
+  if (!localizedMap || typeof localizedMap !== "object") return fallbackText;
+  return localizedMap[currentLang] || localizedMap["en"] || Object.values(localizedMap)[0] || fallbackText;
+}
+
+// Helper to pick localized list according to active system locale
+function getLocalizedList(
+  localizedListMap: LocalizedListMap | undefined,
+  currentLang: string,
+  fallbackList: string[] = []
+): string[] {
+  if (!localizedListMap || typeof localizedListMap !== "object") return fallbackList;
+  const list = localizedListMap[currentLang] || localizedListMap["en"] || Object.values(localizedListMap)[0];
+  return Array.isArray(list) && list.length > 0 ? list : fallbackList;
+}
+
+export default function PlanDetailView({
+  plan,
+  isSharedView = false,
+  onPhaseToggle,
+}: PlanDetailViewProps) {
   const tCurrent = useTranslations("analysis.current");
   const tHistory = useTranslations("analysis.history");
-  const tVerification = useTranslations("analysis.verification");
+  const locale = useLocale();
 
   const isCurrent = plan.isCurrent;
 
-  // Track phase completion and verified artifacts dynamically (for current active plan).
-  const [phases, setPhases] = useState<PlanPhase[]>(plan.phases);
+  // Phase completion state
+  const [phases, setPhases] = useState<PlanPhase[]>(plan.phases || []);
+  const [updatingPhaseId, setUpdatingPhaseId] = useState<string | null>(null);
 
-  // Track selected upload files per phase before verification.
-  const [stagedFiles, setStagedFiles] = useState<{ [phaseId: string]: File | null }>({});
+  // Keep local phases synchronized if plan prop updates
+  React.useEffect(() => {
+    if (plan.phases) {
+      setPhases(plan.phases);
+    }
+  }, [plan.phases]);
 
-  // Track active AI verification process.
-  const [verifyingPhaseId, setVerifyingPhaseId] = useState<string | null>(null);
-  const [verificationStep, setVerificationStep] = useState<number>(1);
+  // Toggle phase isCompleted status with optimistic UI update and database persistence
+  const handleTogglePhase = async (phaseId: string) => {
+    if (!isCurrent || isSharedView) return;
 
-  // File input refs map for triggering file dialogs per phase.
-  const fileInputRefs = useRef<{ [phaseId: string]: HTMLInputElement | null }>({});
+    const targetPhase = phases.find((p) => p.id === phaseId);
+    if (!targetPhase) return;
 
-  // Handle file selection for a specific phase.
-  const handleFileChange = (phaseId: string, file: File | null) => {
-    if (!isCurrent) return;
-    setStagedFiles((prev) => ({ ...prev, [phaseId]: file }));
-  };
+    const nextCompleted = !targetPhase.isCompleted;
 
-  // Simulate stepped AI verification and record node completion.
-  const handleStartVerification = (phaseId: string) => {
-    if (!isCurrent) return;
-    const stagedFile = stagedFiles[phaseId];
-    if (!stagedFile) return;
+    // Optimistic UI state update
+    setPhases((prevPhases) =>
+      prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: nextCompleted } : p))
+    );
+    setUpdatingPhaseId(phaseId);
+    onPhaseToggle?.(phaseId, nextCompleted);
 
-    setVerifyingPhaseId(phaseId);
-    setVerificationStep(1);
+    try {
+      const response = await fetch("/api/analysis/roadmaps/phase", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phaseId,
+          isCompleted: nextCompleted,
+        }),
+      });
 
-    setTimeout(() => setVerificationStep(2), 700);
-    setTimeout(() => setVerificationStep(3), 1400);
-
-    setTimeout(() => {
-      // Mark phase node as completed with AI verification telemetry.
+      if (!response.ok) {
+        // Revert on API failure
+        setPhases((prevPhases) =>
+          prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: !nextCompleted } : p))
+        );
+        onPhaseToggle?.(phaseId, !nextCompleted);
+      }
+    } catch (error) {
+      console.error("Failed to update phase completion status:", error);
+      // Revert on exception
       setPhases((prevPhases) =>
-        prevPhases.map((phase) => {
-          if (phase.id === phaseId) {
-            return {
-              ...phase,
-              isCompleted: true,
-              badgeType: "completed",
-              verifiedArtifact: {
-                name: stagedFile.name,
-                score: 97.8,
-                timestamp: "Just now",
-              },
-            };
-          }
-          return phase;
-        })
+        prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: !nextCompleted } : p))
       );
-
-      // Clear staged file and verification status.
-      setStagedFiles((prev) => ({ ...prev, [phaseId]: null }));
-      setVerifyingPhaseId(null);
-      setVerificationStep(1);
-    }, 2100);
+      onPhaseToggle?.(phaseId, !nextCompleted);
+    } finally {
+      setUpdatingPhaseId(null);
+    }
   };
 
-  // Count completed nodes.
+  // Metrics calculation
   const completedCount = phases.filter((p) => p.isCompleted).length;
+  const totalPhases = phases.length;
+  const progressPercent = totalPhases > 0 ? Math.round((completedCount / totalPhases) * 100) : 0;
+
+  // Localized plan header values based directly on system locale
+  const localizedRoleTitle = getLocalized(plan.targetTitleLocalized, locale, plan.targetRole);
+  const localizedPlanDesc = getLocalized(plan.descriptionLocalized, locale, plan.description);
+  const rawDate = plan.createdAt || plan.date || "";
+  const displayDate = rawDate.split("T")[0].split(" ")[0];
 
   return (
     <div
-      className={`animate-fade-in flex flex-col gap-8 w-full ${
+      className={`animate-fade-in flex flex-col gap-10 w-full ${
         !isCurrent ? "grayscale opacity-85 select-none" : ""
       }`}
     >
-      {/* Sealed Locked Alert Banner for Historical Plans ("全灰且封锁锁定") */}
+      {/* Historical Sealed Notice Banner */}
       {!isCurrent && (
-        <div className="rounded-xl bg-bg-card/90 border border-border-subtle p-4 sm:p-5 flex items-start gap-3.5 shadow-sm">
-          <span className="text-2xl shrink-0 mt-0.5">🔒</span>
+        <div className="rounded-2xl bg-bg-card border border-border-subtle p-5 flex items-start gap-3.5 shadow-sm">
           <div>
             <h4 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-text-primary">
               {tHistory("locked_banner_title")}
@@ -103,522 +130,338 @@ export default function PlanDetailView({ plan, isSharedView = false }: PlanDetai
         </div>
       )}
 
-      {/* Main Plan Overview Banner */}
+      {/* Main Strategic Roadmap Header Card (Identical structure to outer PlanCard, without blue border) */}
       <div
-        className={`relative rounded-2xl p-6 sm:p-8 overflow-hidden transition-all duration-300 ${
+        className={`rounded-2xl p-6 sm:p-7 transition-all duration-300 border ${
           isCurrent
-            ? "bg-bg-card/90 backdrop-blur-2xl border-2 border-accent/40 shadow-[0_0_50px_var(--accent-glow)]"
-            : "bg-bg-secondary/40 border border-border-subtle/70"
+            ? "bg-bg-card border-border-subtle shadow-sm"
+            : "bg-bg-secondary/40 border-border-subtle/70"
         }`}
       >
-        {/* Ambient Top Glow Overlay (Active Current Plan Only) */}
-        {isCurrent && (
-          <div className="absolute top-0 left-1/4 w-1/2 h-36 bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] pointer-events-none" />
-        )}
+        {/* Top Header Row: Roadmap ID on Left, Generation Date on Right */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle mb-5">
+          <span className="text-xs font-mono font-medium text-text-muted">
+            Roadmap ID: <span className="text-text-secondary font-mono">{plan.id}</span>
+          </span>
 
-        {/* Top Meta Header */}
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-border-subtle mb-6">
-          <div className="flex items-center gap-3">
-            {isCurrent ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold font-mono tracking-wider bg-accent/20 text-accent border border-accent/40 uppercase">
-                <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                {tCurrent("badge")}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider bg-text-muted/15 text-text-muted border border-border-subtle uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
-                {tHistory("badge")}
-              </span>
-            )}
-
-            <span className="text-xs text-text-muted font-mono">
-              Trajectory Code: {plan.code}
-            </span>
-          </div>
-
-          <span className="text-xs font-mono text-text-secondary">
-            {plan.date}
+          <span className="text-xs font-mono text-text-muted">
+            {displayDate}
           </span>
         </div>
 
-        {/* Role Title & Match Score Header */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-6">
+        {/* Primary Role Info & Match Metric Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
           <div className="lg:col-span-2">
-            <span
-              className={`text-[11px] font-mono uppercase tracking-wider font-semibold block mb-1 ${
-                isCurrent ? "text-accent" : "text-text-muted"
-              }`}
-            >
+            <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
               {plan.roleCategory}
             </span>
 
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-text-primary tracking-tight mb-3">
-              {plan.targetRole}
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
+              {localizedRoleTitle}
             </h2>
 
-            <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-0">
-              {plan.description}
+            <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-4">
+              {localizedPlanDesc}
             </p>
+
+            {/* SDGs Chips (without "Aligned UN Goals:" label) */}
+            {plan.sdgs && plan.sdgs.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {plan.sdgs.map((sdg) => (
+                  <span
+                    key={sdg}
+                    className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  >
+                    {sdg}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Match Score Display Card */}
-          <div
-            className={`rounded-xl border p-5 flex flex-col items-center text-center justify-center ${
-              isCurrent
-                ? "bg-bg-secondary/70 border-border-subtle"
-                : "bg-bg-card/40 border-border-subtle/50"
-            }`}
-          >
-            <span className="text-[11px] font-mono uppercase text-text-muted tracking-wider mb-1">
-              {isCurrent ? tCurrent("match_score") : "Historical Match"}
+          {/* Match Score Block (Identical styling inside & outside, total time placed inside) */}
+          <div className="rounded-xl border border-border-subtle p-4 flex flex-col items-center text-center justify-center bg-bg-secondary/50">
+            <span className="text-[10px] font-mono uppercase text-text-muted tracking-wider mb-0.5">
+              {tCurrent("match_score")}
             </span>
 
-            <div className="flex items-baseline gap-1">
-              <span
-                className={`text-4xl font-extrabold font-mono ${
-                  isCurrent ? "text-accent" : "text-text-primary"
-                }`}
-              >
+            <div className="flex items-baseline gap-0.5 my-0.5">
+              <span className="text-3xl font-extrabold font-mono text-text-primary">
                 {plan.matchScore.toFixed(1)}
               </span>
-              <span
-                className={`text-sm font-bold font-mono ${
-                  isCurrent ? "text-accent" : "text-text-secondary"
-                }`}
-              >
-                %
-              </span>
+              <span className="text-xs font-bold font-mono text-text-muted">%</span>
             </div>
 
-            <span className="text-[10px] text-text-muted font-mono mt-1">
+            <span className="text-[10px] text-text-muted font-mono mb-2">
               {plan.matchScoreBasis}
             </span>
 
-            <div className="w-full bg-border-subtle rounded-full h-1.5 mt-3 overflow-hidden">
+            <div className="w-full bg-border-subtle rounded-full h-1.5 overflow-hidden mb-2.5">
               <div
-                className={`h-full transition-all duration-500 ${
-                  isCurrent
-                    ? "bg-linear-to-r from-accent to-accent-dim"
-                    : "bg-text-secondary"
-                }`}
+                className="h-full bg-accent transition-all duration-500"
                 style={{ width: `${plan.matchScore}%` }}
+              />
+            </div>
+
+            <span className="text-[11px] font-mono text-text-secondary font-medium">
+              {plan.roadmapWeeks} • {plan.roadmapHours}
+            </span>
+          </div>
+        </div>
+
+        {/* Global Roadmap Progress Bar (No % in Progress text) */}
+        <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-text-secondary">
+              Progress: <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
+            </span>
+            <div className="w-36 sm:w-48 bg-border-subtle rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
         </div>
-
-        {/* Historical Notice Callout Banner */}
-        {!isCurrent && (
-          <div className="relative z-10 mt-4 p-4 rounded-xl bg-bg-card/60 border border-border-subtle flex items-start gap-3">
-            <span className="text-text-muted text-sm mt-0.5">ℹ</span>
-            <p className="text-xs text-text-muted leading-relaxed m-0">
-              {plan.historyNote || tHistory("note")}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Itemized Skills Inventory (Strengths, Gap, At-Risk) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
         {/* Matched Strengths */}
-        <div className="rounded-xl bg-bg-card/80 border border-positive/30 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-subtle">
-            <span className="w-2 h-2 rounded-full bg-positive shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-positive font-mono">
-              {tCurrent("matched_strengths")} ({plan.matchedStrengths.length})
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+              Matched Strengths
             </h3>
+            <span className="text-xs font-mono text-emerald-400 font-semibold">
+              {plan.matchedStrengths.length}
+            </span>
           </div>
-          <ul className="flex flex-col gap-2 list-none p-0 m-0 text-xs text-text-primary">
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {plan.matchedStrengths.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-positive font-bold shrink-0">✓</span>
-                <span>{skill}</span>
+                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Skills to Acquire (Gap) */}
-        <div className="rounded-xl bg-bg-card/80 border border-warning/30 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-subtle">
-            <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-warning font-mono">
-              {tCurrent("skills_gap")} ({plan.skillsGap.length})
+        {/* Skills to Acquire */}
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
+              Skills to Acquire
             </h3>
+            <span className="text-xs font-mono text-amber-400 font-semibold">
+              {plan.skillsGap.length}
+            </span>
           </div>
-          <ul className="flex flex-col gap-2 list-none p-0 m-0 text-xs text-text-primary">
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {plan.skillsGap.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-warning font-bold shrink-0">△</span>
-                <span>{skill}</span>
+                <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
+                <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Automation Alerts (At-Risk Skills) */}
-        <div className="rounded-xl bg-bg-card/80 border border-negative/30 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-subtle">
-            <span className="w-2 h-2 rounded-full bg-negative shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-negative font-mono">
-              {tCurrent("at_risk_skills")} ({plan.atRiskSkills.length})
+        {/* Automation Alerts */}
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
+              Automation Alerts
             </h3>
+            <span className="text-xs font-mono text-rose-400 font-semibold">
+              {plan.atRiskSkills.length}
+            </span>
           </div>
-          <ul className="flex flex-col gap-2 list-none p-0 m-0 text-xs text-text-primary">
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {plan.atRiskSkills.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-negative font-bold shrink-0">✕</span>
-                <span>{skill}</span>
+                <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
+                <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
 
-      {/* 3-Phase Grounded Roadmap Curriculum & AI Verification Section */}
-      <div className="rounded-2xl bg-bg-card/80 border border-border-subtle p-6 sm:p-8">
-        {/* Roadmap Timeline Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-accent text-xl">◈</span>
-            <div>
-              <h3 className="text-base sm:text-xl font-bold text-text-primary tracking-tight">
-                {tCurrent("roadmap_timeline")}
-                {!isCurrent && (
-                  <span className="text-xs font-mono font-normal text-text-muted ml-2">
-                    (Read-Only Snapshot)
-                  </span>
-                )}
-              </h3>
-              <p className="text-xs text-text-secondary mt-0.5">
-                {isCurrent
-                  ? "Complete phase milestones, upload verification artifacts, and unlock authenticated career progression."
-                  : "Historical roadmap iteration preserved as immutable skill telemetry."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 font-mono">
-            <span className="text-xs px-3 py-1 rounded-lg bg-bg-secondary border border-border-subtle text-text-muted">
-              {plan.roadmapWeeks} • {plan.roadmapHours}
-            </span>
-            <span className="text-xs px-3 py-1 rounded-lg bg-accent/15 border border-accent/30 text-accent font-bold">
-              {completedCount}/{phases.length} {tVerification("completed_badge")}
-            </span>
-          </div>
+      {/* Phased Curriculum Timeline (Structured Phase Cards with moderate framing and clear separation) */}
+      <div className="pt-6 border-t border-border-subtle">
+        <div className="pb-6 mb-2">
+          <h3 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">
+            {tCurrent("roadmap_timeline")}
+          </h3>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
+            Follow this phased curriculum. Check the box on each phase once you complete your study.
+          </p>
         </div>
 
-        {/* Phase Stepper Progress Track */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {phases.map((phase, idx) => (
-            <div
-              key={phase.id}
-              className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
-                phase.isCompleted
-                  ? "bg-positive/10 border-positive/30 text-positive"
-                  : verifyingPhaseId === phase.id
-                  ? "bg-accent/10 border-accent/40 text-accent shadow-[0_0_15px_var(--accent-glow)]"
-                  : "bg-bg-secondary/40 border-border-subtle text-text-muted"
-              }`}
-            >
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 ${
-                  phase.isCompleted
-                    ? "bg-positive text-bg-primary"
-                    : verifyingPhaseId === phase.id
-                    ? "bg-accent text-bg-primary animate-pulse"
-                    : "bg-border-subtle text-text-secondary"
-                }`}
-              >
-                {phase.isCompleted ? "✓" : idx + 1}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider block truncate">
-                  Phase {idx + 1}
-                </span>
-                <span className="text-xs font-bold text-text-primary block truncate">
-                  {phase.title}
-                </span>
-              </div>
-
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded shrink-0">
-                {!isCurrent
-                  ? phase.isCompleted
-                    ? tVerification("completed_badge")
-                    : "Archived"
-                  : phase.isCompleted
-                  ? tVerification("completed_badge")
-                  : verifyingPhaseId === phase.id
-                  ? tVerification("verifying")
-                  : tVerification("pending_badge")}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Phase Cards Breakdown */}
+        {/* List of Phases with moderate containers and clear visual emphasis */}
         <div className="flex flex-col gap-6">
-          {phases.map((phase) => {
-            const isPhaseVerifying = verifyingPhaseId === phase.id;
-            const stagedFile = stagedFiles[phase.id];
+          {phases.map((phase, idx) => {
+            const phaseIndex = phase.phaseIndex || idx + 1;
+            const phaseTitleLocalized = getLocalized(phase.titleLocalized, locale, phase.title);
+            const phaseDescLocalized = getLocalized(phase.descriptionLocalized, locale, phase.desc);
+            const phaseObjectives = getLocalizedList(phase.objectivesLocalized, locale, phase.tasks);
+            const isUpdating = updatingPhaseId === phase.id;
 
             return (
               <div
-                key={phase.id}
-                className={`rounded-xl border p-5 sm:p-6 transition-all duration-300 ${
+                key={phase.id || idx}
+                className={`rounded-2xl border p-6 sm:p-7 transition-all flex flex-col gap-5 ${
                   phase.isCompleted
-                    ? "bg-bg-secondary/30 border-positive/30"
-                    : isPhaseVerifying
-                    ? "bg-bg-secondary/60 border-accent shadow-[0_0_25px_var(--accent-glow)]"
-                    : "bg-bg-secondary/40 border-border-subtle"
+                    ? "bg-bg-card/90 border-emerald-500/30 border-l-4 border-l-emerald-500 shadow-sm"
+                    : "bg-bg-card/70 border-border-subtle border-l-4 border-l-accent hover:border-border-subtle/80 shadow-xs"
                 }`}
               >
-                {/* Phase Top Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-subtle mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs font-mono uppercase tracking-wider text-accent font-semibold">
-                      {phase.phase}
+                {/* Phase Header Row: Phase Tag, Title, Duration, and Completion Checkbox */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle/60">
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider ${
+                        phase.isCompleted
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : "bg-accent/15 text-accent"
+                      }`}
+                    >
+                      Phase {phaseIndex}
                     </span>
-                    <span className="text-xs text-text-muted">•</span>
-                    <span className="text-xs font-mono text-text-secondary">
-                      {phase.detail}
+                    <h4 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+                      {phaseTitleLocalized}
+                    </h4>
+                    <span className="text-xs font-mono text-text-muted">
+                      ({phase.durationWeeks || 3} Weeks • {phase.estimatedHours || 15} Hours)
                     </span>
                   </div>
 
-                  {/* Status Badge */}
-                  {phase.isCompleted ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-positive/15 text-positive border border-positive/30">
-                      <span>✓</span>
-                      <span>{tVerification("completed_badge")}</span>
+                  {/* Clean Completion Checkbox Button */}
+                  <button
+                    type="button"
+                    disabled={!isCurrent || isSharedView || isUpdating}
+                    onClick={() => handleTogglePhase(phase.id)}
+                    className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer border ${
+                      phase.isCompleted
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                        : "bg-bg-secondary hover:bg-bg-card text-text-secondary hover:text-text-primary border-border-subtle hover:border-accent/50"
+                    } ${!isCurrent ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${
+                        phase.isCompleted
+                          ? "bg-emerald-500 text-white border-emerald-400"
+                          : "border-border-subtle bg-bg-card"
+                      }`}
+                    >
+                      {phase.isCompleted ? "✓" : ""}
                     </span>
-                  ) : !isCurrent ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-text-muted/15 text-text-muted border border-border-subtle uppercase">
-                      <span>🔒</span>
-                      <span>Archived</span>
+
+                    <span>
+                      {isUpdating
+                        ? "Saving..."
+                        : phase.isCompleted
+                        ? "Completed"
+                        : "Mark Complete"}
                     </span>
-                  ) : isPhaseVerifying ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-accent/20 text-accent border border-accent/40 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                      <span>{tVerification("verifying")}</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-text-muted/15 text-text-muted border border-border-subtle">
-                      <span>○</span>
-                      <span>{tVerification("in_progress_badge")}</span>
-                    </span>
-                  )}
+                  </button>
                 </div>
 
-                {/* Phase Title & Overview */}
-                <h4 className="text-base sm:text-lg font-bold text-text-primary tracking-tight mb-1.5">
-                  {phase.title}
-                </h4>
-                <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-5">
-                  {phase.desc}
-                </p>
+                {/* Phase Description */}
+                {phaseDescLocalized && (
+                  <p className="text-xs sm:text-sm text-text-secondary leading-relaxed m-0">
+                    {phaseDescLocalized}
+                  </p>
+                )}
 
-                {/* Grid: Left = Required Tasks to Do, Right = AI Upload Verification Box OR Sealed Locked Box */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
-                  {/* Left Column: Tasks */}
-                  <div className="rounded-xl bg-bg-card/70 border border-border-subtle/80 p-4">
-                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border-subtle">
-                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-text-primary">
-                        {tVerification("phase_tasks")}
-                      </span>
+                {/* Two Column Content: Objectives & Courses with clean dividers and highlighted key points */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-start pt-1">
+                  {/* Learning Objectives List */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                      <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
+                        Learning Objectives
+                      </h5>
                     </div>
-
-                    <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs">
-                      {phase.tasks.map((task, taskIdx) => (
-                        <li key={taskIdx} className="flex items-start gap-2.5 text-text-secondary">
-                          <span
-                            className={`font-mono font-bold mt-0.5 shrink-0 ${
-                              phase.isCompleted ? "text-positive" : "text-accent"
-                            }`}
-                          >
-                            {phase.isCompleted ? "✓" : `0${taskIdx + 1}.`}
-                          </span>
-                          <span className={phase.isCompleted ? "text-text-primary" : "text-text-secondary"}>
-                            {task}
-                          </span>
+                    <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+                      {phaseObjectives.map((obj, oIdx) => (
+                        <li key={oIdx} className="flex items-start gap-2.5 text-text-primary">
+                          <span className="text-accent font-bold mt-0.5 shrink-0">•</span>
+                          <span className="font-normal">{obj}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  {/* Right Column: AI Upload (Current Plan) OR Sealed Locked Box (History Plan) */}
-                  {!isCurrent ? (
-                    /* Read-Only Sealed Box for History Plans ("完全封锁，不能操作") */
-                    <div className="rounded-xl bg-bg-card/50 border border-border-subtle/60 p-5 flex flex-col items-center justify-center text-center">
-                      <span className="text-2xl mb-2 opacity-60">🔒</span>
-                      <span className="text-xs font-mono font-bold text-text-muted uppercase tracking-wider">
-                        {tHistory("locked_phase_label")}
-                      </span>
-                      <p className="text-[11px] text-text-muted font-mono mt-1.5 max-w-xs leading-relaxed m-0">
-                        {phase.isCompleted && phase.verifiedArtifact ? (
-                          <span className="text-text-secondary block">
-                            📄 {phase.verifiedArtifact.name} • Completed
-                          </span>
-                        ) : (
-                          tHistory("locked_banner_desc")
-                        )}
-                      </p>
+                  {/* Recommended Courses List */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
+                        Recommended Courses
+                      </h5>
                     </div>
-                  ) : (
-                    /* Active Interactive AI Verification Box for Current Plan */
-                    <div className="rounded-xl bg-bg-card/70 border border-border-subtle/80 p-4 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-border-subtle">
-                          <span className="text-xs font-mono font-bold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                            <span>🤖</span>
-                            <span>{tVerification("upload_proof")}</span>
-                          </span>
 
-                          {phase.isCompleted && (
-                            <span className="text-[10px] font-mono text-positive bg-positive/10 px-2 py-0.5 rounded border border-positive/30">
-                              {tVerification("passed")}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* State 1: Already Verified & Completed */}
-                        {phase.isCompleted && phase.verifiedArtifact ? (
-                          <div className="p-3.5 rounded-lg bg-positive/10 border border-positive/20 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <FileFormatIcon
-                                fileOrName={phase.verifiedArtifact.name}
-                                className="w-10 h-10 rounded-lg shadow-sm shrink-0"
-                                iconClassName="w-5 h-5"
-                              />
-                              <div className="min-w-0">
-                                <span className="text-xs font-mono font-bold text-text-primary block truncate">
-                                  {phase.verifiedArtifact.name}
-                                </span>
-                                <span className="text-[10px] font-mono text-positive block mt-0.5">
-                                  Verified by AI • {phase.verifiedArtifact.score}% Confidence • {phase.verifiedArtifact.timestamp}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="w-6 h-6 rounded-full bg-positive text-bg-primary flex items-center justify-center font-bold text-xs shrink-0">
-                              ✓
-                            </div>
-                          </div>
-                        ) : isPhaseVerifying ? (
-                          /* State 2: Actively Verifying with AI */
-                          <div className="p-4 rounded-lg bg-bg-secondary/80 border border-accent/40 font-mono text-xs animate-fade-in space-y-2.5">
-                            <div className="flex items-center gap-2 text-accent font-bold">
-                              <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                              <span>
-                                {verificationStep === 1 && "Stage 1: Extracting Skill Signatures & Code Artifacts..."}
-                                {verificationStep === 2 && "Stage 2: Benchmarking Competencies Against ESCO Taxonomies..."}
-                                {verificationStep === 3 && "Stage 3: Authenticating Milestone & Committing Telemetry..."}
-                              </span>
-                            </div>
-
-                            {/* Stepper Progress Bar */}
-                            <div className="w-full bg-border-subtle rounded-full h-1.5 overflow-hidden">
-                              <div
-                                className="bg-accent h-full transition-all duration-500"
-                                style={{ width: `${(verificationStep / 3) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : isSharedView ? (
-                          /* State 2.5: Peer Read-Only View of In-Progress Milestone */
-                          <div className="p-4 rounded-lg bg-bg-secondary/40 border border-dashed border-border-subtle text-center py-6">
-                            <span className="text-xl mb-1.5 block">⏳</span>
-                            <span className="text-xs font-mono font-medium text-text-secondary block">
-                              Peer Milestone In Progress
-                            </span>
-                            <span className="text-[11px] text-text-muted font-mono mt-1 block">
-                              This milestone is awaiting artifact submission by the owner.
-                            </span>
-                          </div>
-                        ) : (
-                          /* State 3: Ready for User Upload & Verification */
-                          <div>
-                            {/* Hidden Native File Input */}
-                            <input
-                              type="file"
-                              ref={(el) => {
-                                fileInputRefs.current[phase.id] = el;
-                              }}
-                              accept=".pdf,.docx,.png,.zip,.jpg"
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  handleFileChange(phase.id, e.target.files[0]);
-                                }
-                              }}
-                              className="hidden"
-                            />
-
-                            {stagedFile ? (
-                              /* Staged Selected File Card */
-                              <div className="p-3 rounded-lg bg-bg-secondary border border-border-subtle flex items-center justify-between gap-3 mb-3">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <FileFormatIcon
-                                    fileOrName={stagedFile}
-                                    className="w-9 h-9 rounded-md shadow-xs shrink-0"
-                                    iconClassName="w-4 h-4"
-                                  />
-                                  <div className="min-w-0">
-                                    <span className="text-xs font-mono font-semibold text-text-primary block truncate">
-                                      {stagedFile.name}
-                                    </span>
-                                    <span className="text-[10px] font-mono text-text-muted block">
-                                      {(stagedFile.size / 1024).toFixed(1)} KB • Ready for AI Validation
-                                    </span>
-                                  </div>
+                    {phase.recommendedCourses && phase.recommendedCourses.length > 0 ? (
+                      <div className="flex flex-col gap-2.5">
+                        {phase.recommendedCourses.map((course: CourseItem, cIdx: number) => {
+                          const courseTitle = getLocalized(course.titleLocalized, locale, course.title);
+                          return (
+                            <div
+                              key={cIdx}
+                              className="rounded-xl border border-border-subtle/70 p-3.5 bg-bg-secondary/40 hover:bg-bg-secondary/70 transition-colors flex flex-col gap-2"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <h6 className="text-xs font-semibold text-text-primary tracking-tight">
+                                    {courseTitle}
+                                  </h6>
+                                  <span className="text-[11px] font-mono text-text-muted">
+                                    Platform: <span className="text-text-secondary">{course.platform}</span>
+                                    {course.durationHours && ` • ${course.durationHours} Hours`}
+                                  </span>
                                 </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleFileChange(phase.id, null)}
-                                  className="text-xs text-negative hover:underline font-mono bg-transparent border-none cursor-pointer shrink-0"
-                                >
-                                  Remove
-                                </button>
+                                {course.url && (
+                                  <a
+                                    href={course.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-medium text-accent hover:underline shrink-0"
+                                    title="Open verified course"
+                                  >
+                                    <span>Learn ↗</span>
+                                  </a>
+                                )}
                               </div>
-                            ) : (
-                              /* Dropzone Click Area */
-                              <div
-                                onClick={() => fileInputRefs.current[phase.id]?.click()}
-                                className="border border-dashed border-border-subtle hover:border-accent bg-bg-secondary/30 hover:bg-bg-secondary/60 rounded-lg p-4 text-center cursor-pointer transition-all duration-200 mb-3"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent mx-auto mb-1.5">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                  </svg>
+
+                              {/* Course Tags */}
+                              {(course.isFree || course.isHrdCorpClaimable) && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  {course.isFree && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      Free / Audit Available
+                                    </span>
+                                  )}
+                                  {course.isHrdCorpClaimable && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                      HRD Corp Claimable
+                                    </span>
+                                  )}
                                 </div>
-                                <p className="text-xs font-semibold text-text-primary mb-0.5">
-                                  {tVerification("upload_proof")}
-                                </p>
-                                <p className="text-[10px] text-text-muted font-mono m-0">
-                                  {tVerification("upload_hint")}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Bottom Action: Trigger AI Verification */}
-                      {!phase.isCompleted && !isPhaseVerifying && (
-                        <div className="pt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleStartVerification(phase.id)}
-                            disabled={!stagedFile}
-                            className="px-4 py-2 text-xs font-semibold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <span>🤖</span>
-                            <span>{tVerification("btn_verify")}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-text-muted italic">
+                        Self-directed experiential learning projects.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );

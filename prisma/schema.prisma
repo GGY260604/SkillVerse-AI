@@ -13,52 +13,43 @@ generator client {
 // ==========================================
 
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  email          String    @unique
-  name           String?
-  locale         String    @default("en") // 'en' | 'ms' | 'zh'
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  profile        UserProfile?
-  assessments    Assessment[]
-  sharedRoadmaps SharedRoadmap[]
-  auditLogs      SkillMismatchAuditLog[]
-
-  @@map("users")
-}
-
-model UserProfile {
   id                    String        @id @default(uuid()) @db.Uuid
-  userId                String        @unique @db.Uuid
-  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email                 String        @unique
+  name                  String?
+  locale                String        @default("en") // 'en' | 'ms' | 'zh'
   
-  employmentStatus      String        // employed_at_risk, fresh_grad_student, career_switcher, jobseeker
+  // ==========================================
+  // Profile Information
+  // ==========================================
+
+  employmentStatus      String        @default("employed_at_risk") // employed_at_risk, fresh_grad_student, career_switcher, jobseeker
   currentJobTitle       String?
   industry              String?
   educationLevel        String?
   yearsOfExperience     String?
   
-  skills                Json          // Stores user skill structure array (UserSkillItem[])
-  toolsAndSoftware      String[]      // List of common tools and software
+  skills                Json          @default("[]") // Stores user skill structure array (UserSkillItem[])
+  toolsAndSoftware      String[]      @default([]) // List of common tools and software
   casualDescription     String?       // User's free-form description of daily work tasks
-  languages             String[]      // Languages spoken/written
+  languages             String[]      @default([]) // Languages spoken/written
   
-  careerGoal            String?       // upskill, reskill, explore
-  targetSectors         String[]      // Target future sectors
+  careerGoal            String?       @default("explore") // upskill, reskill, explore
+  targetSectors         String[]      @default([]) // Target future sectors
   targetJobTitle        String?
-  workArrangement       String?       // remote, hybrid, onsite, any
+  workArrangement       String?       @default("any") // remote, hybrid, onsite, any
   
   weeklyCommitmentHours String        @default("3-5") // 1-3, 3-5, 5-10, 10+
-  learningProviders     String[]      // free_open, hrd_corp, industry_cert
+  learningProviders     String[]      @default(["free_open", "hrd_corp"]) // free_open, hrd_corp, industry_cert
   outputLanguage        String        @default("en")
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  assessments           Assessment[]
+  roadmaps              Roadmap[]
+  sharedRoadmaps        SharedRoadmap[]
+  auditLogs             SkillMismatchAuditLog[]
 
-  @@map("user_profiles")
+  @@map("users")
 }
 
 // ==========================================
@@ -137,35 +128,84 @@ model SkillMismatchAuditLog {
 }
 
 // ==========================================
-// 3. Assessment & Analysis Engine
+// 3. Roadmap & Planning Engine
 // ==========================================
 
-model Assessment {
+model Roadmap {
   id                   String           @id @default(uuid()) @db.Uuid
-  sessionId            String?          @map("session_id") // For anonymous session tracking
-  userId               String?          @db.Uuid
+  sessionId            String?          @map("session_id") // Anonymous session tracking
+  userId               String?          @db.Uuid @map("user_id")
   user                 User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profileId            String?          @db.Uuid
-  profile              UserProfile?     @relation(fields: [profileId], references: [id], onDelete: Cascade)
   
-  activeScenario       String           @default("moderate") // moderate, accelerated_ai, green_economy
-  radarData            Json             // Multi-dimensional radar chart comparison data
-  topRoles             Json             // Matched role rankings, scores, SDG affinity, and skill gaps
+  status               String           @default("current") // 'current' | 'history'
   
-  selectedRoleRoadmap  Json             // Complete 3-phase dynamic reskilling roadmap for the selected role
+  targetRoleId         String           @map("target_role_id")
+  targetRoleTitle      String           @map("target_role_title")
+  targetTitleLocalized Json?            @map("target_title_localized") // { en: string, ms: string, zh: string }
+  roleCategory         String?          @map("role_category")
+  description          String?
+  descriptionLocalized Json?            @map("description_localized") // { en: string, ms: string, zh: string }
+  scenario             String           @default("moderate") // moderate, accelerated_ai, green_economy
   
-  // Certificate name(s) stored directly alongside the plan/assessment
-  certificatesEarned   String?          // e.g. "Google Data Analytics, HRD Corp Certified AI Practitioner"
-
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-
+  matchScore           Float            @default(0.0) @map("match_score")
+  matchScoreBasis      String?          @map("match_score_basis")
+  
+  sdgs                 String[]         @default([]) // e.g. ["SDG 8.2", "SDG 9.4"]
+  matchedStrengths     String[]         @default([]) @map("matched_strengths")
+  skillsGap            String[]         @default([]) @map("skills_gap")
+  atRiskSkills         String[]         @default([]) @map("at_risk_skills")
+  
+  totalWeeks           Int              @default(10) @map("total_weeks")
+  totalHours           Int              @default(45) @map("total_hours")
+  
+  radarData            Json             @default("[]") @map("radar_data") // Multi-dimensional radar chart comparison data
+  topRoles             Json             @default("[]") @map("top_roles") // Ranked matched roles
+  
+  // Certificate name(s) stored directly alongside the plan/roadmap
+  certificatesEarned   String?          @map("certificates_earned")
+  
+  phases               RoadmapPhase[]
   sharedAsTarget       SharedRoadmap[]
+
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
 
   @@index([sessionId])
   @@index([userId])
-  @@index([profileId])
-  @@map("assessments")
+  @@index([status])
+  @@map("roadmaps")
+}
+
+model RoadmapPhase {
+  id                   String           @id @default(uuid()) @db.Uuid
+  roadmapId            String           @db.Uuid @map("roadmap_id")
+  roadmap              Roadmap          @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  
+  phaseIndex           Int              @map("phase_index") // 1, 2, 3, 4, ...
+  phaseTitle           String           @map("phase_title")
+  titleLocalized       Json?            @map("title_localized") // { en: string, ms: string, zh: string }
+  
+  durationWeeks        Int              @default(3) @map("duration_weeks")
+  estimatedHours       Int              @default(15) @map("estimated_hours")
+  
+  badge                String?          @default("")
+  badgeType            String?          @default("") @map("badge_type")
+  
+  description          String?          @map("description")
+  descriptionLocalized Json?            @map("description_localized") // { en: string, ms: string, zh: string }
+  detail               String?          @map("course_detail")
+  
+  learningObjectives   String[]         @default([]) @map("learning_objectives")
+  objectivesLocalized  Json?            @map("objectives_localized") // { en: string[], ms: string[], zh: string[] }
+  recommendedCourses   Json             @default("[]") @map("recommended_courses") // [{title, titleLocalized: {en, ms, zh}, platform, url, isHrdCorpClaimable, isFree, durationHours}]
+  
+  isCompleted          Boolean          @default(false) @map("is_completed")
+
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  @@index([roadmapId])
+  @@map("roadmap_phases")
 }
 
 // ==========================================
@@ -174,19 +214,19 @@ model Assessment {
 
 model SharedRoadmap {
   id             String     @id @default(uuid()) @db.Uuid
-  ownerId        String     @db.Uuid
+  ownerId        String     @db.Uuid @map("owner_id")
   owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  assessmentId   String     @db.Uuid
-  assessment     Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  roadmapId      String     @db.Uuid @map("roadmap_id")
+  roadmap        Roadmap    @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
   
   title          String     // Roadmap display title
-  isPublic       Boolean    @default(true)
-  synergyData    Json?      // Cross-profile vector delta and complementarity insights
+  isPublic       Boolean    @default(true) @map("is_public")
+  synergyData    Json?      @map("synergy_data") // Cross-profile vector delta and complementarity insights
   
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
 
   @@index([ownerId])
-  @@index([assessmentId])
+  @@index([roadmapId])
   @@map("shared_roadmaps")
 }

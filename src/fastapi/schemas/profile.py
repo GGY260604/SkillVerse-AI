@@ -110,3 +110,11 @@ class ExtractionResponse(BaseModel):
         default=None,
         description="Truncated preview of raw extracted text for auditing",
     )
+    extractionMethod: str = Field(
+        default="gemini",
+        description="Method used for extraction: 'gemini' or 'local'",
+    )
+    usedKey: Optional[str] = Field(
+        default=None,
+        description="Identifier of the Gemini API Key used (e.g. 'GEMINI_API_KEY_5'), or null if local",
+    )
