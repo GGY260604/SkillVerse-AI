@@ -60,9 +60,9 @@
       "option_1_tag": "选项 01 • 即时语义分析",
       "recommended": "推荐",
       "upload_title": "上传专业简历 / CV",
-      "upload_desc": "在 12 秒内直接从现有简历中提取语义技能特征与能力图谱。",
+      "upload_desc": "在 20 秒内直接从现有简历中提取语义技能特征与能力图谱。",
       "drag_drop_text": "上传简历或 CV 文件",
-      "drag_drop_subtext": "支持 PDF、DOCX 或 PNG 扫描件（最大 20MB）",
+      "drag_drop_subtext": "支持 PDF 或图片文件（PNG、JPG、WEBP，最大 10MB）",
       "btn_select_file": "选择文件并启动分析",
       "option_2_tag": "选项 02 • 无需提供简历",
       "time_estimate": "3 分钟",
@@ -98,6 +98,24 @@
       "title": "目前没有任何规划",
       "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",
       "btn_add_plan": "+ 添加新的规划"
+    },
+    "share_modal": {
+      "title": "共享职业转型路线图",
+      "subtitle": "通过用户 ID (UID) 或 Email 检索同伴，并为其授权该路线图的查看或编辑权限。",
+      "search_placeholder": "通过用户 ID (UID) 或 Email 搜索用户...",
+      "filter_label": "筛选",
+      "filter_none": "搜索模式",
+      "filter_all": "所有已授权成员",
+      "filter_viewable": "仅可查看 (Viewable)",
+      "filter_editable": "可编辑 (Editable)",
+      "access_no_access": "无权限 (No Access)",
+      "access_viewable": "可查看 (Viewable)",
+      "access_editable": "可编辑 (Editable)",
+      "empty_initial": "请输入用户 UID 或 Email 进行搜索，或选择上方权限筛选查看已授权成员。",
+      "empty_no_results": "未检索到匹配的用户或已授权记录。",
+      "updating": "更新权限中...",
+      "updated_success": "权限已成功更新。",
+      "btn_close": "关闭"
     },
     "current": {
       "badge": "当前活跃规划",
@@ -241,6 +259,22 @@
       "err_network": "网络连接异常，请检查网络后重试。",
       "err_default": "发生意外错误，请稍后重试。",
       "err_email_required": "请输入电子邮箱地址。"
+    },
+    "profile": {
+      "title": "用户个人资料",
+      "subtitle": "管理您的个人身份与账号凭据。",
+      "email_label": "账号邮箱",
+      "email_readonly_badge": "不可更改",
+      "email_hint": "绑定的账号邮箱地址固定且不可修改。",
+      "name_label": "用户姓名 / 昵称",
+      "name_placeholder": "请输入您的姓名",
+      "name_hint": "该姓名将展示在您的成长路线图与共享分析中。",
+      "btn_save": "保存修改",
+      "btn_saving": "保存中...",
+      "save_success": "个人资料已成功更新！",
+      "save_error": "更新失败，请重试。",
+      "member_badge": "SkillVerse 认证成员",
+      "btn_close": "关闭"
     }
   }
 }

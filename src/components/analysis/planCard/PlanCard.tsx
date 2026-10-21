@@ -1,166 +1,230 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { PlanData } from "./planData";
 
 interface PlanCardProps {
   plan: PlanData;
+  variant?: "current" | "history";
   onSelect?: (plan: PlanData) => void;
 }
 
-// Unified Plan Card Component
-// Shared card presentation for current active roadmap (full rich view) and archived historical roadmaps (compact streamlined view).
-export default function PlanCard({ plan, onSelect }: PlanCardProps) {
+export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
   const tCurrent = useTranslations("analysis.current");
   const tHistory = useTranslations("analysis.history");
+  const locale = useLocale();
 
-  const isCurrent = plan.isCurrent;
+  const isCurrent = variant !== undefined ? variant === "current" : plan.isCurrent;
 
-  // Streamlined Minimal Card Presentation for History Plans (Pelan Sejarah)
+  const displayRoleTitle = plan.targetTitleLocalized?.[locale] || plan.targetRole;
+  const displayDescription = plan.descriptionLocalized?.[locale] || plan.description;
+
+  const completedCount = plan.phases?.filter((p) => p.isCompleted).length || 0;
+  const totalPhases = plan.phases?.length || 0;
+  const progressPercent = totalPhases > 0 ? Math.round((completedCount / totalPhases) * 100) : 0;
+
+  const rawDate = plan.createdAt || plan.date || "";
+  const displayDate = rawDate.split("T")[0].split(" ")[0];
+
+  // ---------------------------------------------------------------------------
+  // History Plan Overview Card (Compact & Monochromatic Grey Aesthetic)
+  // ---------------------------------------------------------------------------
   if (!isCurrent) {
     return (
       <div
         onClick={() => onSelect?.(plan)}
-        className="relative rounded-2xl p-5 sm:p-6 transition-all duration-300 cursor-pointer group bg-bg-secondary/40 border border-border-subtle/70 opacity-90 hover:opacity-100 hover:border-accent/40 hover:bg-bg-secondary/60 hover:shadow-md"
+        className="rounded-xl p-4 sm:p-5 transition-all duration-200 cursor-pointer group border bg-bg-secondary/40 border-zinc-800/80 hover:bg-bg-secondary/70 hover:border-zinc-700/90 shadow-sm"
       >
-        {/* Top Header Row: Archive Badge, Plan ID, Date */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle/40 mb-4">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-text-muted/15 text-text-muted border border-border-subtle uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
+        {/* Top Header Row: Archived Badge, Roadmap ID, Date */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-zinc-800/70 mb-3.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800/90 text-zinc-400 border border-zinc-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
               {tHistory("badge")}
             </span>
-            <span className="text-xs text-text-muted font-mono">
-              Plan ID: {plan.code}
+            <span className="text-[11px] font-mono text-zinc-500">
+              ID: <span className="text-zinc-400">{plan.id}</span>
             </span>
+            {plan.roleCategory && (
+              <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
+                • {plan.roleCategory}
+              </span>
+            )}
           </div>
 
-          <span className="text-xs font-mono text-text-muted">
-            {plan.date}
+          <span className="text-[11px] font-mono text-zinc-500 shrink-0">
+            {displayDate}
           </span>
         </div>
 
-        {/* Content Row: Target Role, Match Score Pill & Chevron Arrow */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <span className="text-[10px] font-mono text-text-muted uppercase tracking-wider block mb-0.5">
-              {plan.roleCategory}
-            </span>
-            <h3 className="text-lg sm:text-xl font-bold text-text-secondary group-hover:text-text-primary tracking-tight transition-colors">
-              {plan.targetRole}
+        {/* Main Content: Title, 1-line description, and compact score */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3.5">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-lg font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors truncate">
+              {displayRoleTitle}
             </h3>
+            {displayDescription && (
+              <p className="text-xs text-zinc-400 line-clamp-1 mt-1 leading-relaxed">
+                {displayDescription}
+              </p>
+            )}
+            <div className="flex items-center gap-3 mt-2 text-[11px] font-mono text-zinc-500 flex-wrap">
+              <span>{plan.roadmapWeeks} • {plan.roadmapHours}</span>
+              {plan.sdgs && plan.sdgs.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {plan.sdgs.map((sdg) => (
+                    <span
+                      key={sdg}
+                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
+                    >
+                      {sdg}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Compact Right Side Controls */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-            {/* Match Score Badge */}
-            <div className="flex items-baseline gap-1 px-3 py-1.5 rounded-lg bg-bg-card/70 border border-border-subtle/60 font-mono">
-              <span className="text-[10px] uppercase text-text-muted mr-1">Match:</span>
-              <span className="text-sm font-bold text-text-primary">{plan.matchScore.toFixed(1)}</span>
-              <span className="text-xs text-text-muted">%</span>
+          {/* Compact Match Score box (grey theme) */}
+          <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-zinc-800/60 pt-2 sm:pt-0">
+            <div className="flex items-baseline gap-1">
+              <span className="text-[10px] font-mono uppercase text-zinc-500">{tCurrent("match_score")}:</span>
+              <span className="text-sm font-bold font-mono text-zinc-300">{plan.matchScore.toFixed(1)}%</span>
             </div>
-
-            {/* Direct Chevron > Action Arrow */}
-            <div className="text-text-muted group-hover:text-accent group-hover:translate-x-1 transition-all duration-200 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <div className="w-24 bg-zinc-800 rounded-full h-1 overflow-hidden mt-1 hidden sm:block">
+              <div
+                className="h-full bg-zinc-500"
+                style={{ width: `${plan.matchScore}%` }}
+              />
             </div>
           </div>
+        </div>
+
+        {/* Footer: Progress & View Details Link */}
+        <div className="pt-3 border-t border-zinc-800/70 flex items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[11px] text-zinc-500">
+              Progress: <strong className="text-zinc-300 font-semibold">{completedCount} / {totalPhases}</strong>
+            </span>
+            <div className="w-20 sm:w-24 bg-zinc-800 rounded-full h-1 overflow-hidden">
+              <div
+                className="h-full bg-zinc-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <span className="text-zinc-400 group-hover:text-zinc-200 transition-colors inline-flex items-center gap-1 font-semibold">
+            <span>{tHistory("view_details")}</span>
+            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+          </span>
         </div>
       </div>
     );
   }
 
-  // Full Rich Card Presentation for Current Active Plan (Pelan Semasa)
+  // ---------------------------------------------------------------------------
+  // Current Plan Overview Card (Prominent & High Contrast Accent Aesthetic)
+  // ---------------------------------------------------------------------------
   return (
     <div
       onClick={() => onSelect?.(plan)}
-      className="relative rounded-2xl p-6 sm:p-8 transition-all duration-300 cursor-pointer group bg-bg-card/90 backdrop-blur-2xl border-2 border-accent/40 shadow-[0_0_50px_var(--accent-glow)] hover:border-accent hover:shadow-[0_0_60px_var(--accent-glow-strong)]"
+      className="rounded-2xl p-6 sm:p-7 transition-all duration-300 cursor-pointer group border bg-bg-card border-border-subtle hover:border-accent/40 hover:shadow-lg"
     >
-      {/* Ambient Top Glow Overlay */}
-      <div className="absolute top-0 left-1/4 w-1/2 h-32 bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] pointer-events-none" />
+      {/* Top Header Row: Roadmap ID on Left, Generation Date on Right */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle mb-5">
+        <span className="text-xs font-mono font-medium text-text-muted">
+          Roadmap ID: <span className="text-text-secondary font-mono">{plan.id}</span>
+        </span>
 
-      {/* Card Header with Badges and Telemetry Metadata */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-border-subtle/60 mb-6">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold font-mono tracking-wider bg-accent/20 text-accent border border-accent/40 uppercase">
-            <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-            {tCurrent("badge")}
-          </span>
-
-          <span className="text-xs text-text-muted font-mono">
-            Plan ID: {plan.code}
-          </span>
-        </div>
-
-        <span className="text-xs font-mono text-text-secondary">
-          {plan.date}
+        <span className="text-xs font-mono text-text-muted">
+          {displayDate}
         </span>
       </div>
 
-      {/* Primary Role Info & Match Metric Row */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-6">
+      {/* Primary Role Info & Match Score Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
         <div className="lg:col-span-2">
-          <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-accent block mb-1">
+          <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
             {plan.roleCategory}
           </span>
 
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
-            {plan.targetRole}
+          <h3 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
+            {displayRoleTitle}
           </h3>
 
-          <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-0">
-            {plan.description}
+          <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-4 line-clamp-2">
+            {displayDescription}
           </p>
+
+          {/* SDGs Tags without "Aligned UN Goals:" label */}
+          {plan.sdgs && plan.sdgs.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {plan.sdgs.map((sdg) => (
+                <span
+                  key={sdg}
+                  className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                >
+                  {sdg}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Match Score Display Block */}
-        <div className="rounded-xl border p-5 flex flex-col items-center text-center justify-center bg-bg-secondary/70 border-border-subtle">
-          <span className="text-[11px] font-mono uppercase text-text-muted tracking-wider mb-1">
+        {/* Match Score Block (Identical styling inside & outside, total time placed inside) */}
+        <div className="rounded-xl border border-border-subtle p-4 flex flex-col items-center text-center justify-center bg-bg-secondary/50">
+          <span className="text-[10px] font-mono uppercase text-text-muted tracking-wider mb-0.5">
             {tCurrent("match_score")}
           </span>
 
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold font-mono text-accent">
+          <div className="flex items-baseline gap-0.5 my-0.5">
+            <span className="text-3xl font-extrabold font-mono text-text-primary">
               {plan.matchScore.toFixed(1)}
             </span>
-            <span className="text-sm font-bold font-mono text-accent">
-              %
-            </span>
+            <span className="text-xs font-bold font-mono text-text-muted">%</span>
           </div>
 
-          <span className="text-[10px] text-text-muted font-mono mt-1">
+          <span className="text-[10px] text-text-muted font-mono mb-2">
             {plan.matchScoreBasis}
           </span>
 
-          <div className="w-full bg-border-subtle rounded-full h-1.5 mt-3 overflow-hidden">
+          <div className="w-full bg-border-subtle rounded-full h-1.5 overflow-hidden mb-2.5">
             <div
-              className="h-full bg-linear-to-r from-accent to-accent-dim transition-all duration-500"
+              className="h-full bg-accent transition-all duration-500"
               style={{ width: `${plan.matchScore}%` }}
             />
           </div>
+
+          <span className="text-[11px] font-mono text-text-secondary font-medium">
+            {plan.roadmapWeeks} • {plan.roadmapHours}
+          </span>
         </div>
       </div>
 
-      {/* Card Action Footer Bar */}
-      <div className="relative z-10 flex items-center justify-between pt-4 border-t border-border-subtle/60">
-        <span className="text-xs text-text-muted font-mono">
-          {plan.roadmapWeeks} • {plan.roadmapHours}
-        </span>
+      {/* Progress & Footer Bar (No % in Progress text) */}
+      <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Progress Display */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-text-secondary">
+            Progress: <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
+          </span>
+          <div className="w-28 sm:w-36 bg-border-subtle rounded-full h-1.5 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect?.(plan);
-          }}
-          className="text-xs font-mono font-semibold flex items-center gap-1.5 transition-all bg-transparent border-none cursor-pointer text-accent group-hover:underline"
-        >
-          <span>{tCurrent("view_details")}</span>
-          <span>→</span>
-        </button>
+        {/* View Details Link */}
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          <span className="text-xs font-mono font-semibold text-accent group-hover:underline inline-flex items-center gap-1">
+            <span>{tCurrent("view_details")}</span>
+            <span>→</span>
+          </span>
+        </div>
       </div>
     </div>
   );

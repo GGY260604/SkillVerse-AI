@@ -32,6 +32,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure user record exists in user table
+    if (data.user?.id && data.user.email) {
+      try {
+        const { prisma } = await import("@/lib/prisma");
+        await prisma.user.upsert({
+          where: { id: data.user.id },
+          create: {
+            id: data.user.id,
+            email: data.user.email.toLowerCase(),
+            locale: (data.user.user_metadata?.locale as string) || "en",
+          },
+          update: {},
+        });
+      } catch (dbErr) {
+        console.error("Failed to sync user in login:", dbErr);
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
       user: {

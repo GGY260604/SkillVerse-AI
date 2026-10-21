@@ -33,24 +33,30 @@ async def extract_profile_from_document(
     # 1. Handle PDF Documents
     if extension == ".pdf" or "application/pdf" in content_type:
         raw_text = extract_text_from_pdf(file_bytes)
-        normalized_profile = await normalize_profile_with_gemini(raw_text=raw_text)
+        normalized_profile, extraction_method, used_key = await normalize_profile_with_gemini(raw_text=raw_text)
         preview = (raw_text[:250] + "...") if len(raw_text) > 250 else raw_text
+        method_desc = f"Gemini AI ({used_key})" if extraction_method == "gemini" else "Local Heuristic Parser"
         return ExtractionResponse(
             success=True,
-            message="PDF resume successfully extracted and standardized into ESCO taxonomy.",
+            message=f"PDF resume successfully extracted and standardized via {method_desc}.",
             extractedProfile=normalized_profile,
             rawTextPreview=preview,
+            extractionMethod=extraction_method,
+            usedKey=used_key,
         )
 
     # 2. Handle Image / Photo CVs
     elif extension in [".png", ".jpg", ".jpeg", ".webp"] or "image/" in content_type:
         verified_bytes, mime_type = validate_and_prepare_image(file_bytes, content_type or f"image/{extension.lstrip('.')}")
-        normalized_profile = await normalize_profile_with_gemini(image_bytes=verified_bytes, mime_type=mime_type)
+        normalized_profile, extraction_method, used_key = await normalize_profile_with_gemini(image_bytes=verified_bytes, mime_type=mime_type)
+        method_desc = f"Gemini Vision AI ({used_key})" if extraction_method == "gemini" else "Local Heuristic Parser"
         return ExtractionResponse(
             success=True,
-            message="CV scan successfully recognized via Vision OCR and standardized into ESCO taxonomy.",
+            message=f"CV scan successfully recognized via {method_desc} and standardized into ESCO taxonomy.",
             extractedProfile=normalized_profile,
-            rawTextPreview="[Image Content Processed via Gemini Vision OCR]",
+            rawTextPreview="[Image Content Processed via Vision OCR]",
+            extractionMethod=extraction_method,
+            usedKey=used_key,
         )
 
     # 3. Unsupported format

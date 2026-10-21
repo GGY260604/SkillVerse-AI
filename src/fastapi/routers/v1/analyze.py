@@ -14,7 +14,6 @@ from schemas.analysis import (
 )
 from services.matching_service import evaluate_roles
 from services.pathway_service import synthesize_pathway
-from services.db_service import persist_assessment_to_supabase
 
 router = APIRouter()
 
@@ -54,17 +53,6 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
             target_role=target_role,
             profile=request.profile,
             locale=request.locale,
-        )
-
-        # Persist complete assessment to Supabase
-        await persist_assessment_to_supabase(
-            assessment_id=assessment_id,
-            session_id=session_id,
-            user_id=request.userId,
-            active_scenario=request.macroScenario.value if hasattr(request.macroScenario, "value") else str(request.macroScenario),
-            radar_data=[item.model_dump() for item in radar_data],
-            top_roles=[r.model_dump() for r in top_5_roles],
-            selected_role_roadmap=roadmap.model_dump(),
         )
 
     return AnalyzeResponsePayload(
@@ -190,17 +178,6 @@ async def synthesize_selected_role_roadmap(request: SynthesizeRoadmapRequest):
         target_role=target_role,
         profile=request.profile,
         locale=request.locale,
-    )
-
-    # 3. Persist complete assessment to Supabase
-    await persist_assessment_to_supabase(
-        assessment_id=assessment_id,
-        session_id=session_id,
-        user_id=request.userId,
-        active_scenario=request.macroScenario.value if hasattr(request.macroScenario, "value") else str(request.macroScenario),
-        radar_data=[item.model_dump() if hasattr(item, "model_dump") else item for item in radar_data_to_save],
-        top_roles=[r.model_dump() if hasattr(r, "model_dump") else r for r in top_roles_to_save],
-        selected_role_roadmap=roadmap.model_dump(),
     )
 
     return SynthesizeRoadmapResponse(

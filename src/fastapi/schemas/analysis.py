@@ -72,6 +72,7 @@ class MatchedRole(BaseModel):
 
 class RecommendedCourse(BaseModel):
     title: str = Field(description="Course or certification title")
+    titleLocalized: Optional[Dict[str, str]] = Field(default=None, description="Trilingual course title: en, ms, zh")
     platform: str = Field(description="Provider platform, e.g. Coursera, edX, freeCodeCamp, HRD Corp")
     url: str = Field(description="Direct URL to course details or enrollment")
     isHrdCorpClaimable: bool = Field(default=False, description="Whether claimable under HRD Corp Malaysia")
@@ -81,10 +82,14 @@ class RecommendedCourse(BaseModel):
 
 class RoadmapMilestone(BaseModel):
     phaseIndex: int = Field(description="Phase sequence (1 = Foundation, 2 = Applied, 3 = Capstone)")
-    phaseTitle: str = Field(description="Localized milestone title")
+    phaseTitle: str = Field(description="Canonical milestone title")
+    titleLocalized: Optional[Dict[str, str]] = Field(default=None, description="Trilingual phase title: en, ms, zh")
+    description: Optional[str] = Field(default=None, description="Phase overview description")
+    descriptionLocalized: Optional[Dict[str, str]] = Field(default=None, description="Trilingual phase description: en, ms, zh")
     durationWeeks: int = Field(description="Estimated duration in weeks")
     estimatedHours: int = Field(description="Total estimated learning hours")
-    learningObjectives: List[str] = Field(default_factory=list)
+    learningObjectives: List[str] = Field(default_factory=list, description="Canonical objectives")
+    objectivesLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual objectives: en, ms, zh")
     recommendedCourses: List[RecommendedCourse] = Field(default_factory=list)
 
 

@@ -4,115 +4,296 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocale } from "next-intl";
 import { usePlanModal } from "@/context/PlanModalContext";
 import Logo from "@/components/Logo";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   MatchedRole,
   AnalyzeResponsePayload,
   analyzeWorkforceProfileStream,
   synthesizeSelectedRoadmap,
   convertAssessmentToPlanData,
-  ProfileIntakePayload,
 } from "@/lib/fastapi/client";
+import { useAuth } from "@/context/AuthContext";
+
+/**
+ * Generates an ultra-concise, single-sentence justification for why this role was matched.
+ * Free of emojis, boxes, or decorative borders.
+ */
+function getRoleReason(role: MatchedRole, locale: string): string {
+  if (role.matchedStrengths && role.matchedStrengths.length > 0) {
+    const skillsList = role.matchedStrengths.slice(0, 3);
+    if (locale === "zh") {
+      return `基于您掌握的 ${skillsList.join("、")} 等基础，具备高度技能迁移与适应潜力。`;
+    }
+    if (locale === "ms") {
+      return `Berdasarkan penguasaan anda dalam ${skillsList.join(", ")}, mempunyai kebolehsesuaian tinggi.`;
+    }
+    return `High transition potential based on your foundation in ${skillsList.join(", ")}.`;
+  }
+
+  if (locale === "zh") {
+    return "高度契合您的职业发展方向与行业转型高增长需求。";
+  }
+  if (locale === "ms") {
+    return "Sejajar dengan objektif transformasi kerjaya dan permintaan industri yang pesat membangun.";
+  }
+  return "Closely aligns with your career transition goals and high-growth industry demands.";
+}
 
 export default function RoleSelectorModal() {
   const locale = useLocale();
-  const { activeModal, activeProfile, closeModals, saveActivePlan } = usePlanModal();
+  const { user } = useAuth();
+  const { activeModal, activeProfile, openWizardOption, closeModals, saveActivePlan } =
+    usePlanModal();
 
-  const [phase, setPhase] = useState<number>(1);
-  const [phaseTitle, setPhaseTitle] = useState<string>("Initializing Intake Telemetry...");
-  const [phaseDetail, setPhaseDetail] = useState<string>("Connecting to FastAPI microservice...");
+  // Execution phases:
+  // 1. isMatching: Stage 1 stream running (progress 15% -> 50%)
+  // 2. !isMatching && !isSynthesizing: Role selection view (progress paused at 50%)
+  // 3. isSynthesizing: Stage 2 synthesis & DB persistence (progress 50% -> 100%)
+  const [isMatching, setIsMatching] = useState<boolean>(true);
+  const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(15);
 
-  const [topRoles, setTopRoles] = useState<MatchedRole[]>([]);
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeResponsePayload | null>(null);
+  const [loadingTitle, setLoadingTitle] = useState<string>("");
+  const [loadingSubtitle, setLoadingSubtitle] = useState<string>("");
 
-  const [activeScenario, setActiveScenario] = useState<"moderate" | "accelerated_ai" | "green_economy">("moderate");
-  const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
-  const [synthesizingRoleTitle, setSynthesizingRoleTitle] = useState<string>("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [topRoles, setTopRoles] = useState<MatchedRole[]>([]);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeResponsePayload | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const isOpen = activeModal === "role_select";
 
-  // Execute Stage 1 matching pipeline when modal opens with activeProfile
+  // Stage 1: Trigger /api/analysis/analyze stream matching upon modal open
   useEffect(() => {
     if (!isOpen || !activeProfile) return;
 
-    let isMounted = true;
-    setErrorMsg(null);
+    let isCancelled = false;
+    setErrorMessage(null);
     setTopRoles([]);
+    setSelectedRoleId(null);
     setAnalysisResult(null);
-    setPhase(1);
-    setProgressPercent(20);
-    setPhaseTitle("Phase 1: Auditing Automation Risk");
-    setPhaseDetail("Auditing competencies against live Supabase trend signals...");
+    setIsMatching(true);
+    setIsSynthesizing(false);
+    setProgressPercent(15);
 
-    const runStream = async () => {
+    setLoadingTitle(
+      locale === "zh"
+        ? "正在评估高增长匹配岗位..."
+        : locale === "ms"
+        ? "Menilai Peranan Sesuai..."
+        : "Evaluating Matching Future Roles..."
+    );
+    setLoadingSubtitle(
+      locale === "zh"
+        ? "正在通过高维向量相似度与技能重合度检索契合岗位..."
+        : locale === "ms"
+        ? "Menganalisis padanan vektor dan kecekapan kemahiran..."
+        : "Analyzing vector similarities and skill overlaps against ESCO taxonomy..."
+    );
+
+    const runRoleMatching = async () => {
       try {
         const payload = {
           locale,
-          macroScenario: activeScenario,
+          macroScenario: "moderate" as const,
           profile: activeProfile,
           autoSynthesizeRoadmap: false,
         };
 
         const result = await analyzeWorkforceProfileStream(payload, (evt) => {
-          if (!isMounted) return;
-          if (evt.phase) setPhase(evt.phase);
-          if (evt.title) setPhaseTitle(evt.title);
-          if (evt.detail) setPhaseDetail(evt.detail);
-          if (evt.percent) setProgressPercent(evt.percent);
-          if (evt.error) setErrorMsg(evt.error);
+          if (isCancelled) return;
+          if (evt.error) {
+            setErrorMessage(evt.error);
+          }
+
+          // Map stream phases (1 to 4) smoothly across 15% -> 50%
+          if (evt.percent) {
+            const mappedPercent = Math.min(50, Math.max(15, Math.round(evt.percent * 0.5)));
+            setProgressPercent(mappedPercent);
+          }
+
+          if (evt.phase === 1) {
+            setLoadingTitle(
+              locale === "zh"
+                ? "正在审计技能自动化风险..."
+                : locale === "ms"
+                ? "Mengaudit Risiko Automasi..."
+                : "Auditing Automation Risk..."
+            );
+            setLoadingSubtitle(
+              locale === "zh"
+                ? "对比实时行业趋势信号分析核心技能面临的替代压力..."
+                : locale === "ms"
+                ? "Menilai tekanan penggantian terhadap isyarat trend pasaran..."
+                : "Auditing competencies against live workforce trend signals..."
+            );
+          } else if (evt.phase === 2) {
+            setLoadingTitle(
+              locale === "zh"
+                ? "正在生成语义特征向量..."
+                : locale === "ms"
+                ? "Menjana Vektor Profil..."
+                : "Generating Semantic Profile Vector..."
+            );
+            setLoadingSubtitle(
+              locale === "zh"
+                ? "构建 1024 维密集特征向量表征您的职业经历与能力..."
+                : locale === "ms"
+                ? "Membina vektor semantik profil 1024 dimensi..."
+                : "Generating 1024-dimensional semantic profile vector..."
+            );
+          } else if (evt.phase === 3) {
+            setLoadingTitle(
+              locale === "zh"
+                ? "正在检索职业分类库..."
+                : locale === "ms"
+                ? "Mencari Taksonomi Pekerjaan..."
+                : "Searching Occupational Taxonomy..."
+            );
+            setLoadingSubtitle(
+              locale === "zh"
+                ? "在标准职业库中比对软技能与专业技能重叠度..."
+                : locale === "ms"
+                ? "Menilai pertindihan kemahiran dalam taksonomi standard..."
+                : "Querying vector index & calculating soft skill overlaps..."
+            );
+          } else if (evt.phase === 4 || evt.phase === 5) {
+            setLoadingTitle(
+              locale === "zh"
+                ? "正在校准联合国 SDG 目标匹配..."
+                : locale === "ms"
+                ? "Menentukur Penjajaran SDG..."
+                : "Calibrating UN SDG Alignment..."
+            );
+            setLoadingSubtitle(
+              locale === "zh"
+                ? "校准可持续发展目标亲和度与能力雷达指标..."
+                : locale === "ms"
+                ? "Menentukur matlamat kelestarian dan radar kompetensi..."
+                : "Calibrating radar axes & UN SDG impact goals..."
+            );
+          }
         });
 
-        if (isMounted && result && result.topRoles) {
+        if (!isCancelled && result && result.topRoles && result.topRoles.length > 0) {
           setTopRoles(result.topRoles);
+          setSelectedRoleId(result.topRoles[0].roleId);
           setAnalysisResult(result);
-          setProgressPercent(100);
+          // Keep progress bar at 50% for user action
+          setProgressPercent(50);
+          setIsMatching(false);
+        } else if (!isCancelled && (!result || !result.topRoles || result.topRoles.length === 0)) {
+          throw new Error("No matching prospective roles could be identified.");
         }
-      } catch (err: unknown) {
-        if (isMounted) {
-          const message = err instanceof Error ? err.message : String(err);
-          setErrorMsg(message || "Role discovery failed. Please ensure FastAPI microservice is online.");
+      } catch (err: any) {
+        if (!isCancelled) {
+          setIsMatching(false);
+          setErrorMessage(err.message || "Failed to discover matching roles.");
         }
       }
     };
 
-    runStream();
+    runRoleMatching();
 
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, [isOpen, activeProfile, activeScenario, locale]);
+  }, [isOpen, activeProfile, locale]);
 
-  // Stage 2: User explicitly selects one of the top 5 roles
-  const handleSelectRole = async (role: MatchedRole) => {
-    if (!activeProfile || isSynthesizing) return;
+  // Stage 2: User explicitly confirms role selection and synthesizes roadmap
+  const handleConfirmRole = async () => {
+    if (!activeProfile || !selectedRoleId || isSynthesizing) return;
+
+    const chosenRole = topRoles.find((r) => r.roleId === selectedRoleId) || topRoles[0];
+    if (!chosenRole) return;
 
     try {
+      setErrorMessage(null);
       setIsSynthesizing(true);
-      setSynthesizingRoleTitle(role.titleLocalized || role.title);
+
+      // Do NOT reset progress bar - continue from 50% up to 100%!
+      setProgressPercent(60);
+      setLoadingTitle(
+        locale === "zh"
+          ? "正在生成技能转型路线图..."
+          : locale === "ms"
+          ? "Menjana Pelan Kemahiran..."
+          : "Synthesizing Reskilling Roadmap..."
+      );
+      setLoadingSubtitle(
+        locale === "zh"
+          ? `针对目标岗位「${chosenRole.titleLocalized || chosenRole.title}」规划三阶段学习路径与受认可课程...`
+          : locale === "ms"
+          ? `Merangka kurikulum 3 fasa untuk '${chosenRole.titleLocalized || chosenRole.title}'...`
+          : `Formulating 3-phase curriculum for '${chosenRole.titleLocalized || chosenRole.title}'...`
+      );
 
       const synthesizeReq = {
+        userId: user?.id,
         sessionId: analysisResult?.sessionId,
         assessmentId: analysisResult?.assessmentId,
         locale,
-        macroScenario: activeScenario,
-        targetRoleId: role.roleId,
+        macroScenario: "moderate" as const,
+        targetRoleId: chosenRole.roleId,
         profile: activeProfile,
         topRoles,
         radarData: analysisResult?.radarData,
       };
 
-      const resp = await synthesizeSelectedRoadmap(synthesizeReq);
-      const planData = convertAssessmentToPlanData(resp, role);
+      // Progress bar moves to 75%
+      setTimeout(() => {
+        setProgressPercent((prev) => Math.max(prev, 75));
+      }, 400);
 
+      const resp = await synthesizeSelectedRoadmap(synthesizeReq);
+
+      // Synthesis completed, progress advances to 90%
+      setProgressPercent(90);
+      setLoadingTitle(
+        locale === "zh"
+          ? "正在存入数据库..."
+          : locale === "ms"
+          ? "Menyimpan ke Pangkalan Data..."
+          : "Saving Assessment to Database..."
+      );
+      setLoadingSubtitle(
+        locale === "zh"
+          ? "路线图生成完成，正在将评估记录与个人学习规划同步存入数据库..."
+          : locale === "ms"
+          ? "Menyegerakkan rekod penilaian dan pelan pembelajaran ke pangkalan data..."
+          : "Synchronizing assessment record and milestones to database..."
+      );
+
+      // Brief delay to let the user see the database persistence feedback
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      setProgressPercent(100);
+      setLoadingTitle(
+        locale === "zh"
+          ? "规划生成完毕！"
+          : locale === "ms"
+          ? "Pelan Siap Dijana!"
+          : "Roadmap Complete!"
+      );
+
+      const planData = convertAssessmentToPlanData(resp, chosenRole);
       saveActivePlan(planData);
-      closeModals();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setErrorMsg(message || "Roadmap synthesis failed. Please try again.");
-    } finally {
+
+      // Dispatch refresh event immediately after DB save is confirmed so the page
+      // re-fetches guaranteed-fresh data before the modal animates out.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("roadmap-refresh"));
+      }
+
+      // Close modal smoothly after a short cosmetic delay
+      setTimeout(() => {
+        setIsSynthesizing(false);
+        closeModals();
+      }, 500);
+    } catch (err: any) {
       setIsSynthesizing(false);
+      setErrorMessage(err.message || "Roadmap synthesis failed. Please try again.");
     }
   };
 
@@ -122,27 +303,42 @@ export default function RoleSelectorModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isMatching && !isSynthesizing) {
+          closeModals();
+        }
+      }}
     >
+      {/* Modal Container: Matches Option 1 & 2 */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-4xl max-h-[92vh] bg-bg-card/95 border border-border-subtle rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-fade-in-up"
+        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
       >
-        {/* Top Header Bar */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border-subtle bg-bg-card/70 shrink-0">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" showBeta />
-            <div className="h-4 w-px bg-border-subtle hidden sm:block" />
-            <span className="text-xs font-mono font-bold tracking-wider text-accent uppercase hidden sm:inline-block">
-              Stage {topRoles.length > 0 ? "2: Commit & Reskill" : "1: Match & Discover"}
-            </span>
+        {/* Top Controls: Back, Brand & Close */}
+        <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={openWizardOption}
+              disabled={isMatching || isSynthesizing}
+              className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
+              aria-label="Back"
+              title="Back"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div className="h-4 w-px bg-border-subtle" />
+            <Logo size="sm" />
           </div>
 
           <button
             type="button"
             onClick={closeModals}
-            disabled={isSynthesizing}
-            className="text-text-muted hover:text-text-primary p-2 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-40"
+            disabled={isMatching || isSynthesizing}
+            className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,304 +347,130 @@ export default function RoleSelectorModal() {
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          {/* Synthesizing Overlay */}
-          {isSynthesizing && (
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
-              <div className="relative w-16 h-16 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-2 border-accent/20 animate-ping" />
-                <div className="w-12 h-12 rounded-full border-2 border-accent border-t-transparent animate-spin" />
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-text-primary tracking-tight">
-                  Synthesizing Personalized Reskilling Roadmap
-                </h3>
-                <p className="text-xs text-accent font-mono mt-1 font-semibold">
-                  Target Horizon: {synthesizingRoleTitle}
-                </p>
-                <p className="text-xs text-text-secondary max-w-md mx-auto mt-2 leading-relaxed">
-                  Querying Google Gemini 1.5 Flash for customized 3-phase curriculum, grounding
-                  recommendations in free Coursera/edX tracks and Malaysian HRD Corp claimable modules.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Phase Progress Bar (While evaluating Stage 1) */}
-          {!isSynthesizing && topRoles.length === 0 && !errorMsg && (
-            <div className="py-10 space-y-6 animate-fade-in">
-              <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent font-mono text-xs">
-                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                  <span>Real-Time Computation Telemetry</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight">
-                  {phaseTitle}
-                </h3>
-                <p className="text-xs text-text-secondary max-w-lg mx-auto font-mono">
-                  {phaseDetail}
-                </p>
-              </div>
-
-              {/* Glowing Progress Track */}
-              <div className="max-w-xl mx-auto space-y-2">
-                <div className="w-full bg-bg-secondary rounded-full h-2.5 overflow-hidden border border-border-subtle shadow-inner">
-                  <div
-                    className="bg-accent h-full transition-all duration-500 shadow-[0_0_15px_var(--accent-glow-strong)]"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] font-mono text-text-muted">
-                  <span>Phase {phase} of 4</span>
-                  <span>{progressPercent}% Complete</span>
-                </div>
-              </div>
-
-              {/* Stepper Checklist */}
-              <div className="max-w-md mx-auto grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${phase >= 1 ? "border-accent/40 bg-accent/10 text-accent" : "border-border-subtle text-text-muted"}`}>
-                  <span>{phase > 1 ? "✓" : "◈"}</span>
-                  <span>1. Trend Signals Audit</span>
-                </div>
-                <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${phase >= 2 ? "border-accent/40 bg-accent/10 text-accent" : "border-border-subtle text-text-muted"}`}>
-                  <span>{phase > 2 ? "✓" : "◈"}</span>
-                  <span>2. BGE-M3 1024-d Vector</span>
-                </div>
-                <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${phase >= 3 ? "border-accent/40 bg-accent/10 text-accent" : "border-border-subtle text-text-muted"}`}>
-                  <span>{phase > 3 ? "✓" : "◈"}</span>
-                  <span>3. Supabase HNSW Search</span>
-                </div>
-                <div className={`p-2.5 rounded-lg border flex items-center gap-2 ${phase >= 4 ? "border-accent/40 bg-accent/10 text-accent" : "border-border-subtle text-text-muted"}`}>
-                  <span>{phase >= 4 ? "✓" : "◈"}</span>
-                  <span>4. SDG Calibration</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error View */}
-          {errorMsg && (
-            <div className="py-8 text-center space-y-4 animate-fade-in">
-              <div className="w-12 h-12 rounded-full bg-negative/15 border border-negative/30 text-negative flex items-center justify-center mx-auto text-xl">
-                ✕
-              </div>
-              <h3 className="text-lg font-bold text-text-primary">Pipeline Execution Warning</h3>
-              <p className="text-xs text-text-secondary max-w-md mx-auto font-mono">
-                {errorMsg}
+        {/* Dynamic Body: Loading State VS Role Selection List */}
+        {isMatching || isSynthesizing ? (
+          /* Loading Animation (Replaces modal body with persistent progress bar) */
+          <div className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
+            <LoadingSpinner
+              title={loadingTitle}
+              subtitle={loadingSubtitle}
+              showProgressBar={true}
+              progressPercent={progressPercent}
+              progressBarClassName="h-1.5"
+              size="md"
+            />
+          </div>
+        ) : (
+          /* Role Selection View */
+          <>
+            {/* Header Title & Subtitle */}
+            <div className="mb-5 shrink-0">
+              <h3 className="text-lg font-bold text-text-primary tracking-tight mb-1">
+                {locale === "zh"
+                  ? "推荐未来匹配岗位"
+                  : locale === "ms"
+                  ? "Peranan Masa Depan Disyorkan"
+                  : "Recommended Future-Ready Roles"}
+              </h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                {locale === "zh"
+                  ? "根据您的技能基准与发展意向计算出的最佳职业方向，请选择一个开启路线图："
+                  : locale === "ms"
+                  ? "Berdasarkan garis dasar kemahiran dan aspirasi kerjaya anda, pilih satu untuk menjana pelan:"
+                  : "Select your preferred prospective horizon to generate your personalized reskilling roadmap:"}
               </p>
+            </div>
+
+            {/* Error Message: Plain red text, no background, no border */}
+            {errorMessage && (
+              <p className="mb-3 text-xs text-rose-400 font-mono animate-fade-in shrink-0">
+                {errorMessage}
+              </p>
+            )}
+
+            {/* Scrollable Roles List */}
+            <div className="flex-1 overflow-y-auto pr-1.5 space-y-3">
+              {topRoles.map((role, idx) => {
+                const isSelected = selectedRoleId === role.roleId;
+                const matchPct = Math.round(role.matchScore * 100);
+                const reason = getRoleReason(role, locale);
+
+                return (
+                  <div
+                    key={role.roleId}
+                    onClick={() => {
+                      setSelectedRoleId(role.roleId);
+                      setErrorMessage(null);
+                    }}
+                    className={`rounded-xl border p-4 sm:p-5 text-left cursor-pointer transition-all duration-200 flex flex-col justify-between ${
+                      isSelected
+                        ? "border-accent bg-accent/10 shadow-[0_0_15px_var(--accent-glow)]"
+                        : "border-border-subtle bg-bg-secondary/30 hover:border-accent/60 hover:bg-bg-secondary/60"
+                    }`}
+                  >
+                    {/* Line 1: (Role) and (%Match) */}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs sm:text-sm font-bold font-mono text-text-primary">
+                        {idx + 1}. {role.titleLocalized || role.title}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-accent shrink-0">
+                        {matchPct}% Match
+                      </span>
+                    </div>
+
+                    {/* Line 2: (SDG) - Plain text, no emoji, no background, no border. Shows full name on hover */}
+                    {role.sdgAlignments && role.sdgAlignments.length > 0 && (
+                      <div className="text-[11px] font-mono text-emerald-400 mt-1 flex flex-wrap gap-x-2">
+                        {role.sdgAlignments.map((sdg, sIdx) => (
+                          <span
+                            key={sdg.targetCode}
+                            title={`${sdg.targetCode}: ${sdg.targetTitle}`}
+                            className="cursor-help hover:underline"
+                          >
+                            {sdg.targetCode}
+                            {sIdx < role.sdgAlignments.length - 1 ? "," : ""}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Line 3: (Reason) - Short, plain text */}
+                    <p className="text-[11px] sm:text-xs text-text-secondary mt-1.5 leading-snug">
+                      {reason}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Action Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-border-subtle mt-4 shrink-0">
+              <span className="text-[11px] font-mono text-text-muted">
+                {locale === "zh"
+                  ? "已选定 1 个职业方向"
+                  : locale === "ms"
+                  ? "1 peranan dipilih"
+                  : "1 role selected"}
+              </span>
+
               <button
                 type="button"
-                onClick={() => {
-                  setErrorMsg(null);
-                  setPhase(1);
-                }}
-                className="px-5 py-2 text-xs font-mono font-semibold bg-accent text-bg-primary rounded-lg border-none cursor-pointer hover:opacity-90 transition-all"
+                onClick={handleConfirmRole}
+                disabled={!selectedRoleId}
+                className="px-6 py-2.5 text-xs font-semibold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_20px_var(--accent-glow)] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Retry Analysis
+                <span>
+                  {locale === "zh"
+                    ? "确认选择并生成路线图"
+                    : locale === "ms"
+                    ? "Sahkan & Jana Pelan"
+                    : "Confirm & Generate Roadmap"}
+                </span>
+                <span>→</span>
               </button>
             </div>
-          )}
-
-          {/* Top 5 Matched Roles Selection List */}
-          {!isSynthesizing && topRoles.length > 0 && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Header Title & Scenario Switcher */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">
-                    Top 5 Recommended Future-Ready Roles
-                  </h3>
-                  <p className="text-xs text-text-secondary mt-1">
-                    Ranked by BGE-M3 vector cosine similarity and soft skill overlap against 104 standardized ESCO roles.
-                    Choose your desired career path to synthesize your personalized reskilling plan.
-                  </p>
-                </div>
-
-                {/* Macro Scenario Toggle */}
-                <div className="flex items-center gap-1.5 p-1 rounded-lg bg-bg-secondary border border-border-subtle shrink-0">
-                  <span className="text-[10px] font-mono text-text-muted px-2">Scenario:</span>
-                  {[
-                    { id: "moderate", label: "Moderate" },
-                    { id: "accelerated_ai", label: "AI Shock" },
-                    { id: "green_economy", label: "Green" },
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setActiveScenario(s.id as "moderate" | "accelerated_ai" | "green_economy")}
-                      className={`px-2.5 py-1 text-[11px] font-mono rounded-md border-none cursor-pointer transition-all ${
-                        activeScenario === s.id
-                          ? "bg-accent text-bg-primary font-bold shadow-sm"
-                          : "bg-transparent text-text-secondary hover:text-text-primary"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Roles Cards Stack */}
-              <div className="space-y-4">
-                {topRoles.map((role, idx) => {
-                  const scorePct = Math.round(role.matchScore * 1000) / 10;
-                  const isTopMatch = idx === 0;
-
-                  return (
-                    <div
-                      key={role.roleId}
-                      className={`rounded-xl border p-4 sm:p-5 transition-all duration-300 ${
-                        isTopMatch
-                          ? "border-accent/60 bg-bg-secondary/70 shadow-[0_0_30px_var(--accent-glow)]"
-                          : "border-border-subtle hover:border-border-accent/40 bg-bg-secondary/40 hover:bg-bg-secondary/60"
-                      }`}
-                    >
-                      {/* Top Row: Rank, Title, Match Score */}
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-bg-card border border-border-subtle text-text-muted">
-                              #{idx + 1} Candidate
-                            </span>
-                            <span className="text-[11px] font-mono text-accent font-semibold px-2 py-0.5 rounded bg-accent/10 border border-accent/20">
-                              {role.industry}
-                            </span>
-                            {role.scenarioMultiplierApplied > 1 && (
-                              <span className="text-[10px] font-mono text-positive bg-positive/10 border border-positive/30 px-1.5 py-0.5 rounded">
-                                +{Math.round((role.scenarioMultiplierApplied - 1) * 100)}% {activeScenario.replace("_", " ")} boost
-                              </span>
-                            )}
-                          </div>
-
-                          <h4 className="text-base sm:text-lg font-bold text-text-primary tracking-tight">
-                            {role.titleLocalized || role.title}
-                            {role.titleLocalized && role.titleLocalized !== role.title && (
-                              <span className="text-xs text-text-muted font-normal ml-2">
-                                ({role.title})
-                              </span>
-                            )}
-                          </h4>
-                        </div>
-
-                        {/* Match Score Badge */}
-                        <div className="flex items-center sm:flex-col sm:items-end gap-2 shrink-0">
-                          <div className="flex items-baseline gap-1 bg-accent/15 border border-accent/30 rounded-lg px-3 py-1.5">
-                            <span className="text-lg font-mono font-black text-accent">{scorePct}%</span>
-                            <span className="text-[10px] font-mono text-text-secondary uppercase">Match</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* UN SDG Impact Statement Box (MANDATORY REQUIREMENT) */}
-                      {role.sdgAlignments && role.sdgAlignments.length > 0 && (
-                        <div className="rounded-lg bg-bg-card/80 border border-border-subtle p-3 mb-3.5 space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-mono font-bold text-text-muted uppercase">
-                              UN Sustainable Development Goals (SDG) Alignment:
-                            </span>
-                            {role.sdgAlignments.map((sdg) => (
-                              <span
-                                key={sdg.targetCode}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                              >
-                                <span>🌐</span>
-                                <span>{sdg.targetCode}: {sdg.targetTitle}</span>
-                                <span className="opacity-70">({Math.round(sdg.affinityScore * 100)}%)</span>
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* How choosing this career path contributes to the UN SDGs */}
-                          {role.sdgAlignments[0]?.impactExplanation && (
-                            <p className="text-xs text-text-secondary leading-relaxed pl-1 border-l-2 border-emerald-500/50">
-                              <span className="font-semibold text-text-primary">Impact Contribution: </span>
-                              {role.sdgAlignments[0].impactExplanation}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Skills Breakdown Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs font-mono">
-                        {/* Possessed Strengths */}
-                        <div className="p-2.5 rounded-lg bg-bg-card/50 border border-border-subtle">
-                          <span className="text-[10px] uppercase font-bold text-positive flex items-center gap-1 mb-1.5">
-                            <span>✓</span> Overlapping Strengths ({role.matchedStrengths.length})
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {role.matchedStrengths.slice(0, 4).map((s) => (
-                              <span
-                                key={s}
-                                className="px-2 py-0.5 rounded text-[10px] bg-positive/10 text-positive border border-positive/20"
-                              >
-                                {s}
-                              </span>
-                            ))}
-                            {role.matchedStrengths.length > 4 && (
-                              <span className="text-[10px] text-text-muted self-center">
-                                +{role.matchedStrengths.length - 4} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Skills Gap */}
-                        <div className="p-2.5 rounded-lg bg-bg-card/50 border border-border-subtle">
-                          <span className="text-[10px] uppercase font-bold text-amber-400 flex items-center gap-1 mb-1.5">
-                            <span>⚡</span> Competencies to Acquire ({role.skillsGap.length})
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {role.skillsGap.slice(0, 4).map((g) => (
-                              <span
-                                key={g}
-                                className="px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20"
-                              >
-                                {g}
-                              </span>
-                            ))}
-                            {role.skillsGap.length > 4 && (
-                              <span className="text-[10px] text-text-muted self-center">
-                                +{role.skillsGap.length - 4} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Automation Risk Alert (if at-risk skills identified) */}
-                      {role.atRiskCompetencies && role.atRiskCompetencies.length > 0 && (
-                        <div className="mb-4 p-2 rounded-lg bg-negative/10 border border-negative/25 text-[11px] font-mono text-negative flex items-center gap-2">
-                          <span>⚠️</span>
-                          <span>
-                            Automation Risk: {role.atRiskCompetencies.map(a => a.skillName).join(", ")} facing displacement pressure.
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Select Action Button */}
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleSelectRole(role)}
-                          className={`px-5 py-2.5 text-xs font-mono font-bold rounded-lg border-none cursor-pointer tracking-wide flex items-center gap-2 transition-all shadow-sm ${
-                            isTopMatch
-                              ? "bg-accent text-bg-primary hover:opacity-95 shadow-[0_0_20px_var(--accent-glow-strong)]"
-                              : "bg-bg-card hover:bg-accent text-text-primary hover:text-bg-primary border border-border-subtle hover:border-transparent"
-                          }`}
-                        >
-                          <span>Choose this Career Path & Build Reskilling Plan</span>
-                          <span>→</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

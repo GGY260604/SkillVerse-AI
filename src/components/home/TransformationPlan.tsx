@@ -59,7 +59,6 @@ export default function TransformationPlan() {
                 <span className="whitespace-nowrap">{opt1Prefix} •</span>
                 <span className="whitespace-nowrap">{opt1Label}</span>
               </div>
-              <span className="text-[10px] font-bold font-mono tracking-wider bg-accent/20 text-accent border border-accent/40 rounded px-2.5 py-0.5 uppercase whitespace-nowrap shrink-0">{t("recommended")}</span>
             </div>
 
             {/* Option Title & Description */}
@@ -113,7 +112,6 @@ export default function TransformationPlan() {
                 <span className="whitespace-nowrap">{opt2Prefix} •</span>
                 <span className="whitespace-nowrap">{opt2Label}</span>
               </div>
-              <span className="text-[10px] font-bold font-mono tracking-wider bg-bg-secondary text-text-secondary border border-border-subtle rounded px-2.5 py-0.5 uppercase whitespace-nowrap shrink-0">{t("time_estimate")}</span>
             </div>
 
             {/* Option Title & Description */}

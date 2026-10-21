@@ -12,6 +12,7 @@
     "db:seed": "prisma db execute --file prisma/seed.sql"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@supabase/supabase-js": "^2.118.0",
     "@types/pg": "^8.23.1",

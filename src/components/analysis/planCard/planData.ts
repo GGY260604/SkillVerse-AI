@@ -1,16 +1,47 @@
 // Plan Data Interfaces and Default Telemetry Datasets
 // Provides typed representation for current active plans and archived historical plans.
 
+export interface LocalizedStringMap {
+  en?: string;
+  ms?: string;
+  zh?: string;
+  [key: string]: string | undefined;
+}
+
+export interface LocalizedListMap {
+  en?: string[];
+  ms?: string[];
+  zh?: string[];
+  [key: string]: string[] | undefined;
+}
+
+export interface CourseItem {
+  title: string;
+  titleLocalized?: LocalizedStringMap;
+  platform: string;
+  url: string;
+  isHrdCorpClaimable?: boolean;
+  isFree?: boolean;
+  durationHours?: number;
+}
+
 export interface PlanPhase {
   id: string;
+  phaseIndex?: number;
   phase: string;
   weeks: string;
-  badge: string;
+  durationWeeks?: number;
+  estimatedHours?: number;
+  badge?: string;
   badgeType?: "free" | "claimable" | "capstone" | "completed" | "superseded";
   title: string;
+  titleLocalized?: LocalizedStringMap;
   desc: string;
-  detail: string;
+  descriptionLocalized?: LocalizedStringMap;
+  detail?: string;
   tasks: string[];
+  objectivesLocalized?: LocalizedListMap;
+  recommendedCourses?: CourseItem[];
   isCompleted?: boolean;
   verifiedArtifact?: {
     name: string;
@@ -24,9 +55,12 @@ export interface PlanData {
   isCurrent: boolean;
   code: string;
   date: string;
+  createdAt?: string;
   targetRole: string;
+  targetTitleLocalized?: LocalizedStringMap;
   roleCategory: string;
   description: string;
+  descriptionLocalized?: LocalizedStringMap;
   scenario?: string;
   sdgs?: string[];
   matchScore: number;
@@ -45,7 +79,8 @@ export const CURRENT_PLAN: PlanData = {
   id: "current-plan",
   isCurrent: true,
   code: "SV-2026-ARCH-01",
-  date: "Oct 2026 • Live Telemetry Active",
+  date: "2026-10-22",
+  createdAt: "2026-10-22",
   targetRole: "AI Systems & Solutions Architect",
   roleCategory: "Target Horizon Role",
   description:
@@ -133,7 +168,8 @@ export const HISTORY_PLANS: PlanData[] = [
     id: "history-plan-01",
     isCurrent: false,
     code: "SV-2026-DEV-00",
-    date: "Aug 2026 • Superseded",
+    date: "2026-08-14",
+    createdAt: "2026-08-14",
     targetRole: "Junior Full-Stack Web Developer",
     roleCategory: "Previous Target Role (Superseded)",
     description:
@@ -217,7 +253,8 @@ export const HISTORY_PLANS: PlanData[] = [
     id: "history-plan-02",
     isCurrent: false,
     code: "SV-2026-DATA-PRE",
-    date: "Jun 2026 • Archived",
+    date: "2026-06-20",
+    createdAt: "2026-06-20",
     targetRole: "Data & BI Reporting Analyst",
     roleCategory: "Initial Target Role (Archived)",
     description:

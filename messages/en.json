@@ -60,9 +60,9 @@
       "option_1_tag": "OPTION 01 • INSTANT ANALYSIS",
       "recommended": "RECOMMENDED",
       "upload_title": "Upload Professional CV",
-      "upload_desc": "Extract semantic skill signatures directly from your existing resume in under 12 seconds.",
+      "upload_desc": "Extract semantic skill signatures directly from your existing resume in under 20 seconds.",
       "drag_drop_text": "Upload Resume or CV File",
-      "drag_drop_subtext": "Supports PDF, DOCX or PNG scans (up to 20MB)",
+      "drag_drop_subtext": "Supports PDF or Images (PNG, JPG, WEBP, up to 10MB)",
       "btn_select_file": "Select File & Launch Analysis",
       "option_2_tag": "OPTION 02 • NO RESUME REQUIRED",
       "time_estimate": "3 MINS",
@@ -98,6 +98,24 @@
       "title": "No Career Plans Available Currently",
       "desc": "You haven't generated an AI transformation roadmap yet. Start your diagnostic to unlock personalized reskilling pathways.",
       "btn_add_plan": "+ Add New Plan"
+    },
+    "share_modal": {
+      "title": "Share Career Roadmap",
+      "subtitle": "Search peers by UID or Email to grant view or edit permissions to this roadmap.",
+      "search_placeholder": "Search by User ID (UID) or Email...",
+      "filter_label": "Filter",
+      "filter_none": "Search Mode",
+      "filter_all": "All Shared",
+      "filter_viewable": "Viewable",
+      "filter_editable": "Editable",
+      "access_no_access": "No Access",
+      "access_viewable": "Viewable",
+      "access_editable": "Editable",
+      "empty_initial": "Search for a user by UID or Email, or select an access filter above.",
+      "empty_no_results": "No users found matching your search or filter.",
+      "updating": "Updating...",
+      "updated_success": "Permission updated successfully.",
+      "btn_close": "Close"
     },
     "current": {
       "badge": "CURRENT ACTIVE ROADMAP",
@@ -241,6 +259,22 @@
       "err_network": "Network error occurred. Please check your connection and try again.",
       "err_default": "An unexpected error occurred. Please try again.",
       "err_email_required": "Please enter your email address."
+    },
+    "profile": {
+      "title": "User Profile",
+      "subtitle": "Manage your personal profile and account credentials.",
+      "email_label": "Account Email",
+      "email_readonly_badge": "Read-only",
+      "email_hint": "Account email address is permanently bound and cannot be changed.",
+      "name_label": "Display Name",
+      "name_placeholder": "Enter your display name",
+      "name_hint": "Your name as visible across roadmaps and shared analyses.",
+      "btn_save": "Save Changes",
+      "btn_saving": "Saving...",
+      "save_success": "Profile name updated successfully!",
+      "save_error": "Failed to update profile. Please try again.",
+      "member_badge": "SkillVerse Member",
+      "btn_close": "Close"
     }
   }
 }

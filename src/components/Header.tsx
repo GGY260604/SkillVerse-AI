@@ -132,7 +132,7 @@ export default function Header() {
                   title={t("profile")}
                   className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
                 >
-                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
                 </button>
 
                 <button
@@ -297,10 +297,10 @@ export default function Header() {
                 className="flex-1 h-12 px-3 rounded-xl bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent text-text-primary flex items-center gap-2.5 min-w-0 cursor-pointer transition-all"
               >
                 <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shrink-0 shadow-[0_0_10px_var(--accent-glow)]">
-                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="flex flex-col text-left min-w-0 flex-1">
-                  <span className="text-xs font-bold text-text-primary truncate">{t("profile")}</span>
+                  <span className="text-xs font-bold text-text-primary truncate">{user?.name || t("profile")}</span>
                   <span className="text-[10px] text-text-muted font-mono truncate">{user?.email}</span>
                 </div>
               </button>

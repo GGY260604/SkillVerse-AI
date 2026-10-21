@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFastApiConfig } from "@/lib/fastapi/client";
 
 /**
- * GET /api/trend
+ * GET /api/home/trend
  * Proxies request to FastAPI /trends using the dynamic connection resolver in lib/fastapi/client.ts.
  * Supports trilingual localization via ?locale=en | ms | zh.
  */
@@ -14,44 +14,37 @@ export async function GET(request: NextRequest) {
     const config = getFastApiConfig();
     const baseUrl = config.baseUrl.replace(/\/+$/, "");
 
-    // Prioritize /api/v1/trends, fallback to /trends
-    const candidateUrls = baseUrl.includes("/api/v1")
-      ? [`${baseUrl}/trends?locale=${encodeURIComponent(locale)}`]
-      : [
-          `${baseUrl}/api/v1/trends?locale=${encodeURIComponent(locale)}`,
-          `${baseUrl}/trends?locale=${encodeURIComponent(locale)}`,
-        ];
+    const targetUrl = baseUrl.endsWith("/api/v1")
+      ? `${baseUrl}/trends?locale=${encodeURIComponent(locale)}`
+      : `${baseUrl}/api/v1/trends?locale=${encodeURIComponent(locale)}`;
 
     let lastError: any = null;
     let data = null;
 
-    for (const url of candidateUrls) {
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            ...config.headers,
-            Accept: "application/json",
-          },
-          // Cache trends for 30s in Next.js data cache for snappy responsiveness
-          next: { revalidate: 30 },
-        });
+    try {
+      const response = await fetch(targetUrl, {
+        method: "GET",
+        headers: {
+          ...config.headers,
+          Accept: "application/json",
+        },
+        // Cache trends for 30s in Next.js data cache for snappy responsiveness
+        next: { revalidate: 30 },
+      });
 
-        if (response.ok) {
-          data = await response.json();
-          break;
-        } else {
-          lastError = new Error(
-            `FastAPI returned HTTP ${response.status} from ${url}`
-          );
-        }
-      } catch (err: any) {
-        lastError = err;
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        lastError = new Error(
+          `FastAPI returned HTTP ${response.status} from ${targetUrl}`
+        );
       }
+    } catch (err: any) {
+      lastError = err;
     }
 
     if (!data) {
-      console.warn("[/api/trend] Backend fetch failed:", lastError?.message);
+      console.warn("[/api/home/trend] Backend fetch failed:", lastError?.message);
       return NextResponse.json(
         {
           success: false,
@@ -69,7 +62,7 @@ export async function GET(request: NextRequest) {
       ...data,
     });
   } catch (error: any) {
-    console.error("[/api/trend] Internal route error:", error);
+    console.error("[/api/home/trend] Internal route error:", error);
     return NextResponse.json(
       {
         success: false,

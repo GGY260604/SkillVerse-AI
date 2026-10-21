@@ -45,7 +45,7 @@ export default function LaborMarketDynamics() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/trend?locale=${encodeURIComponent(locale)}`, {
+        const res = await fetch(`/api/home/trend?locale=${encodeURIComponent(locale)}`, {
           cache: "no-store",
         });
         if (!res.ok) {

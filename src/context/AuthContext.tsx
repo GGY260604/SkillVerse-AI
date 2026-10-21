@@ -13,6 +13,7 @@ export type AuthModalView =
 export interface AuthUser {
   id: string;
   email?: string;
+  name?: string;
   metadata?: Record<string, unknown>;
 }
 

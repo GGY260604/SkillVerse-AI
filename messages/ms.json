@@ -60,9 +60,9 @@
       "option_1_tag": "PILIHAN 01 • ANALISIS SEGERA",
       "recommended": "DISYORKAN",
       "upload_title": "Muat Naik CV Profesional",
-      "upload_desc": "Ekstrak tandatangan kemahiran semantik terus dari resume sedia ada anda dalam masa kurang 12 saat.",
+      "upload_desc": "Ekstrak tandatangan kemahiran semantik terus dari resume sedia ada anda dalam masa kurang 20 saat.",
       "drag_drop_text": "Muat Naik Fail Resume atau CV",
-      "drag_drop_subtext": "Menyokong imbasan PDF, DOCX atau PNG (sehingga 20MB)",
+      "drag_drop_subtext": "Menyokong fail PDF atau Imej (PNG, JPG, WEBP, sehingga 10MB)",
       "btn_select_file": "Pilih Fail & Mulakan Analisis",
       "option_2_tag": "PILIHAN 02 • TIADA RESUME DIPERLUKAN",
       "time_estimate": "3 MINIT",
@@ -98,6 +98,24 @@
       "title": "Tiada Sebarang Pelan Buat Masa Ini",
       "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",
       "btn_add_plan": "+ Tambah Pelan Baharu"
+    },
+    "share_modal": {
+      "title": "Kongsi Pelan Hala Tuju",
+      "subtitle": "Cari rakan melalui UID atau Emel untuk memberikan kebenaran melihat atau mengedit pelan hala tuju ini.",
+      "search_placeholder": "Cari melalui ID Pengguna (UID) atau Emel...",
+      "filter_label": "Tapis",
+      "filter_none": "Mod Carian",
+      "filter_all": "Semua Yang Dikongsi",
+      "filter_viewable": "Boleh Lihat (Viewable)",
+      "filter_editable": "Boleh Edit (Editable)",
+      "access_no_access": "Tiada Akses (No Access)",
+      "access_viewable": "Boleh Lihat (Viewable)",
+      "access_editable": "Boleh Edit (Editable)",
+      "empty_initial": "Cari pengguna melalui UID atau Emel, atau pilih penapis akses di atas.",
+      "empty_no_results": "Tiada pengguna ditemui yang sepadan dengan carian atau penapis anda.",
+      "updating": "Mengemas kini akses...",
+      "updated_success": "Kebenaran berjaya dikemas kini.",
+      "btn_close": "Tutup"
     },
     "current": {
       "badge": "PELAN AKTIF SEMASA",
@@ -241,6 +259,22 @@
       "err_network": "Ralat rangkaian berlaku. Sila semak sambungan anda dan cuba lagi.",
       "err_default": "Ralat tidak dijangka berlaku. Sila cuba lagi.",
       "err_email_required": "Sila masukkan alamat emel anda."
+    },
+    "profile": {
+      "title": "Profil Pengguna",
+      "subtitle": "Urus profil peribadi dan kelayakan akaun anda.",
+      "email_label": "Emel Akaun",
+      "email_readonly_badge": "Hanya Baca",
+      "email_hint": "Alamat emel akaun terikat secara kekal dan tidak boleh diubah.",
+      "name_label": "Nama Paparan",
+      "name_placeholder": "Masukkan nama paparan anda",
+      "name_hint": "Nama ini akan dipaparkan dalam pelan hala tuju dan analisis kongsi anda.",
+      "btn_save": "Simpan Perubahan",
+      "btn_saving": "Menyimpan...",
+      "save_success": "Profil berjaya dikemas kini!",
+      "save_error": "Gagal mengemas kini profil. Sila cuba lagi.",
+      "member_badge": "Ahli SkillVerse",
+      "btn_close": "Tutup"
     }
   }
 }

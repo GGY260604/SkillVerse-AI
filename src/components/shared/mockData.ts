@@ -30,7 +30,7 @@ export const MOCK_SHARED_USERS: SharedUser[] = [
       id: "shared-plan-sarah-current",
       isCurrent: true,
       code: "SV-2026-SECOPS-03",
-      date: "Oct 2026 • Live Telemetry Active",
+      date: "2026-10-18",
       targetRole: "Enterprise Zero-Trust & FinOps Architect",
       roleCategory: "Cloud Security Horizon",
       description:
@@ -175,7 +175,7 @@ export const MOCK_SHARED_USERS: SharedUser[] = [
       id: "shared-plan-haziq-current",
       isCurrent: true,
       code: "SV-2026-ESG-02",
-      date: "Oct 2026 • Live Telemetry Active",
+      date: "2026-10-18",
       targetRole: "ESG & Sustainable Supply Chain Intelligence Lead",
       roleCategory: "Green Economy Horizon",
       description:
@@ -317,7 +317,7 @@ export const MOCK_SHARED_USERS: SharedUser[] = [
       id: "shared-plan-priya-current",
       isCurrent: true,
       code: "SV-2026-GENAI-04",
-      date: "Oct 2026 • Live Telemetry Active",
+      date: "2026-10-18",
       targetRole: "GenAI Agent Systems & LLMOps Specialist",
       roleCategory: "Generative AI Systems",
       description:
