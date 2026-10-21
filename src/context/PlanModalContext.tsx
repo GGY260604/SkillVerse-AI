@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export type PlanModalType = "pathway_select" | "upload" | "wizard" | null;
 
@@ -21,6 +22,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activeModal, setActiveModal] = useState<PlanModalType>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const { isLoggedIn, openAuthModal } = useAuth();
 
   // Redirect to analysis page when user triggers a plan creation or option workflow.
   const navigateToAnalysisIfNeeded = useCallback(() => {
@@ -31,26 +33,45 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
 
   // Open pathway selection overlay window.
   const openPathwaySelect = useCallback(() => {
+    if (!isLoggedIn) {
+      openAuthModal("login");
+      return;
+    }
     navigateToAnalysisIfNeeded();
     setActiveModal("pathway_select");
-  }, [navigateToAnalysisIfNeeded]);
+  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
 
   // Directly open upload option overlay window.
   const openUploadOption = useCallback(() => {
+    if (!isLoggedIn) {
+      openAuthModal("login");
+      return;
+    }
     navigateToAnalysisIfNeeded();
     setActiveModal("upload");
-  }, [navigateToAnalysisIfNeeded]);
+  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
 
   // Directly open guided diagnostic wizard option overlay window.
   const openWizardOption = useCallback(() => {
+    if (!isLoggedIn) {
+      openAuthModal("login");
+      return;
+    }
     navigateToAnalysisIfNeeded();
     setActiveModal("wizard");
-  }, [navigateToAnalysisIfNeeded]);
+  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
 
   // Dismiss any currently active option or pathway modal.
   const closeModals = useCallback(() => {
     setActiveModal(null);
   }, []);
+
+  // Dismiss any active plan modal immediately when user logs out or session is unauthenticated.
+  useEffect(() => {
+    if (!isLoggedIn && activeModal !== null) {
+      setActiveModal(null);
+    }
+  }, [isLoggedIn, activeModal]);
 
   return (
     <PlanModalContext.Provider

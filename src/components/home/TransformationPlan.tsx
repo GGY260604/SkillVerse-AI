@@ -2,15 +2,21 @@
 
 import { useTranslations } from "next-intl";
 import { usePlanModal } from "@/context/PlanModalContext";
+import { useAuth } from "@/context/AuthContext";
 
 // AI Transformation Plan Component
 // Dual diagnostic selection cards triggering upcoming upload and form overlay windows.
 export default function TransformationPlan() {
   const t = useTranslations("home.plan");
+  const { isLoggedIn, openAuthModal } = useAuth();
   const { openUploadOption, openWizardOption } = usePlanModal();
 
   // Handle pathway selection trigger, auto-navigating to /analysis and opening option modal.
   const handleSelectPathway = (pathway: "upload" | "wizard") => {
+    if (!isLoggedIn) {
+      openAuthModal("login");
+      return;
+    }
     if (pathway === "upload") {
       openUploadOption();
     } else {
