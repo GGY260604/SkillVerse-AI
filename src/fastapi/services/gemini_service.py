@@ -4,8 +4,8 @@ import uuid
 import httpx
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
-from ..config import settings
-from ..schemas.profile import ProfileIntakePayload, UserSkillItem, EmploymentStatus, SkillProficiency
+from config import settings
+from schemas.profile import ProfileIntakePayload, UserSkillItem, EmploymentStatus, SkillProficiency
 
 
 GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"]

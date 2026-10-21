@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from ...schemas.replan import ReplanRequestPayload, ShiftAdvisoryPayload
-from ...services.replan_service import execute_roadmap_replanning
+from schemas.replan import ReplanRequestPayload, ShiftAdvisoryPayload
+from services.replan_service import execute_roadmap_replanning
 
 router = APIRouter(prefix="/replan", tags=["Module 2: Autonomous Roadmap Re-Planning"])
 

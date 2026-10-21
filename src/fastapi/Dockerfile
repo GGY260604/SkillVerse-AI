@@ -17,12 +17,12 @@ ENV ENABLE_LOCAL_BGE_M3=true
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code into package structure
-COPY . /app/src/fastapi
+# Copy source code into app root
+COPY . /app
 
 # Expose port (default 8000)
 EXPOSE 8000
 
-# Start Uvicorn ASGI server with full module path
-CMD ["python", "-m", "uvicorn", "src.fastapi.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start Uvicorn ASGI server with root module path
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 

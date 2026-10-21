@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 from .gemini_service import call_gemini_with_fallback
-from ..schemas.replan import ReplanRequestPayload, ShiftAdvisoryPayload, ModifiedMilestoneItem
+from schemas.replan import ReplanRequestPayload, ShiftAdvisoryPayload, ModifiedMilestoneItem
 
 logger = logging.getLogger("skillverse.replan")
 

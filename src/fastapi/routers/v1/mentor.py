@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from ...schemas.mentor import MentorQueryPayload, MentorResponsePayload
-from ...services.mentor_service import generate_mentor_guidance
+from schemas.mentor import MentorQueryPayload, MentorResponsePayload
+from services.mentor_service import generate_mentor_guidance
 
 router = APIRouter(prefix="/mentor", tags=["Module 3: In-Roadmap Learning Mentor"])
 

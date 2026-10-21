@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 import httpx
 
-from ..config import settings
+from config import settings
 from .gemini_service import call_gemini_with_fallback
 from .embedding_service import generate_embedding
 

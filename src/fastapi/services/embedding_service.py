@@ -1,7 +1,7 @@
 import math
 import httpx
 from typing import List, Optional
-from ..config import settings
+from config import settings
 
 
 async def get_embedding_from_runpod(text: str) -> Optional[List[float]]:
