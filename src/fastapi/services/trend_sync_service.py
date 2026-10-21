@@ -100,18 +100,26 @@ Return ONLY valid JSON with this exact structure:
   "trendSignals": [
     {{
       "skillName": "canonical skill name in lower case",
-      "category": "Category Name",
+      "skillName_ms": "nama kemahiran dalam Bahasa Melayu",
+      "skillName_zh": "中文技能名称",
+      "category": "Category Name (e.g. Artificial Intelligence, Cloud & DevOps, Clean Tech & ESG)",
+      "category_ms": "Nama Kategori dalam Bahasa Melayu",
+      "category_zh": "中文类别名称",
       "status": "emerging" | "declining" | "stable",
       "velocityVs": 0.65,
       "sourceName": "ArXiv cs.AI" | "RemoteOK Job Feed",
       "sourceUrl": "https://...",
-      "citation": "Brief sentence explaining the trend insight from the paper/job"
+      "citation": "Brief sentence explaining the trend insight in English",
+      "citation_ms": "Keterangan ringkas trend dalam Bahasa Melayu",
+      "citation_zh": "趋势中文说明"
     }}
   ],
   "emergingRoles": [
     {{
       "roleId": "canonical-slug-role-id",
-      "title": "Professional Role Title",
+      "title": "Professional Role Title in English",
+      "title_ms": "Tajuk Peranan dalam Bahasa Melayu",
+      "title_zh": "中文职位名称 (Simplified Chinese)",
       "industry": "Responsible AI & Digital Transformation",
       "description": "Clear 1-2 sentence description of what this professional does.",
       "essentialSkills": ["skill 1", "skill 2", "skill 3", "skill 4", "skill 5"],
@@ -196,24 +204,78 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
     synced_count = 0
     roles_synced_count = 0
     async with httpx.AsyncClient(timeout=20.0) as client:
+        # Pre-fetch existing trend signals from Supabase to obtain real historical baseline (pastWindowC)
+        existing_trends: Dict[str, float] = {}
+        try:
+            query_resp = await client.get(
+                f"{base_url}/rest/v1/trend_signals?select=skillName,currentWindowC",
+                headers={
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                },
+                timeout=10.0,
+            )
+            if query_resp.status_code == 200:
+                for row in query_resp.json():
+                    name = (row.get("skillName") or "").lower().strip()
+                    if name and row.get("currentWindowC") is not None:
+                        existing_trends[name] = float(row["currentWindowC"])
+        except Exception as e:
+            print(f"[!] Warning: Could not pre-fetch historical trend signals: {e}")
+
         for s in signals:
             skill_name = s.get("skillName", "").lower().strip()
             if not skill_name:
                 continue
 
+            # 1. Real Frequency Calculation (Ct): Count actual occurrences across live ArXiv and RemoteOK items
+            mention_count = sum(
+                1 for item in all_items
+                if skill_name in item.get("title", "").lower() or skill_name in item.get("snippet", "").lower()
+            )
+            current_c = float(max(mention_count, 1))
+
+            # 2. Historical Baseline (Ct-1): Use existing Supabase value if present, or derive initial baseline
+            if skill_name in existing_trends:
+                past_c = max(existing_trends[skill_name], 1.0)
+                real_velocity = round((current_c - past_c) / past_c, 3)
+            else:
+                # Brand new skill: Derive initial baseline from Gemini's initial velocity estimation
+                llm_v = float(s.get("velocityVs", 0.35))
+                if llm_v > 0:
+                    past_c = max(1.0, round(current_c / (1.0 + llm_v), 1))
+                else:
+                    past_c = max(1.0, round(current_c * (1.0 - llm_v), 1))
+                real_velocity = round((current_c - past_c) / past_c, 3)
+
+            # 3. Dynamic Status Classification according to mathematical specification (README 5.1)
+            # Emerging: Vs > +0.25 | Declining: Vs < -0.15 | Stable: -0.15 <= Vs <= +0.25
+            if real_velocity > 0.25:
+                calc_status = "emerging"
+            elif real_velocity < -0.15:
+                calc_status = "declining"
+            else:
+                calc_status = "stable"
+
             payload = {
                 "id": str(uuid.uuid4()),
                 "skillName": skill_name,
                 "category": s.get("category", "Technology"),
-                "status": s.get("status", "emerging"),
-                "velocityVs": float(s.get("velocityVs", 0.35)),
-                "currentWindowC": round(15.0 * (1.0 + float(s.get("velocityVs", 0.35))), 1),
-                "pastWindowC": 15.0,
+                "status": calc_status,
+                "velocityVs": real_velocity,
+                "currentWindowC": current_c,
+                "pastWindowC": past_c,
                 "sources": [
                     {
                         "sourceName": s.get("sourceName", "Live Open Labor Feed"),
                         "url": s.get("sourceUrl", "https://export.arxiv.org"),
                         "citation": s.get("citation", "Extracted from real-time market data feed."),
+                        "citation_ms": s.get("citation_ms", ""),
+                        "citation_zh": s.get("citation_zh", ""),
+                        "skillName_ms": s.get("skillName_ms", skill_name),
+                        "skillName_zh": s.get("skillName_zh", skill_name),
+                        "category_ms": s.get("category_ms", s.get("category", "Technology")),
+                        "category_zh": s.get("category_zh", s.get("category", "Technology")),
                         "capturedAt": capture_time,
                     }
                 ],
@@ -231,6 +293,8 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
         for role in emerging_roles:
             r_id = role.get("roleId") or f"emerging-{uuid.uuid4().hex[:8]}"
             title = role.get("title", "Emerging Professional Role")
+            title_ms = role.get("title_ms") or title
+            title_zh = role.get("title_zh") or title
             skills = role.get("essentialSkills", [])
             desc = role.get("description", "")
             industry = role.get("industry", "Responsible AI & Digital Transformation")
@@ -243,8 +307,8 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 "id": str(uuid.uuid4()),
                 "role_id": r_id,
                 "title": title,
-                "title_ms": title,
-                "title_zh": title,
+                "title_ms": title_ms,
+                "title_zh": title_zh,
                 "industry": industry,
                 "required_skills": skills,
                 "embedding": vector,
