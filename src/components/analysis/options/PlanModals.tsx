@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import PathwaySelectModal from "./PathwaySelectModal";
 import UploadOptionModal from "./UploadOptionModal";
 import WizardOptionModal from "./WizardOptionModal";
+import RoleSelectorModal from "./RoleSelectorModal";
 
 // Plan Modals Orchestrator Component
 // Mount and manage lifecycle of all option and pathway overlay windows.
@@ -25,6 +26,9 @@ export default function PlanModals() {
 
       {/* Option 02: Guided Diagnostic Wizard Overlay */}
       <WizardOptionModal />
+
+      {/* Top 5 Role Discovery & Reskilling Selection Overlay */}
+      <RoleSelectorModal />
     </>
   );
 }

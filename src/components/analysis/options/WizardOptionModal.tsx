@@ -4,12 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { usePlanModal } from "@/context/PlanModalContext";
 import Logo from "@/components/Logo";
+import { ProfileIntakePayload } from "@/lib/fastapi/client";
 
 // Interactive Assessment Wizard Option Modal Component
 // Provide structured multi-step diagnostic form for users without a pre-existing resume.
 export default function WizardOptionModal() {
   const t = useTranslations("home.plan");
-  const { activeModal, openPathwaySelect, closeModals } = usePlanModal();
+  const { activeModal, openPathwaySelect, openRoleSelect, closeModals } = usePlanModal();
 
   // Wizard Multi-Step State
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,13 +57,27 @@ export default function WizardOptionModal() {
     setSelectedSkills(selectedSkills.filter((s) => s !== skillToRemove));
   };
 
-  // Simulate roadmap synthesis pipeline completion.
+  // Assemble real user profile payload and transition to Role Discovery
   const handleFinalSubmit = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      closeModals();
-    }, 2800);
+    const profilePayload: ProfileIntakePayload = {
+      employmentStatus: "employed_at_risk",
+      currentJobTitle: jobTitle.trim() || undefined,
+      industry: industry || undefined,
+      yearsOfExperience: experienceLevel || undefined,
+      skills: selectedSkills.map((s, idx) => ({
+        id: `skill-${idx}-${s.toLowerCase().replace(/\s+/g, "-")}`,
+        name: s,
+        proficiency: "intermediate",
+        isAiExtracted: false,
+      })),
+      targetJobTitle: targetRole.trim() || undefined,
+      careerGoal: targetGoal || "reskill",
+      weeklyCommitmentHours: "3-5",
+      learningProviders: ["free_open", "hrd_corp"],
+      outputLanguage: "en",
+    };
+
+    openRoleSelect(profilePayload);
   };
 
   if (!isOpen) return null;

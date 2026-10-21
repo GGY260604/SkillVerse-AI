@@ -401,6 +401,49 @@ async def synthesize_on_demand_role(
         return None
 
 
+def get_sdg_impact_explanation(target_code: str, role_title: str, locale: str) -> str:
+    """
+    Returns an informative, human-readable impact statement explaining how pursuing
+    this role directly contributes to the specified UN SDG target.
+    """
+    code_upper = target_code.upper()
+    if locale == "zh":
+        if "8.2" in code_upper or "SDG 8" in code_upper:
+            return f"从事「{role_title}」将通过先进数字化技术与技能升级，直接推动产业高附加值生产力与体面就业（SDG 8.2）。"
+        elif "9.4" in code_upper or "SDG 9" in code_upper:
+            return f"从事「{role_title}」助力现代化基础设施升级与清洁可持续工业技术改造（SDG 9.4）。"
+        elif "4.4" in code_upper or "SDG 4" in code_upper:
+            return f"从事「{role_title}」通过掌握高阶职业与技术技能，大幅提升优质职业发展与数字素养水平（SDG 4.4）。"
+        elif "12" in code_upper:
+            return f"从事「{role_title}」通过流程优化与资源循环监控，促进可持续消费与生产模式转型（SDG 12.2）。"
+        elif "13" in code_upper or "7" in code_upper:
+            return f"从事「{role_title}」直接促进清洁能源普及与应对气候变化的韧性运营能力（SDG 7 / 13）。"
+        else:
+            return f"从事「{role_title}」通过绿色数字化转型与产业赋能，积极践行联合国可持续发展目标（{target_code}）。"
+    elif locale == "ms":
+        if "8.2" in code_upper or "SDG 8" in code_upper:
+            return f"Menceburi kerjaya '{role_title}' memacu produktiviti ekonomi bernilai tinggi melalui peningkatan teknologi dan kemahiran mampan (SDG 8.2)."
+        elif "9.4" in code_upper or "SDG 9" in code_upper:
+            return f"Peranan '{role_title}' menyokong peningkatan infrastruktur dan penerapan teknologi industri bersih yang mampan (SDG 9.4)."
+        elif "4.4" in code_upper or "SDG 4" in code_upper:
+            return f"Meningkatkan kemahiran teknikal dan vokasional yang relevan untuk pekerjaan bermaruah dan ekonomi masa hadapan (SDG 4.4)."
+        else:
+            return f"Menyumbang secara langsung kepada pencapaian Matlamat Pembangunan Mampan PBB ({target_code}) melalui transformasi digital pintar."
+    else:
+        if "8.2" in code_upper or "SDG 8" in code_upper:
+            return f"Pursuing '{role_title}' drives economic productivity and decent work by upgrading technological capabilities and future-ready workforce competencies (SDG 8.2)."
+        elif "9.4" in code_upper or "SDG 9" in code_upper:
+            return f"Accelerates sustainable industrial retrofit, clean infrastructure modernization, and high-efficiency digital workflows (SDG 9.4)."
+        elif "4.4" in code_upper or "SDG 4" in code_upper:
+            return f"Substantially expands relevant technical and professional competencies required for high-growth digital and green sectors (SDG 4.4)."
+        elif "12" in code_upper:
+            return f"Facilitates sustainable management and efficient utilization of institutional resources through automated circular monitoring (SDG 12.2)."
+        elif "13" in code_upper or "7" in code_upper:
+            return f"Directly enhances climate resilience and clean renewable energy systems adoption across ASEAN enterprise networks (SDG 7 / 13)."
+        else:
+            return f"Directly advances UN Sustainable Development Goal {target_code} through responsible innovation and high-value technological adoption."
+
+
 async def evaluate_roles(
     profile: AnalyzeProfileData,
     scenario: MacroScenario,
@@ -593,7 +636,15 @@ async def evaluate_roles(
                 code = sdg.get("targetCode") or sdg.get("code") or sdg.get("sdg") or "SDG 8.2"
                 title = sdg.get("targetTitle") or sdg.get("title") or sdg.get("sdg_title") or "Decent Work & Economic Growth"
                 score = float(sdg.get("affinityScore") or sdg.get("score") or 0.85)
-                sdg_items.append(SdgAlignmentItem(targetCode=code, targetTitle=title, affinityScore=score))
+                explanation = sdg.get("impactExplanation") or get_sdg_impact_explanation(code, loc_title, locale)
+                sdg_items.append(
+                    SdgAlignmentItem(
+                        targetCode=code,
+                        targetTitle=title,
+                        affinityScore=score,
+                        impactExplanation=explanation,
+                    )
+                )
 
         matched_roles.append(
             MatchedRole(

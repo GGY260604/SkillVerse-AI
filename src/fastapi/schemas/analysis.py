@@ -37,12 +37,18 @@ class AnalyzeRequestPayload(BaseModel):
         description="Macro scenario toggle: moderate, accelerated_ai, or green_economy",
     )
     profile: AnalyzeProfileData = Field(..., description="Verified profile intake payload")
+    targetRoleId: Optional[str] = Field(default=None, description="Optional specific role ID chosen by the user")
+    autoSynthesizeRoadmap: bool = Field(default=True, description="Whether to immediately synthesize the roadmap")
 
 
 class SdgAlignmentItem(BaseModel):
     targetCode: str = Field(default="SDG 8.2", description="UN SDG target identifier, e.g. SDG 8.2")
     targetTitle: str = Field(default="Technological upgrading & economic productivity", description="Descriptive title of the target")
     affinityScore: float = Field(default=0.85, description="Semantic affinity score (0.0 - 1.0)")
+    impactExplanation: Optional[str] = Field(
+        default=None,
+        description="Clear explanation of how pursuing this role advances this UN SDG target",
+    )
 
 
 class AtRiskSkillItem(BaseModel):
@@ -101,4 +107,32 @@ class AnalyzeResponsePayload(BaseModel):
     activeScenario: MacroScenario = Field(description="Active macro scenario")
     radarData: List[RadarAxisItem] = Field(default_factory=list, description="Data points for Recharts radar chart")
     topRoles: List[MatchedRole] = Field(default_factory=list, description="Ranked top 3-5 resilient future roles")
-    selectedRoleRoadmap: SelectedRoleRoadmap = Field(description="Synthesized reskilling roadmap for the top role")
+    selectedRoleRoadmap: Optional[SelectedRoleRoadmap] = Field(
+        default=None,
+        description="Synthesized reskilling roadmap for the chosen role",
+    )
+
+
+class SynthesizeRoadmapRequest(BaseModel):
+    assessmentId: Optional[str] = Field(default=None, description="Existing assessment UUID if updating")
+    sessionId: Optional[str] = Field(default=None, description="Client session UUID")
+    userId: Optional[str] = Field(default=None, description="Authenticated user UUID if logged in")
+    locale: str = Field(default="en", description="Target locale (en, ms, zh)")
+    macroScenario: MacroScenario = Field(default=MacroScenario.MODERATE)
+    targetRoleId: str = Field(..., description="Role ID selected by the user")
+    profile: AnalyzeProfileData = Field(..., description="Candidate profile data")
+    topRoles: Optional[List[MatchedRole]] = Field(default=None, description="Previously evaluated top roles")
+    radarData: Optional[List[RadarAxisItem]] = Field(default=None, description="Previously calibrated radar data")
+
+
+class SynthesizeRoadmapResponse(BaseModel):
+    assessmentId: str = Field(description="Saved assessment UUID in Supabase")
+    sessionId: str = Field(description="Associated session UUID")
+    generatedAt: str = Field(description="ISO timestamp")
+    activeScenario: MacroScenario = Field(description="Active macro scenario")
+    targetRoleId: str = Field(description="Target role ID")
+    targetRoleTitle: str = Field(description="Target role canonical title")
+    radarData: List[RadarAxisItem] = Field(default_factory=list)
+    topRoles: List[MatchedRole] = Field(default_factory=list)
+    selectedRoleRoadmap: SelectedRoleRoadmap = Field(description="Synthesized 3-phase reskilling roadmap")
+

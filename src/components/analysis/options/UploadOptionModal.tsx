@@ -5,16 +5,18 @@ import { useTranslations } from "next-intl";
 import { usePlanModal } from "@/context/PlanModalContext";
 import Logo from "@/components/Logo";
 import { FileFormatIcon } from "@/lib/fileIcons";
+import { extractProfileDocument } from "@/lib/fastapi/client";
 
 // Upload Option Modal Component
 // Provide dedicated file ingestion overlay window for CV extraction and semantic matching.
 export default function UploadOptionModal() {
   const t = useTranslations("home.plan");
-  const { activeModal, openPathwaySelect, closeModals } = usePlanModal();
+  const { activeModal, openPathwaySelect, openRoleSelect, closeModals } = usePlanModal();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -47,26 +49,42 @@ export default function UploadOptionModal() {
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setSelectedFile(e.dataTransfer.files[0]);
+      setErrorMessage(null);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setErrorMessage(null);
     }
   };
 
-  // Simulate semantic analysis pipeline with stepped feedback.
-  const handleStartAnalysis = () => {
-    setIsAnalyzing(true);
-    setAnalysisStep(1);
+  // Real document parsing and AI normalization pipeline
+  const handleStartAnalysis = async () => {
+    if (!selectedFile) return;
 
-    setTimeout(() => setAnalysisStep(2), 1200);
-    setTimeout(() => setAnalysisStep(3), 2400);
-    setTimeout(() => {
+    try {
+      setIsAnalyzing(true);
+      setErrorMessage(null);
+      setAnalysisStep(1);
+
+      // Call real backend extraction
+      const result = await extractProfileDocument(selectedFile);
+      setAnalysisStep(2);
+
+      if (result && result.extractedProfile) {
+        // Hand off normalized profile to the real Role Discovery modal
+        openRoleSelect(result.extractedProfile);
+      } else {
+        throw new Error("Unable to parse profile data from the uploaded file.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(msg || "Document extraction failed. Please ensure the backend is running.");
+    } finally {
       setIsAnalyzing(false);
-      closeModals();
-    }, 3600);
+    }
   };
 
   if (!isOpen) return null;
@@ -205,6 +223,14 @@ export default function UploadOptionModal() {
                 style={{ width: `${(analysisStep / 3) * 100}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Error message alert */}
+        {errorMessage && (
+          <div className="rounded-xl bg-negative/15 border border-negative/30 p-3 mb-6 animate-fade-in font-mono text-xs text-negative flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{errorMessage}</span>
           </div>
         )}
 
