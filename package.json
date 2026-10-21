@@ -8,13 +8,19 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:seed": "node prisma/seed.mjs"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
     "@prisma/client": "^7.10.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/pg": "^8.23.1",
     "next": "16.4.2",
     "next-intl": "^4.14.9",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
