@@ -241,6 +241,22 @@
       "err_network": "网络连接异常，请检查网络后重试。",
       "err_default": "发生意外错误，请稍后重试。",
       "err_email_required": "请输入电子邮箱地址。"
+    },
+    "profile": {
+      "title": "用户个人资料",
+      "subtitle": "管理您的个人身份与账号凭据。",
+      "email_label": "账号邮箱",
+      "email_readonly_badge": "不可更改",
+      "email_hint": "绑定的账号邮箱地址固定且不可修改。",
+      "name_label": "用户姓名 / 昵称",
+      "name_placeholder": "请输入您的姓名",
+      "name_hint": "该姓名将展示在您的成长路线图与共享分析中。",
+      "btn_save": "保存修改",
+      "btn_saving": "保存中...",
+      "save_success": "个人资料已成功更新！",
+      "save_error": "更新失败，请重试。",
+      "member_badge": "SkillVerse 认证成员",
+      "btn_close": "关闭"
     }
   }
 }

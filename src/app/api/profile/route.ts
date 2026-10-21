@@ -45,13 +45,135 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const resolvedName =
+      userRecord?.name ||
+      userData.user.user_metadata?.name ||
+      userData.user.user_metadata?.full_name ||
+      "";
+
     return NextResponse.json({
       success: true,
       profile: userRecord || null,
+      user: {
+        id: userId,
+        email: userData.user.email,
+        name: resolvedName,
+      },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[/api/profile GET] Uncaught exception:", err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/profile
+ * Partially updates the user's profile, specifically their display name.
+ * Updates both the database `users` table and Supabase Auth `user_metadata`.
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const { accessToken } = await getAuthTokensFromCookies();
+    if (!accessToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = userData.user;
+    const body = await request.json();
+    const rawName = typeof body.name === "string" ? body.name.trim() : "";
+
+    if (!rawName) {
+      return NextResponse.json(
+        { error: "Name cannot be empty." },
+        { status: 400 }
+      );
+    }
+
+    if (rawName.length > 100) {
+      return NextResponse.json(
+        { error: "Name cannot exceed 100 characters." },
+        { status: 400 }
+      );
+    }
+
+    const admin = createAdminClient();
+
+    // 1. Update or upsert user in `users` table
+    const { data: existingUser } = await admin
+      .from("users")
+      .select("id, email, name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    let updatedUser;
+    if (existingUser) {
+      const { data, error } = await admin
+        .from("users")
+        .update({
+          name: rawName,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("[/api/profile PATCH] DB update error:", error);
+        throw error;
+      }
+      updatedUser = data;
+    } else {
+      const { data, error } = await admin
+        .from("users")
+        .insert({
+          id: user.id,
+          email: user.email || "",
+          name: rawName,
+          locale: "en",
+          updatedAt: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("[/api/profile PATCH] DB insert error:", error);
+        throw error;
+      }
+      updatedUser = data;
+    }
+
+    // 2. Also sync to Supabase Auth metadata so future session tokens immediately reflect the updated name
+    try {
+      await admin.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...user.user_metadata,
+          name: rawName,
+          full_name: rawName,
+        },
+      });
+    } catch (authErr) {
+      console.warn("[/api/profile PATCH] Auth metadata sync warning:", authErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Profile name updated successfully.",
+      user: {
+        id: user.id,
+        email: user.email,
+        name: rawName,
+      },
+      profile: updatedUser,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("[/api/profile PATCH] Uncaught exception:", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

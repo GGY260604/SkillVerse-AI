@@ -241,6 +241,22 @@
       "err_network": "Network error occurred. Please check your connection and try again.",
       "err_default": "An unexpected error occurred. Please try again.",
       "err_email_required": "Please enter your email address."
+    },
+    "profile": {
+      "title": "User Profile",
+      "subtitle": "Manage your personal profile and account credentials.",
+      "email_label": "Account Email",
+      "email_readonly_badge": "Read-only",
+      "email_hint": "Account email address is permanently bound and cannot be changed.",
+      "name_label": "Display Name",
+      "name_placeholder": "Enter your display name",
+      "name_hint": "Your name as visible across roadmaps and shared analyses.",
+      "btn_save": "Save Changes",
+      "btn_saving": "Saving...",
+      "save_success": "Profile name updated successfully!",
+      "save_error": "Failed to update profile. Please try again.",
+      "member_badge": "SkillVerse Member",
+      "btn_close": "Close"
     }
   }
 }

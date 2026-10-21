@@ -21,11 +21,17 @@ export async function GET() {
     const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
 
     if (!userError && userData?.user) {
+      const name =
+        (userData.user.user_metadata?.name ||
+          userData.user.user_metadata?.full_name ||
+          null) as string | null;
+
       return NextResponse.json({
         authenticated: true,
         user: {
           id: userData.user.id,
           email: userData.user.email,
+          name,
           metadata: userData.user.user_metadata,
         },
       });
@@ -39,11 +45,17 @@ export async function GET() {
         });
 
       if (!refreshError && refreshData.session && refreshData.user) {
+        const name =
+          (refreshData.user.user_metadata?.name ||
+            refreshData.user.user_metadata?.full_name ||
+            null) as string | null;
+
         const response = NextResponse.json({
           authenticated: true,
           user: {
             id: refreshData.user.id,
             email: refreshData.user.email,
+            name,
             metadata: refreshData.user.user_metadata,
           },
         });
