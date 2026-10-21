@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
+import { useAuth } from "@/context/AuthContext";
 import EmptyPlanState from "@/components/analysis/EmptyPlanState";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
 
@@ -60,11 +63,26 @@ export const HAS_PLAN: boolean = true;
 // Handles conditional presentation between EmptyPlanState and ExistPlanState.
 export default function AnalysisPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isLoggedIn, isLoading, openAuthModal } = useAuth();
+
+  // Redirect unauthenticated user to home and trigger login modal.
+  useEffect(() => {
+    if (!isLoading && !isLoggedIn) {
+      openAuthModal("login");
+      router.replace("/");
+    }
+  }, [isLoading, isLoggedIn, openAuthModal, router]);
 
   // Check URL query override or fallback to HAS_PLAN constant.
   const planQuery = searchParams.get("plan");
   const planExists =
     planQuery === "false" ? false : planQuery === "true" ? true : HAS_PLAN;
+
+  // Prevent flashing content while validating authentication or if unauthenticated.
+  if (isLoading || !isLoggedIn) {
+    return null;
+  }
 
 
   // Render blank state if no plan exists.
