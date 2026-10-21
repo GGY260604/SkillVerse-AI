@@ -42,26 +42,9 @@ const AUTH_CACHE_KEY = "skillverse_auth_cache";
 // Authentication Provider Component
 // Manages global user authentication state, session validation, and auth modal visibility.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Initialize user from session cache to preserve login across locale transitions.
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = sessionStorage.getItem(AUTH_CACHE_KEY);
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return null;
-  });
-
-  // Start with loading true only when no cached session exists.
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return !sessionStorage.getItem(AUTH_CACHE_KEY);
-      } catch {}
-    }
-    return true;
-  });
+  // Initialize user and loading consistently between SSR and client initial hydration to avoid hydration mismatch.
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>("login");
@@ -109,6 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check authentication status on initial application mount.
   useEffect(() => {
+    // Instantly restore cached session on browser client mount without causing SSR mismatch
+    try {
+      const cached = sessionStorage.getItem(AUTH_CACHE_KEY);
+      if (cached) {
+        setUser(JSON.parse(cached));
+        setIsLoading(false);
+      }
+    } catch {}
+
     checkAuth();
   }, [checkAuth]);
 
