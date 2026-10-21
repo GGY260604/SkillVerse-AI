@@ -21,27 +21,45 @@ FALLBACK_ROLES_CATALOG: List[Dict[str, Any]] = []
 FALLBACK_DECLINING_SKILLS = {
     "manual data entry": {
         "velocity": -0.45,
+        "aliases": ["manual data entry", "kemasukan data manual", "手动数据录入", "人工录入数据", "data entry"],
         "reason": "High risk of automation by AI OCR agents and intelligent document processing systems.",
+        "reason_ms": "Risiko tinggi automasi oleh ejen AI OCR dan sistem pemprosesan dokumen pintar.",
+        "reason_zh": "面临被 AI OCR 智能体与文档自动化处理系统替代的极高风险。",
     },
     "routine document filing": {
         "velocity": -0.38,
+        "aliases": ["routine document filing", "pemfailan dokumen rutin", "常规文档归档与整理", "文档归档", "filing"],
         "reason": "Replaced by cloud content management systems and auto-tagging workflows.",
+        "reason_ms": "Digantikan oleh sistem pengurusan kandungan awan dan aliran kerja auto-tag.",
+        "reason_zh": "被云端内容管理系统和自动标签归档工作流程逐步淘汰。",
     },
     "basic switchboard routing": {
         "velocity": -0.35,
+        "aliases": ["basic switchboard routing", "penghalaan papan suis asas", "基础总机电话转接", "总机转接"],
         "reason": "Automated by conversational voice AI and natural language IVR systems.",
+        "reason_ms": "Diautomasikan oleh AI suara perbualan dan sistem IVR bahasa semula jadi.",
+        "reason_zh": "已被对话式语音 AI 与自然语言交互式语音应答系统取代。",
     },
     "generic copywriting": {
         "velocity": -0.40,
+        "aliases": ["generic copywriting", "penulisan salinan generik", "通用文案撰写", "文案撰写", "copywriting"],
         "reason": "Large language models generating baseline marketing copy autonomously.",
+        "reason_ms": "Model bahasa besar menghasilkan salinan pemasaran asas secara autonomi.",
+        "reason_zh": "大语言模型（LLM）已能自主批量生成基础营销与推广文案。",
     },
     "simple bookkeeping reconciliation": {
         "velocity": -0.32,
+        "aliases": ["simple bookkeeping reconciliation", "penyesuaian simpan kira mudah", "基础账目核对与对账", "记账对账", "bookkeeping"],
         "reason": "Direct bank feed APIs and automated cloud accounting platforms.",
+        "reason_ms": "API suapan bank terus dan platform perakaunan awan automatik.",
+        "reason_zh": "直接银行数据接口与自动化云端会计平台已取代人工核算。",
     },
     "telemarketing outbound calling": {
         "velocity": -0.48,
+        "aliases": ["telemarketing outbound calling", "panggilan keluar pemasaran tele", "电话推销外呼", "电话营销", "telemarketing"],
         "reason": "Automated conversational agents and strict telemarketing consumer protections.",
+        "reason_ms": "Ejen perbualan automatik dan perlindungan pengguna pemasaran tele yang ketat.",
+        "reason_zh": "对话式 AI 外呼机器人与严格的消费者电话隐私法规正加速其淘汰。",
     },
 }
 
@@ -53,6 +71,7 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
     """
     Dynamically loads declining / automation-risk skills from the Supabase trend_signals table.
     Caches results in-memory for 5 minutes for sub-millisecond evaluation.
+    Extracts multilingual aliases (English, Bahasa Melayu, Chinese) and localized citations.
     """
     global _cached_declining_skills, _last_declining_fetch_time
 
@@ -83,10 +102,29 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
                     for r in rows:
                         s_name = r.get("skillName", "").lower().strip()
                         sources = r.get("sources", [])
-                        reason = sources[0].get("citation", "Automated by modern AI & digital platforms") if sources else "High automation risk"
+                        first_source = sources[0] if (isinstance(sources, list) and len(sources) > 0 and isinstance(sources[0], dict)) else {}
+                        reason = first_source.get("citation", "Automated by modern AI & digital platforms")
+                        reason_ms = first_source.get("citation_ms", reason)
+                        reason_zh = first_source.get("citation_zh", reason)
+                        skill_ms = first_source.get("skillName_ms", "").lower().strip()
+                        skill_zh = first_source.get("skillName_zh", "").lower().strip()
+
+                        aliases = [s_name]
+                        if skill_ms:
+                            aliases.append(skill_ms)
+                        if skill_zh:
+                            aliases.append(skill_zh)
+
+                        # Incorporate predefined multilingual aliases if present
+                        if s_name in FALLBACK_DECLINING_SKILLS:
+                            aliases.extend(FALLBACK_DECLINING_SKILLS[s_name].get("aliases", []))
+
                         loaded[s_name] = {
                             "velocity": float(r.get("velocityVs", -0.35)),
                             "reason": reason,
+                            "reason_ms": reason_ms,
+                            "reason_zh": reason_zh,
+                            "aliases": list(set(aliases)),
                         }
                     _cached_declining_skills = loaded
                     _last_declining_fetch_time = time.time()
@@ -188,11 +226,21 @@ async def query_supabase_pgvector(
     return None
 
 
+_cached_active_roles: List[Dict[str, Any]] = []
+_last_active_roles_fetch_time: float = 0.0
+
+
 async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     """
     Fetches the active catalog of real ESCO occupational roles dynamically from Supabase.
+    Caches in memory for 5 minutes for sub-millisecond retrieval.
     Falls back to FALLBACK_ROLES_CATALOG if offline.
     """
+    global _cached_active_roles, _last_active_roles_fetch_time
+
+    if _cached_active_roles and (time.time() - _last_active_roles_fetch_time < 300):
+        return [dict(r) for r in _cached_active_roles]
+
     if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
         return FALLBACK_ROLES_CATALOG
 
@@ -236,7 +284,9 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                                 "ESG & Sustainability": 70,
                             }),
                         })
-                    return formatted
+                    _cached_active_roles = formatted
+                    _last_active_roles_fetch_time = time.time()
+                    return [dict(r) for r in formatted]
     except Exception:
         pass
 
@@ -397,26 +447,87 @@ async def evaluate_roles(
 
     matched_roles: List[MatchedRole] = []
 
-    # Check at-risk skills across user competencies dynamically from Supabase trend signals
-    declining_catalog = await fetch_declining_skills_from_supabase()
-    at_risk_items: List[AtRiskSkillItem] = []
-    for skill_name in user_skills_list:
-        s_lower = skill_name.lower().strip()
-        for declining_key, info in declining_catalog.items():
-            if declining_key in s_lower or s_lower in declining_key:
-                at_risk_items.append(
-                    AtRiskSkillItem(
-                        skillName=skill_name,
-                        velocityScore=info["velocity"],
-                        riskReason=info["reason"],
-                    )
-                )
-                break
-
-    # Pre-embed user skills for dynamic semantic similarity (cached in memory)
+    # Pre-embed user skills for dynamic semantic similarity and cross-lingual evaluation (cached in memory)
     user_skill_vectors: Dict[str, List[float]] = {}
     for u_skill in user_skills_list:
         user_skill_vectors[u_skill] = await generate_embedding(u_skill)
+
+    # Check at-risk skills across user competencies dynamically from Supabase trend signals
+    declining_catalog = await fetch_declining_skills_from_supabase()
+    at_risk_items: List[AtRiskSkillItem] = []
+    matched_declining_keys = set()
+
+    # Build multilingual user skill alias map from profile.skills localized_labels
+    user_skill_alias_map: Dict[str, List[str]] = {}
+    for s_item in profile.skills:
+        s_aliases = [s_item.name.lower().strip()]
+        if s_item.localized_labels:
+            for l_val in s_item.localized_labels.values():
+                if l_val:
+                    s_aliases.append(l_val.lower().strip())
+        user_skill_alias_map[s_item.name.lower().strip()] = list(set(s_aliases))
+
+    for skill_name in user_skills_list:
+        s_lower = skill_name.lower().strip()
+        matched_declining = None
+
+        # Candidate user aliases for this skill (e.g. ["manual data entry", "手动数据录入", "kemasukan data manual"])
+        candidate_aliases = user_skill_alias_map.get(s_lower, [s_lower])
+
+        for declining_key, info in declining_catalog.items():
+            if declining_key in matched_declining_keys:
+                continue
+
+            declining_aliases = info.get("aliases", [declining_key])
+
+            # Tier 1: Exact or substring match across multilingual aliases
+            is_string_match = any(
+                u_alias and d_alias and (u_alias in d_alias or d_alias in u_alias)
+                for u_alias in candidate_aliases
+                for d_alias in declining_aliases
+            )
+            if is_string_match:
+                matched_declining = (declining_key, info)
+                break
+
+            # Tier 2: Token Jaccard string similarity overlap (>= 0.60)
+            is_token_match = any(
+                compute_string_similarity(u_alias, d_alias) >= 0.60
+                for u_alias in candidate_aliases
+                for d_alias in declining_aliases
+            )
+            if is_token_match:
+                matched_declining = (declining_key, info)
+                break
+
+            # Tier 3: Cross-Lingual Semantic Vector Cosine Proximity (BGE-M3 / Gemini >= 0.65)
+            # Evaluates semantic alignment even when user enters raw Chinese (e.g. "手动录入") or Malay without exact dictionary match
+            vec_u = user_skill_vectors.get(skill_name)
+            if vec_u:
+                vec_declining = await generate_embedding(declining_key)
+                if vec_declining and cosine_similarity(vec_u, vec_declining) >= 0.65:
+                    matched_declining = (declining_key, info)
+                    break
+
+        if matched_declining:
+            d_key, info = matched_declining
+            matched_declining_keys.add(d_key)
+
+            # Localize riskReason according to user active locale
+            if locale == "zh":
+                r_reason = info.get("reason_zh") or info.get("reason")
+            elif locale == "ms":
+                r_reason = info.get("reason_ms") or info.get("reason")
+            else:
+                r_reason = info.get("reason")
+
+            at_risk_items.append(
+                AtRiskSkillItem(
+                    skillName=skill_name,
+                    velocityScore=info["velocity"],
+                    riskReason=r_reason,
+                )
+            )
 
     for role_def in active_roles:
         required_skills = role_def["requiredSkills"]
