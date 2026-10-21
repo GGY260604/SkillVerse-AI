@@ -68,34 +68,52 @@ export default function Hero() {
       {/* Stats Cards Section */}
       <div className="animate-fade-in-up-delay-3 max-w-7xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12">
         <div className="flex overflow-x-auto lg:grid lg:grid-cols-3 gap-4 pb-3 lg:pb-0 snap-x snap-mandatory lg:snap-none scroll-smooth">
-          {/* Stat Card 1: Market Shift */}
-          <div className="w-65 sm:w-75 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-border-accent hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{ts("market_shift")}</span>
-              <span className="text-xs text-positive">↗</span>
+          {/* Stat Card 1: AI Skills Divide */}
+          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-rose-500/60 hover:shadow-[0_0_28px_rgba(244,63,94,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">{ts("card_1_label")}</span>
+                <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500/20 group-hover:border-rose-500/40 transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">{ts("card_1_stat")}</p>
             </div>
-            <p className="text-3xl font-extrabold text-positive tracking-tight">+38.4%</p>
-            <p className="text-xs text-text-muted mt-1 leading-relaxed">{ts("market_shift_desc")}</p>
+            <p className="text-xs text-text-muted mt-2.5 leading-relaxed">{ts("card_1_desc")}</p>
           </div>
 
-          {/* Stat Card 2: Reskill Cycle */}
-          <div className="w-65 sm:w-75 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-border-accent hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{ts("reskill_cycle")}</span>
-              <span className="text-xs text-accent">↗</span>
+          {/* Stat Card 2: National Reskilling Crisis */}
+          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-amber-500/60 hover:shadow-[0_0_28px_rgba(245,158,11,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">{ts("card_2_label")}</span>
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">{ts("card_2_stat")}</p>
             </div>
-            <p className="text-3xl font-extrabold text-text-primary tracking-tight">14.2 <span className="text-base font-medium">Mos</span></p>
-            <p className="text-xs text-text-muted mt-1 leading-relaxed">{ts("reskill_cycle_desc")}</p>
+            <p className="text-xs text-text-muted mt-2.5 leading-relaxed">{ts("card_2_desc")}</p>
           </div>
 
-          {/* Stat Card 3: Enterprise Partners */}
-          <div className="w-65 sm:w-75 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-border-accent hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">{ts("enterprise_partners")}</span>
-              <span className="text-xs text-accent">↗</span>
+          {/* Stat Card 3: Sustainable Future Roles */}
+          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-accent hover:shadow-[0_0_28px_rgba(0,229,195,0.25)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-accent uppercase tracking-wider">{ts("card_3_label")}</span>
+                <div className="w-6 h-6 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:bg-accent/20 group-hover:border-accent/40 transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl sm:text-3xl font-extrabold text-accent tracking-tight">{ts("card_3_stat")}</p>
             </div>
-            <p className="text-3xl font-extrabold text-text-primary tracking-tight">3,400+</p>
-            <p className="text-xs text-text-muted mt-1 leading-relaxed">{ts("enterprise_partners_desc")}</p>
+            <p className="text-xs text-text-muted mt-2.5 leading-relaxed">{ts("card_3_desc")}</p>
           </div>
         </div>
       </div>
