@@ -21,6 +21,7 @@ export interface SharedRoadmapItem {
     id: string;
     name: string | null;
     email: string;
+    level?: number;
     role: string;
     department: string;
   };
@@ -295,54 +296,43 @@ export default function SharedPlansView() {
       {!isLoading && filteredRoadmaps.length > 0 && (
         <div className="space-y-3.5">
           {filteredRoadmaps.map((item) => {
-            const displayName = item.owner.name || item.owner.email.split("@")[0] || "Peer";
-            const initial = (item.owner.name || item.owner.email || "P").charAt(0).toUpperCase();
+            const displayName = item.owner.name || item.owner.email.split("@")[0] || tModal("user");
+            const initial = (item.owner.name || item.owner.email || "U").charAt(0).toUpperCase();
+            const userLevel = item.owner.level ?? 1;
 
             return (
               <div
                 key={item.id}
                 onClick={() => setActiveSharedId(item.id)}
-                className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-card/70 hover:bg-bg-card p-4 sm:p-5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
+                className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-secondary/40 hover:bg-bg-secondary/70 p-4 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
               >
-                {/* Left Identity Card */}
+                {/* Left Identity Card (Matching SharedPlansModal collaborator card styling) */}
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                    {initial}
+                  {/* Avatar Circle with Linear Gradient & Level Badge */}
+                  <div className="relative w-10 h-10 shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-full h-full rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm">
+                      {initial}
+                    </div>
+                    <span className="absolute -right-2 -bottom-1 rounded-full border border-bg-card bg-bg-primary px-1 py-0.5 text-[8px] font-mono font-bold leading-none text-accent shadow-sm">
+                      Lv.{userLevel}
+                    </span>
                   </div>
 
                   <div className="min-w-0 flex-1">
+                    {/* Top Row: User Name & Email */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
+                      <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
                         {displayName}
-                      </h3>
+                      </h4>
                       <span className="text-xs font-mono text-text-muted truncate">
                         • {item.owner.email}
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-blue-500/15 text-blue-400 border-blue-500/40">
-                        View Only
-                      </span>
                     </div>
 
-                    {/* Shared Roadmap Role Title & Match Score Badge */}
-                    <div className="flex items-center gap-2 mt-1 text-xs text-text-secondary flex-wrap">
-                      <span className="font-semibold text-text-primary flex items-center gap-1 truncate max-w-sm">
-                        <span className="text-accent text-xs">◈</span>
-                        <span>{item.currentPlan.targetRole}</span>
-                      </span>
-                      <span className="text-text-muted">•</span>
-                      <span className="font-mono text-accent text-xs font-semibold">
-                        {item.currentPlan.matchScore}% Match
-                      </span>
-                      <span className="text-text-muted">•</span>
-                      <span className="font-mono text-[11px] text-text-muted">
-                        Shared {item.sharedAt}
-                      </span>
-                    </div>
-
-                    {/* Peer UID with 1-Click Copy Button */}
-                    <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-mono text-text-muted">
-                      <span className="font-semibold text-text-secondary">UID:</span>
-                      <span className="text-text-muted select-all truncate max-w-44 sm:max-w-none">
+                    {/* User UID with 1-Click Copy Button */}
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-text-muted">
+                      <span className="font-semibold text-text-secondary">{tModal("uid")}</span>
+                      <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
                         {item.owner.id}
                       </span>
                       <button
@@ -351,16 +341,16 @@ export default function SharedPlansView() {
                           e.stopPropagation();
                           handleCopyUid(item.owner.id);
                         }}
-                        className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-secondary hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
-                        title="Copy UID"
-                        aria-label="Copy UID"
+                        className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
+                        title={tModal("copy_uid")}
+                        aria-label={tModal("copy_uid")}
                       >
                         {copiedId === item.owner.id ? (
                           <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
                             <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
-                            <span>Copied</span>
+                            <span>{tModal("copied")}</span>
                           </span>
                         ) : (
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,11 +364,29 @@ export default function SharedPlansView() {
                         )}
                       </button>
                     </div>
+
+                    {/* Divider Line Between User Profile and Shared Roadmap */}
+                    <div className="border-t border-border-subtle/70 my-2.5" />
+
+                    {/* Bottom Row: Career Direction, Match Score & Date (No Diamond, Separate Line) */}
+                    <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
+                      <span className="font-semibold text-text-primary truncate max-w-sm">
+                        {item.currentPlan.targetRole}
+                      </span>
+                      <span className="text-text-muted">•</span>
+                      <span className="font-mono text-accent text-xs font-semibold">
+                        {item.currentPlan.matchScore}% {t("match_score")}
+                      </span>
+                      <span className="text-text-muted">•</span>
+                      <span className="font-mono text-[11px] text-text-muted">
+                        {t("shared_on")} {item.sharedAt}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Right Side Action Button */}
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                {/* Right Side Action Button: Trash Can */}
+                <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
                   <button
                     type="button"
                     onClick={(e) => {

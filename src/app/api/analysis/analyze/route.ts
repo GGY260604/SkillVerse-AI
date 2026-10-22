@@ -6,23 +6,22 @@ import {
 } from "@/app/api/_lib/fastapi/client";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/supabase/prisma";
 
 // --- Route Handler ---
 /**
- * POST /api/analysis/analyze
+ * POST /api/analysis/analyze.
  * Unified server-side proxy route communicating with FastAPI analyze microservices.
- * Supports:
- * - action === "stream": Streams SSE role matching telemetry from /api/v1/analyze/stream
- * - action === "synthesize": Generates multi-phase reskilling roadmap via FastAPI,
- *   archives any prior 'current' roadmap to 'history', and persists new 'current' roadmap to database.
- * - default: Standard deterministic role analysis from /api/v1/analyze
+ * Supported actions:
+ * - `stream`: Streams role-matching telemetry from `/api/v1/analyze/stream`.
+ * - `synthesize`: Generates a multi-phase reskilling roadmap through FastAPI,
+ *   archives prior `current` roadmaps to `history`, and persists the new `current` roadmap.
+ * - Default: Runs standard role analysis through `/api/v1/analyze`.
  *
  * Synthesis flow:
  * 1. Resolve the session user, then request a roadmap for the selected role from FastAPI.
  * 2. Normalize generated milestones, role metrics, and localized content for database fields.
- * 3. In one transaction, archive every existing current roadmap and insert the new current
- *    roadmap with its phases, so a failed write cannot leave a half-switched plan state.
+ * 3. In one transaction, archive current roadmaps and insert the new current roadmap with its phases.
  * 4. Return the created roadmap to the client, which refreshes the analysis page from storage.
  */
 export async function POST(request: NextRequest) {
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
     const action = body.action || "stream";
 
     // 1. Resolve the authenticated user ID for service requests and database ownership.
-    let authenticatedUserId: string | undefined = body.userId;
+    let authenticatedUserId: string | undefined;
     try {
       const { accessToken } = await getAuthTokensFromCookies();
       if (accessToken) {
@@ -40,8 +39,8 @@ export async function POST(request: NextRequest) {
           authenticatedUserId = userData.user.id;
         }
       }
-    } catch {
-      // Continue unauthenticated if session check fails
+    } catch (authError) {
+      console.warn("[/api/analysis/analyze] Session verification failed.", authError);
     }
 
     const config = getFastApiConfig();
@@ -49,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Stream role discovery results to the client for progressive progress updates.
     if (action === "stream") {
+      const streamIdleTimeoutMs = 15_000;
       const forwardPayload = {
         sessionId: body.sessionId,
         userId: authenticatedUserId,
@@ -60,44 +60,172 @@ export async function POST(request: NextRequest) {
       };
 
       const targets = getFastApiTargets();
-      let streamResponse: Response | null = null;
-      let lastStreamError: string = "";
+      let activeAttempt: AbortController | null = null;
+      let clientDisconnected = false;
+      const encoder = new TextEncoder();
 
-      for (const target of targets) {
-        try {
-          const streamUrl = `${target.baseUrl}/api/v1/analyze/stream`;
-          const candidateResponse = await fetch(streamUrl, {
-            method: "POST",
-            headers: {
-              ...target.headers,
-              "Content-Type": "application/json",
-              Accept: "text/event-stream",
-            },
-            body: JSON.stringify(forwardPayload),
-          });
+      const responseBody = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          let lastStreamError = "No endpoint returned a completed matching result.";
 
-          if (candidateResponse.ok && candidateResponse.body) {
-            streamResponse = candidateResponse;
-            break;
+          for (const target of targets) {
+            if (clientDisconnected || request.signal.aborted) break;
+
+            const attemptController = new AbortController();
+            activeAttempt = attemptController;
+            let timedOut = false;
+            let idleTimer: ReturnType<typeof setTimeout> | undefined;
+            const abortWithClient = () => attemptController.abort();
+            const resetIdleTimer = () => {
+              if (idleTimer) clearTimeout(idleTimer);
+              idleTimer = setTimeout(() => {
+                timedOut = true;
+                attemptController.abort();
+              }, streamIdleTimeoutMs);
+            };
+            request.signal.addEventListener("abort", abortWithClient, { once: true });
+
+            try {
+              resetIdleTimer();
+              const streamUrl = `${target.baseUrl}/api/v1/analyze/stream`;
+              const response = await fetch(streamUrl, {
+                method: "POST",
+                headers: {
+                  ...target.headers,
+                  "Content-Type": "application/json",
+                  Accept: "text/event-stream",
+                },
+                body: JSON.stringify(forwardPayload),
+                signal: attemptController.signal,
+              });
+
+              if (!response.ok || !response.body) {
+                lastStreamError = `Tier ${target.tier} returned status ${response.status}${response.body ? "" : " without a response body"}.`;
+                void response.body?.cancel().catch(() => {});
+                continue;
+              }
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder("utf-8");
+              let buffer = "";
+              let completed = false;
+              let tierFailed = false;
+
+              const processEvent = (event: string): "continue" | "complete" | "failed" => {
+                const data = event
+                  .split(/\r?\n/)
+                  .filter((line) => line.startsWith("data:"))
+                  .map((line) => line.slice(5).trimStart())
+                  .join("\n");
+
+                if (!data.trim()) {
+                  if (!clientDisconnected) controller.enqueue(encoder.encode(`${event}\n\n`));
+                  return "continue";
+                }
+
+                let parsed: { error?: unknown; errorCode?: unknown; result?: unknown };
+                try {
+                  parsed = JSON.parse(data);
+                } catch {
+                  lastStreamError = `Tier ${target.tier} returned invalid SSE data.`;
+                  return "failed";
+                }
+
+                if (parsed.error) {
+                  const detail =
+                    typeof parsed.error === "string" ? parsed.error : "The matching service returned an error.";
+                  const errorCode =
+                    typeof parsed.errorCode === "string" ? ` (${parsed.errorCode})` : "";
+                  lastStreamError = `Tier ${target.tier} failed: ${detail}${errorCode}`;
+                  return "failed";
+                }
+
+                resetIdleTimer();
+                if (!clientDisconnected) controller.enqueue(encoder.encode(`${event}\n\n`));
+                if (parsed.result) return "complete";
+                return "continue";
+              };
+
+              while (!clientDisconnected && !request.signal.aborted) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split(/\r?\n\r?\n/);
+                buffer = events.pop() || "";
+
+                for (const event of events) {
+                  const eventStatus = processEvent(event);
+                  if (eventStatus === "complete") {
+                    completed = true;
+                    break;
+                  }
+                  if (eventStatus === "failed") {
+                    tierFailed = true;
+                    break;
+                  }
+                }
+
+                if (completed || tierFailed) break;
+              }
+
+              if (!completed && !tierFailed && !clientDisconnected && !request.signal.aborted) {
+                buffer += decoder.decode();
+                if (buffer.trim()) {
+                  const eventStatus = processEvent(buffer);
+                  completed = eventStatus === "complete";
+                  tierFailed = eventStatus === "failed";
+                }
+              }
+
+              if (completed) {
+                void reader.cancel().catch(() => {});
+                if (!clientDisconnected) controller.close();
+                return;
+              }
+
+              if (!tierFailed && !clientDisconnected && !request.signal.aborted) {
+                lastStreamError = timedOut
+                  ? `Tier ${target.tier} timed out after ${streamIdleTimeoutMs / 1000} seconds without progress.`
+                  : `Tier ${target.tier} stream ended without a matching result.`;
+              }
+              void reader.cancel().catch(() => {});
+            } catch (tierError: unknown) {
+              if (request.signal.aborted || clientDisconnected) break;
+              lastStreamError = timedOut
+                ? `Tier ${target.tier} timed out after ${streamIdleTimeoutMs / 1000} seconds without progress.`
+                : `Tier ${target.tier} error: ${tierError instanceof Error ? tierError.message : String(tierError)}`;
+            } finally {
+              if (idleTimer) clearTimeout(idleTimer);
+              request.signal.removeEventListener("abort", abortWithClient);
+              if (activeAttempt === attemptController) activeAttempt = null;
+            }
           }
-          lastStreamError = `Tier ${target.tier} returned status ${candidateResponse.status}`;
-        } catch (tierErr: unknown) {
-          lastStreamError = `Tier ${target.tier} error: ${tierErr instanceof Error ? tierErr.message : String(tierErr)}`;
-        }
-      }
 
-      if (!streamResponse || !streamResponse.body) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `FastAPI stream error across all endpoints: ${lastStreamError || "No response body"}`,
-          },
-          { status: 502 }
-        );
-      }
+          if (!clientDisconnected && request.signal.aborted) {
+            controller.close();
+            return;
+          }
 
-      // Forward SSE streaming response to browser
-      return new Response(streamResponse.body, {
+          if (clientDisconnected) return;
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                phase: -1,
+                error: `FastAPI stream failed across all configured endpoints: ${lastStreamError}`,
+                errorCode: "ROLE_MATCHING_FAILED",
+              })}\n\n`
+            )
+          );
+          controller.close();
+        },
+        cancel() {
+          clientDisconnected = true;
+          activeAttempt?.abort();
+        },
+      });
+
+      return new Response(responseBody, {
         headers: {
           "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
@@ -107,12 +235,48 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Synthesize the selected role's roadmap, then persist the roadmap and phases.
+    // 3. Synthesize the selected role's roadmap, then persist it with its phases.
     if (action === "synthesize") {
+      if (!authenticatedUserId) {
+        return NextResponse.json(
+          { success: false, error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+
+      let effectiveUserId = authenticatedUserId;
+      if (body.userId && body.userId !== authenticatedUserId) {
+        if (typeof body.userId !== "string") {
+          return NextResponse.json(
+            { success: false, error: "Invalid target user." },
+            { status: 400 }
+          );
+        }
+
+        const editPermission = await prisma.sharedRoadmap.findFirst({
+          where: {
+            ownerId: body.userId,
+            targetUserId: authenticatedUserId,
+            accessLevel: "editable",
+            roadmap: { status: "current" },
+          },
+          select: { id: true },
+        });
+
+        if (!editPermission) {
+          return NextResponse.json(
+            { success: false, error: "Forbidden: No edit permission for this user's roadmap." },
+            { status: 403 }
+          );
+        }
+
+        effectiveUserId = body.userId;
+      }
+
       const forwardPayload = {
         assessmentId: body.assessmentId,
         sessionId: body.sessionId,
-        userId: authenticatedUserId,
+        userId: effectiveUserId,
         locale: body.locale || "en",
         macroScenario: body.macroScenario || "moderate",
         targetRoleId: body.targetRoleId,
@@ -142,20 +306,6 @@ export async function POST(request: NextRequest) {
       }
 
       const data = await fastApiResponse.json();
-
-      // Persist newly synthesized roadmap and its phases into database via Prisma
-      // Resolve authenticated user ID with fallback to ensure persistence never gets skipped
-      let effectiveUserId = authenticatedUserId;
-      if (!effectiveUserId) {
-        try {
-          const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
-          if (fallbackUser) {
-            effectiveUserId = fallbackUser.id;
-          }
-        } catch {
-          // ignore fallback error
-        }
-      }
 
       if (effectiveUserId) {
         try {

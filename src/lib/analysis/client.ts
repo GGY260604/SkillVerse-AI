@@ -123,13 +123,20 @@ export async function analyzeWorkforceProfileStream(
         buffer = events.pop() || "";
         for (const event of events) {
           processEvent(event);
+          if (finalResult) break;
+        }
+        if (finalResult) {
+          void reader.cancel().catch(() => {});
+          break;
         }
       }
 
-      buffer += decoder.decode();
-      if (buffer.trim()) processEvent(buffer);
+      if (!finalResult) {
+        buffer += decoder.decode();
+        if (buffer.trim()) processEvent(buffer);
+      }
     } catch (error) {
-      await reader.cancel().catch(() => {});
+      void reader.cancel().catch(() => {});
       throw error;
     } finally {
       reader.releaseLock();

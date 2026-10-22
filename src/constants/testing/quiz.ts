@@ -5,7 +5,10 @@ import type { QuizResponseData } from "@/components/analysis/quiz/PhaseQuizModal
 // -------------------------------------------------------------
 
 // Keep this constant false for live deployments.
-export const USE_QUIZ_MOCK_DATA = true;
+export const USE_PHASE_QUIZ_MODAL_TESTING = false;
+
+// Keep this constant false to request quizzes from the API.
+export const USE_QUIZ_MOCK_DATA = false;
 
 // -------------------------------------------------------------
 

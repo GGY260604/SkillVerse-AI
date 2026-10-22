@@ -545,5 +545,186 @@
       "tagline": "Semua kandungan yang disediakan di laman web ini adalah untuk rujukan sahaja; keputusan muktamad terletak sepenuhnya pada anda.",
       "github": "Repositori GitHub"
     }
+  },
+  "profile": {
+    "options": {
+      "employmentStatus": {
+        "employed_at_risk": {
+          "label": "Bekerja (Berisiko)",
+          "desc": "Aliran kerja rutin menghadapi gangguan AI"
+        },
+        "fresh_grad_student": {
+          "label": "Graduan Baharu / Pelajar",
+          "desc": "Memasuki pasaran buruh & mencari penempatan"
+        },
+        "career_switcher": {
+          "label": "Penukar Kerjaya",
+          "desc": "Beralih merentas domain atau industri"
+        },
+        "jobseeker": {
+          "label": "Pencari Kerja",
+          "desc": "Calon aktif mencari peluang pekerjaan"
+        }
+      },
+      "workArrangement": {
+        "any": {
+          "label": "Mana-mana"
+        },
+        "remote": {
+          "label": "Bekerja dari Rumah"
+        },
+        "hybrid": {
+          "label": "Hibrid"
+        },
+        "onsite": {
+          "label": "Di Tapak"
+        }
+      },
+      "careerGoal": {
+        "upskill": {
+          "label": "Peningkatan Kemahiran",
+          "desc": "Maju dalam bidang pekerjaan semasa"
+        },
+        "reskill": {
+          "label": "Latihan Semula",
+          "desc": "Beralih ke AI dan teknologi baharu"
+        },
+        "explore": {
+          "label": "Meneroka Peluang",
+          "desc": "Meneroka peluang berpertumbuhan tinggi"
+        }
+      },
+      "yearsOfExperience": {
+        "0-1": {
+          "label": "0 - 1 Tahun (Tahap Permulaan)"
+        },
+        "1-3": {
+          "label": "1 - 3 Tahun (Sekutu)"
+        },
+        "3-5": {
+          "label": "3 - 5 Tahun (Pertengahan)"
+        },
+        "5-10": {
+          "label": "5 - 10 Tahun (Kanan)"
+        },
+        "10+": {
+          "label": "10+ Tahun (Ketua / Pengarah)"
+        }
+      },
+      "industry": {
+        "Software & Cloud Services": {
+          "label": "Perisian & Perkhidmatan Awan"
+        },
+        "Banking & Financial Services": {
+          "label": "Perbankan & Perkhidmatan Kewangan"
+        },
+        "Clean Energy & ESG": {
+          "label": "Tenaga Bersih & ESG"
+        },
+        "Healthcare & BioTech": {
+          "label": "Penjagaan Kesihatan & Bioteknologi"
+        },
+        "Industrial Automation & Robotics": {
+          "label": "Automasi Industri & Robotik"
+        },
+        "Smart Logistics & Supply Chain": {
+          "label": "Logistik Pintar & Rantaian Bekalan"
+        },
+        "Clerical & Administrative": {
+          "label": "Perkeranian & Pentadbiran"
+        },
+        "Marketing & Creative Media": {
+          "label": "Pemasaran & Media Kreatif"
+        },
+        "Public Sector & Education": {
+          "label": "Sektor Awam & Pendidikan"
+        }
+      },
+      "educationLevel": {
+        "Secondary / High School": {
+          "label": "Sekolah Menengah / SPM"
+        },
+        "Diploma / Vocational (TVET)": {
+          "label": "Diploma / Vokasional (TVET)"
+        },
+        "Bachelor's Degree": {
+          "label": "Ijazah Sarjana Muda"
+        },
+        "Master's / Postgraduate": {
+          "label": "Ijazah Sarjana / Pascasiswazah"
+        },
+        "Doctorate / PhD": {
+          "label": "Doktor Falsafah (PhD)"
+        },
+        "Self-Taught / Industry Certified": {
+          "label": "Belajar Sendiri / Pensijilan Industri"
+        }
+      },
+      "weeklyCommitmentHours": {
+        "1-3": {
+          "label": "1 - 3 Jam",
+          "sub": "Pembelajaran mikro"
+        },
+        "3-5": {
+          "label": "3 - 5 Jam",
+          "sub": "Disyorkan"
+        },
+        "5-10": {
+          "label": "5 - 10 Jam",
+          "sub": "Dipercepatkan"
+        },
+        "10+": {
+          "label": "10+ Jam",
+          "sub": "Penyerapan penuh"
+        }
+      },
+      "learningProviders": {
+        "free_open": {
+          "label": "Percuma & Sumber Terbuka",
+          "desc": "Audit Coursera, YouTube, edX, MIT OpenCourseWare"
+        },
+        "hrd_corp": {
+          "label": "Tuntutan HRD Corp",
+          "desc": "Program latihan perusahaan Malaysia yang diperakui"
+        },
+        "industry_cert": {
+          "label": "Pensijilan Vendor",
+          "desc": "AWS, Google Cloud, Microsoft, Cisco, NVIDIA"
+        },
+        "university": {
+          "label": "Mikrokredensial Universiti",
+          "desc": "Kredit pendidikan tinggi modular bertauliah"
+        }
+      },
+      "targetSectors": {
+        "Artificial Intelligence & Machine Learning": {
+          "label": "Kecerdasan Buatan & Pembelajaran Mesin"
+        },
+        "Clean Energy & ESG": {
+          "label": "Tenaga Bersih & ESG"
+        },
+        "Cloud & Infrastructure": {
+          "label": "Awan & Infrastruktur"
+        },
+        "Cybersecurity & Zero Trust": {
+          "label": "Keselamatan Siber & Zero Trust"
+        },
+        "Modern Finance & FinTech": {
+          "label": "Kewangan Moden & FinTech"
+        },
+        "Software Engineering": {
+          "label": "Kejuruteraan Perisian"
+        },
+        "Smart Logistics & Supply Chain": {
+          "label": "Logistik Pintar & Rantaian Bekalan"
+        },
+        "Healthcare & BioTech": {
+          "label": "Penjagaan Kesihatan & Bioteknologi"
+        },
+        "Industrial Automation": {
+          "label": "Automasi Industri"
+        }
+      }
+    }
   }
 }

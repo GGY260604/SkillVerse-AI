@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Record the user profile within the local database instance.
     if (data.user?.id) {
       try {
-        const { prisma } = await import("@/lib/prisma");
+        const { prisma } = await import("@/lib/supabase/prisma");
         await prisma.user.upsert({
           where: { id: data.user.id },
           create: {

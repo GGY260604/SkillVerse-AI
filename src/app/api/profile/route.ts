@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/supabase/prisma";
 import {
   normalizeWorkArrangement,
   normalizeEmploymentStatus,
@@ -16,11 +16,11 @@ import {
 } from "@/lib/profileNormalization";
 
 /**
- * GET /api/profile
+ * GET /api/profile.
  * Data flow:
  * 1. Authenticate the requester and use their own ID by default.
- * 2. For a requested peer profile, verify that the peer shared a roadmap with the requester.
- * 3. Read and return the selected users-table record for the wizard/profile UI.
+ * 2. Verify that a requested peer profile is shared with the requester.
+ * 3. Read and return the selected `users` record for the wizard or profile UI.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     let targetUserId = currentUserId;
     if (requestedUserId && requestedUserId !== currentUserId) {
-      // Verify that requested user shared a roadmap with current logged-in user
+      // Verify that the requested user shared a roadmap with the current user.
       const sharePermission = await (prisma.sharedRoadmap as any).findFirst({
         where: {
           ownerId: requestedUserId,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Query single user record from users table
+    // Query the selected user record.
     const { data: userRecord, error } = await admin
       .from("users")
       .select("*")
@@ -92,9 +92,9 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * PATCH /api/profile
+ * PATCH /api/profile.
  * Partially updates the user's profile, specifically their display name.
- * Updates both the database `users` table and Supabase Auth `user_metadata`.
+ * Updates both the `users` table and Supabase Auth `user_metadata`.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // 1. Update or upsert user in `users` table
+    // 1. Update or insert the user in the `users` table.
     const { data: existingUser } = await admin
       .from("users")
       .select("id, email, name")
@@ -172,7 +172,7 @@ export async function PATCH(request: NextRequest) {
       updatedUser = data;
     }
 
-    // 2. Also sync to Supabase Auth metadata so future session tokens immediately reflect the updated name
+    // 2. Sync Supabase Auth metadata so future session tokens reflect the updated name.
     try {
       await admin.auth.admin.updateUserById(user.id, {
         user_metadata: {
@@ -203,7 +203,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 /**
- * POST /api/profile
+ * POST /api/profile.
  * Updates the user's unified profile record in the users table.
  * The assessment wizard calls this after validating all steps. Shared-user edits require an
  * editable grant; an upsert preserves identity fields and writes the normalized intake values.
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
 
     let effectiveUserId = user.id;
     if (body.targetUserId && body.targetUserId !== user.id) {
-      // Verify that current user has "editable" permission on a shared roadmap from targetUserId
+      // Verify that the current user can edit a shared roadmap owned by the target user.
       const sharePermission = await (prisma.sharedRoadmap as any).findFirst({
         where: {
           ownerId: body.targetUserId,
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
       effectiveUserId = body.targetUserId;
     }
 
-    // Fetch existing user to preserve identity fields (name, email, locale)
+    // Fetch the existing user to preserve identity fields (name, email, and locale).
     const { data: existingUser } = await admin
       .from("users")
       .select("name, locale, email")

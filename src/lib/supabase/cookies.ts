@@ -1,3 +1,5 @@
+// --- Authentication Cookie Manager ---
+// Manage secure HTTP-only session cookies for Supabase authentication tokens.
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -7,7 +9,8 @@ export const REFRESH_TOKEN_COOKIE = "sb_refresh_token";
 // Standard session expiration fallback: 7 days in seconds.
 const DEFAULT_MAX_AGE = 60 * 60 * 24 * 7;
 
-// Attach authentication session tokens to server response cookies.
+// Step 1: Attach Session Cookies
+// Attach authentication access and refresh tokens to server response cookies.
 export function attachAuthCookies(
   response: NextResponse,
   accessToken: string,
@@ -29,7 +32,8 @@ export function attachAuthCookies(
   return response;
 }
 
-// Clear authentication session cookies upon logout or token invalidation.
+// Step 2: Clear Session Cookies
+// Remove authentication session cookies upon logout or token invalidation.
 export function clearAuthCookies(response: NextResponse) {
   response.cookies.set(ACCESS_TOKEN_COOKIE, "", {
     httpOnly: true,
@@ -50,6 +54,7 @@ export function clearAuthCookies(response: NextResponse) {
   return response;
 }
 
+// Step 3: Retrieve Session Tokens
 // Read authentication tokens from current incoming request cookies.
 export async function getAuthTokensFromCookies() {
   const cookieStore = await cookies();
@@ -57,3 +62,4 @@ export async function getAuthTokensFromCookies() {
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value || null;
   return { accessToken, refreshToken };
 }
+

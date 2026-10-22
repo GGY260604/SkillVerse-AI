@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Ensure the verified user record exists in the local database.
     if (data.user?.id && data.user.email) {
       try {
-        const { prisma } = await import("@/lib/prisma");
+        const { prisma } = await import("@/lib/supabase/prisma");
         await prisma.user.upsert({
           where: { id: data.user.id },
           create: {

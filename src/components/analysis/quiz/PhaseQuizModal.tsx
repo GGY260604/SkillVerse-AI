@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
+import {
+  USE_PHASE_QUIZ_MODAL_TESTING,
+  USE_QUIZ_MOCK_DATA,
+  getMockQuizData,
+} from "@/constants/testing/quiz";
 
 export interface QuizQuestion {
   id: number;
@@ -51,6 +55,13 @@ export default function PhaseQuizModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quizData, setQuizData] = useState<QuizResponseData | null>(null);
+  const [isTestingOpen, setIsTestingOpen] = useState(USE_PHASE_QUIZ_MODAL_TESTING);
+  const modalIsOpen = isOpen || (USE_PHASE_QUIZ_MODAL_TESTING && isTestingOpen);
+
+  const handleClose = () => {
+    setIsTestingOpen(false);
+    onClose();
+  };
 
   // Selected options: key is question index (0..9), value is option index (0..3)
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
@@ -62,7 +73,7 @@ export default function PhaseQuizModal({
 
   // Fetch quiz when modal opens (or load Next.js mock data if USE_QUIZ_MOCK_DATA is true)
   useEffect(() => {
-    if (!isOpen) {
+    if (!modalIsOpen) {
       setQuizData(null);
       setUserAnswers({});
       setCurrentQIndex(0);
@@ -73,7 +84,7 @@ export default function PhaseQuizModal({
     }
 
     // When constant USE_QUIZ_MOCK_DATA is true, load local mock data directly without calling backend API
-    if (USE_QUIZ_MOCK_DATA) {
+    if (USE_PHASE_QUIZ_MODAL_TESTING || USE_QUIZ_MOCK_DATA) {
       const mock = getMockQuizData({
         phaseIndex,
         phaseTitle,
@@ -91,7 +102,7 @@ export default function PhaseQuizModal({
 
     async function fetchQuiz() {
       try {
-        const res = await fetch("/api/analysis/phase-quiz", {
+        const res = await fetch("/api/analysis/phase/quiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -129,9 +140,9 @@ export default function PhaseQuizModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale, t]);
+  }, [modalIsOpen, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale, t]);
 
-  if (!isOpen) return null;
+  if (!modalIsOpen) return null;
 
   const questions = quizData?.questions || [];
   const totalQuestions = questions.length;
@@ -167,7 +178,7 @@ export default function PhaseQuizModal({
     if (correctCount === 10) {
       setTimeout(() => {
         onPassed(expReward);
-        onClose();
+        handleClose();
       }, 1600);
     }
   };
@@ -247,7 +258,7 @@ export default function PhaseQuizModal({
               <h4 className="text-sm font-bold text-text-primary">{error}</h4>
               <button
                 type="button"
-                onClick={() => onClose()}
+                onClick={handleClose}
                 className="mt-2 px-4 py-2 rounded-lg bg-bg-secondary text-xs font-mono border border-border-subtle hover:border-accent text-text-primary cursor-pointer"
               >
                 {t("close_try_later")}
