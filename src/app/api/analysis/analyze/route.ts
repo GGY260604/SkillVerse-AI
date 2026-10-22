@@ -295,14 +295,18 @@ export async function POST(request: NextRequest) {
         radarData: body.radarData,
       };
 
-      const fastApiResponse = await fetchWithFastApiFallback("/api/v1/analyze/synthesize-roadmap", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+      const fastApiResponse = await fetchWithFastApiFallback(
+        "/api/v1/analyze/synthesize-roadmap",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(forwardPayload),
         },
-        body: JSON.stringify(forwardPayload),
-      });
+        { timeoutMs: 90_000 }
+      );
 
       if (!fastApiResponse.ok) {
         const errText = await fastApiResponse.text().catch(() => "");

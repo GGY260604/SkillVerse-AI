@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   USE_PHASE_QUIZ_MODAL_TESTING,
   USE_QUIZ_MOCK_DATA,
@@ -36,6 +38,7 @@ interface PhaseQuizModalProps {
   phaseDescription?: string;
   skills: string[];
   targetRole?: string;
+  alreadyCompleted?: boolean;
   onPassed: (expGained: number) => void;
 }
 
@@ -47,33 +50,49 @@ export default function PhaseQuizModal({
   phaseDescription,
   skills,
   targetRole,
+  alreadyCompleted = false,
   onPassed,
 }: PhaseQuizModalProps) {
   const locale = useLocale();
   const t = useTranslations("analysis.quiz");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quizData, setQuizData] = useState<QuizResponseData | null>(null);
   const [isTestingOpen, setIsTestingOpen] = useState(USE_PHASE_QUIZ_MODAL_TESTING);
+  const hasReportedPass = useRef(false);
   const modalIsOpen = isOpen || (USE_PHASE_QUIZ_MODAL_TESTING && isTestingOpen);
 
+  // --- Completion Handling ---
   const handleClose = () => {
+    if (
+      isSubmitted &&
+      score === 10 &&
+      !alreadyCompleted &&
+      !hasReportedPass.current
+    ) {
+      hasReportedPass.current = true;
+      onPassed(quizData?.expReward || 35);
+    }
     setIsTestingOpen(false);
     onClose();
   };
 
-  // Selected options: key is question index (0..9), value is option index (0..3)
+  // --- Quiz State ---
+  // Store the selected option by question index.
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
   const [currentQIndex, setCurrentQIndex] = useState(0);
 
-  // Submission results
+  // --- Submission State ---
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
 
-  // Fetch quiz when modal opens (or load Next.js mock data if USE_QUIZ_MOCK_DATA is true)
+  // --- Quiz Loading ---
+  // Fetch the assessment when the user starts, unless local testing data is enabled.
   useEffect(() => {
-    if (!modalIsOpen) {
+    if (!modalIsOpen || !hasStarted) {
+      if (modalIsOpen) return;
       setQuizData(null);
       setUserAnswers({});
       setCurrentQIndex(0);
@@ -83,7 +102,7 @@ export default function PhaseQuizModal({
       return;
     }
 
-    // When constant USE_QUIZ_MOCK_DATA is true, load local mock data directly without calling backend API
+    // Load local test data without calling the API.
     if (USE_PHASE_QUIZ_MODAL_TESTING || USE_QUIZ_MOCK_DATA) {
       const mock = getMockQuizData({
         phaseIndex,
@@ -140,9 +159,9 @@ export default function PhaseQuizModal({
     return () => {
       isMounted = false;
     };
-  }, [modalIsOpen, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale, t]);
+  }, [modalIsOpen, hasStarted, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale, t]);
 
-  if (!modalIsOpen) return null;
+  if (!modalIsOpen || typeof document === "undefined") return null;
 
   const questions = quizData?.questions || [];
   const totalQuestions = questions.length;
@@ -151,7 +170,8 @@ export default function PhaseQuizModal({
   const answeredCount = Object.keys(userAnswers).length;
   const isAllAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
 
-  // Handle selecting an answer
+  // --- Quiz Actions ---
+  // Record the selected answer for the current question.
   const handleSelectOption = (optionIndex: number) => {
     if (isSubmitted) return;
     setUserAnswers((prev) => ({
@@ -160,7 +180,7 @@ export default function PhaseQuizModal({
     }));
   };
 
-  // Evaluate quiz on submit
+  // Score all answers when the user submits the assessment.
   const handleSubmitQuiz = () => {
     if (!quizData) return;
 
@@ -174,16 +194,9 @@ export default function PhaseQuizModal({
     setScore(correctCount);
     setIsSubmitted(true);
 
-    // If 10/10 passed, trigger onPassed
-    if (correctCount === 10) {
-      setTimeout(() => {
-        onPassed(expReward);
-        handleClose();
-      }, 1600);
-    }
   };
 
-  // Reset quiz for retrying
+  // Clear the submitted answers so the user can retry.
   const handleRetry = () => {
     setUserAnswers({});
     setCurrentQIndex(0);
@@ -191,28 +204,17 @@ export default function PhaseQuizModal({
     setScore(0);
   };
 
-  return (
+  // --- UI ---
+  return createPortal(
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-xl animate-fade-in"
       role="dialog"
       aria-modal="true"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
     >
-      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col bg-bg-card border border-border-subtle rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] min-h-0 bg-bg-card/95 border border-border-subtle rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up flex flex-col">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 border-b border-border-subtle bg-bg-secondary/40 flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30">
-                {t("phase_exam", { phase: phaseIndex })}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                ⚡ {t("exp_bounty", { exp: expReward })}
-              </span>
-              <span className="text-[11px] font-mono text-text-muted">
-                {t("strict_mastery_gate")}
-              </span>
-            </div>
-
             <h3 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
               {phaseTitle}
             </h3>
@@ -225,31 +227,95 @@ export default function PhaseQuizModal({
 
           <button
             type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-bg-secondary hover:bg-bg-elevated border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer shrink-0"
+            onClick={handleClose}
+            className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors shrink-0"
             aria-label={t("close_quiz")}
           >
-            ✕
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              <div className="relative w-14 h-14">
-                <div className="absolute inset-0 rounded-full border-2 border-accent/20 animate-ping" />
-                <div className="w-14 h-14 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+          {!hasStarted ? (
+            <div className="mx-auto flex w-full max-w-xl flex-col items-center py-4 sm:py-10 text-center">
+              <div className="mb-3 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border border-accent/25 bg-accent/10 text-accent">
+                <svg className="h-6 w-6 sm:h-7 sm:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5.25H7.5A2.25 2.25 0 005.25 7.5v11.25A2.25 2.25 0 007.5 21h9a2.25 2.25 0 002.25-2.25V7.5A2.25 2.25 0 0016.5 5.25H15M9 5.25A2.25 2.25 0 0111.25 3h1.5A2.25 2.25 0 0115 5.25M9 5.25A2.25 2.25 0 0011.25 7.5h1.5A2.25 2.25 0 0015 5.25M9 12h6m-6 4.5h6" />
+                </svg>
               </div>
-              <div>
-                <h4 className="text-base font-bold text-text-primary">
-                  {t("evaluating_title")}
-                </h4>
-                <p className="text-xs text-text-muted mt-1 max-w-md">
-                  {t("evaluating_description")}
+              <h4 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+                {t(alreadyCompleted ? "retake_start_title" : "confirm_start_title")}
+              </h4>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-text-secondary">
+                {t(alreadyCompleted ? "retake_start_description" : "confirm_start_description")}
+              </p>
+
+              <div className="mt-5 sm:mt-7 w-fit max-w-full">
+                <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-border-subtle bg-bg-secondary/50 p-4 text-center">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-text-muted">
+                      {t("assessment_rule_label")}
+                    </span>
+                    <div className="mt-2 flex items-baseline justify-center gap-2">
+                      <span className="text-3xl font-black font-mono text-text-primary">10/10</span>
+                      <span className="text-xs font-semibold text-text-secondary">
+                        {t("assessment_rule_value")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={`rounded-2xl border p-4 text-center ${
+                    alreadyCompleted
+                      ? "border-border-subtle bg-bg-secondary/50"
+                      : "border-emerald-500/25 bg-emerald-500/5"
+                  }`}>
+                    <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                      alreadyCompleted ? "text-text-muted" : "text-emerald-400"
+                    }`}>
+                      {t(alreadyCompleted ? "retake_reward_label" : "first_pass_reward_label")}
+                    </span>
+                    <div className="mt-2 flex items-baseline justify-center gap-2">
+                      {alreadyCompleted ? (
+                        <span className="text-xl font-black font-mono text-text-secondary">
+                          {t("no_additional_exp")}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-black font-mono text-emerald-400">
+                            +{expReward}
+                          </span>
+                          <span className="text-xs font-semibold text-emerald-400">
+                            EXP
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setHasStarted(true)}
+                  className="mt-5 sm:mt-7 w-full rounded-xl bg-accent px-5 py-3 text-xs font-mono font-bold uppercase tracking-wider text-bg-primary shadow-sm transition-opacity hover:opacity-90 cursor-pointer"
+                >
+                  {t("start_quiz")}
+                </button>
+                <p className="mt-2 text-xs text-text-muted">
+                  {t("quiz_retry_hint")}
                 </p>
               </div>
             </div>
+          ) : isLoading ? (
+            <LoadingSpinner
+              title={t("evaluating_title")}
+              subtitle={t("evaluating_description")}
+              showProgressBar={false}
+              size="md"
+              className="py-16"
+            />
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
               <div className="w-12 h-12 rounded-full bg-negative/15 text-negative flex items-center justify-center text-xl font-bold">
@@ -265,7 +331,7 @@ export default function PhaseQuizModal({
               </button>
             </div>
           ) : isSubmitted ? (
-            /* Results & Review View */
+            /* --- Results & Review --- */
             <div className="flex flex-col gap-6 animate-fade-in">
               {/* Score Summary Banner */}
               <div
@@ -293,7 +359,9 @@ export default function PhaseQuizModal({
                     </h4>
                     <p className="text-xs text-text-muted mt-0.5">
                       {score === 10
-                        ? t("verified_mastery_description", { exp: expReward })
+                        ? alreadyCompleted
+                          ? t("already_completed_description")
+                          : t("verified_mastery_description", { exp: expReward })
                         : t("mastery_not_passed_description", { score })}
                     </p>
                   </div>
@@ -310,7 +378,7 @@ export default function PhaseQuizModal({
                 )}
               </div>
 
-              {/* Review All 10 Questions with Gemini Explanations */}
+              {/* Question Review */}
               <div className="flex flex-col gap-4">
                 <h5 className="text-xs font-mono uppercase tracking-wider text-text-muted font-bold">
                   {t("question_review")}
@@ -371,7 +439,7 @@ export default function PhaseQuizModal({
                         })}
                       </div>
 
-                      {/* AI Technical Explanation */}
+                      {/* Answer Explanation */}
                       <div className="p-3 rounded-lg bg-bg-secondary/70 border border-border-subtle/80 text-xs text-text-secondary leading-relaxed">
                         <span className="font-mono font-bold text-accent text-[11px] block mb-0.5">
                           {t("rationale")}:
@@ -382,38 +450,49 @@ export default function PhaseQuizModal({
                   );
                 })}
               </div>
+              <div className="flex justify-end border-t border-border-subtle pt-4">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="px-5 py-2.5 rounded-xl bg-accent text-bg-primary text-xs font-mono font-bold uppercase tracking-wider hover:opacity-90 shadow-sm cursor-pointer"
+                >
+                  {t("exit_quiz")}
+                </button>
+              </div>
             </div>
           ) : currentQuestion ? (
-            /* Active Interactive Question View */
+            /* --- Active Question --- */
             <div className="flex flex-col gap-6">
-              {/* Question Navigation Stepper Pills (1..10) */}
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2 border-b border-border-subtle">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {questions.map((_, idx) => {
-                    const isAnswered = userAnswers[idx] !== undefined;
-                    const isCurrent = idx === currentQIndex;
+              {/* Question Navigation */}
+              <div className="flex min-w-0 items-center gap-8 border-b border-border-subtle pb-2">
+                <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain pr-2">
+                  <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
+                    {questions.map((_, idx) => {
+                      const isAnswered = userAnswers[idx] !== undefined;
+                      const isCurrent = idx === currentQIndex;
 
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setCurrentQIndex(idx)}
-                        className={`w-7 h-7 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
-                          isCurrent
-                            ? "bg-accent text-bg-primary border-accent shadow-[0_0_10px_var(--accent-glow)]"
-                            : isAnswered
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                            : "bg-bg-secondary text-text-muted border-border-subtle hover:text-text-primary"
-                        }`}
-                        aria-label={t("go_to_question", { question: idx + 1 })}
-                      >
-                        {idx + 1}
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCurrentQIndex(idx)}
+                          className={`h-7 w-7 shrink-0 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
+                            isCurrent
+                              ? "bg-accent text-bg-primary border-accent shadow-[0_0_10px_var(--accent-glow)]"
+                              : isAnswered
+                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                              : "bg-bg-secondary text-text-muted border-border-subtle hover:text-text-primary"
+                          }`}
+                          aria-label={t("go_to_question", { question: idx + 1 })}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <span className="text-xs font-mono text-text-muted shrink-0">
+                <span className="shrink-0 whitespace-nowrap text-xs font-mono text-text-muted">
                   {t("answered_count", { answered: answeredCount, total: totalQuestions })}
                 </span>
               </div>
@@ -433,7 +512,7 @@ export default function PhaseQuizModal({
                   {currentQuestion.question}
                 </h4>
 
-                {/* 4 Interactive Option Cards */}
+                {/* Answer Options */}
                 <div className="flex flex-col gap-2.5 mt-2">
                   {currentQuestion.options.map((option, optIdx) => {
                     const isSelected = userAnswers[currentQIndex] === optIdx;
@@ -470,7 +549,7 @@ export default function PhaseQuizModal({
           ) : null}
         </div>
 
-        {/* Modal Footer Controls */}
+        {/* Navigation Controls */}
         {!isLoading && !isSubmitted && totalQuestions > 0 && (
           <div className="p-4 sm:p-5 border-t border-border-subtle bg-bg-secondary/30 flex items-center justify-between gap-3">
             <button
@@ -509,6 +588,7 @@ export default function PhaseQuizModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

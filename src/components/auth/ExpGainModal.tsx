@@ -8,16 +8,20 @@ import {
   USE_EXP_GAIN_MODAL_MOCK_DATA,
 } from "@/constants/testing/expGain";
 
+// --- EXP Reward Overlay ---
+// Present earned EXP, level progress, and level-up feedback from the auth context.
 export default function ExpGainModal() {
   const t = useTranslations("auth.exp_gain");
   const { expGainEvent, dismissExpModal } = useExpGain();
+  // Use the test fixture only when no real reward event is active.
   const modalEvent = expGainEvent ?? (USE_EXP_GAIN_MODAL_MOCK_DATA ? MOCK_EXP_GAIN_EVENT : null);
 
-  // Animation states
+  // --- Reward Animation State ---
   const [animatedExp, setAnimatedExp] = useState(0);
   const [barProgress, setBarProgress] = useState(0);
   const [showLevelUpEffect, setShowLevelUpEffect] = useState(false);
 
+  // Count up the reward first, then animate the level bar and optional level-up transition.
   useEffect(() => {
     if (!modalEvent) {
       setAnimatedExp(0);
@@ -36,6 +40,8 @@ export default function ExpGainModal() {
     // 1. Ticking up the EXP number
     const duration = 1200; // ms
     const startTime = performance.now();
+    let animationFrameId = 0;
+    let levelUpTimer: ReturnType<typeof setTimeout> | undefined;
 
     const frame = (now: number) => {
       const elapsed = now - startTime;
@@ -43,36 +49,32 @@ export default function ExpGainModal() {
       // Ease out cubic
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setAnimatedExp(Math.round(easeOut * expGained));
-
       if (progress < 1) {
-        requestAnimationFrame(frame);
+        animationFrameId = requestAnimationFrame(frame);
       } else {
         setAnimatedExp(expGained);
       }
     };
-    requestAnimationFrame(frame);
+    animationFrameId = requestAnimationFrame(frame);
 
-    // 2. Animate progress bar & handle level up transition
     const timer1 = setTimeout(() => {
       if (didLevelUp) {
-        // First fill to 100%
         setBarProgress(100);
 
-        // Then trigger Level Up fanfare
-        const timer2 = setTimeout(() => {
+        levelUpTimer = setTimeout(() => {
           setShowLevelUpEffect(true);
-          // Set to new level current exp
           setBarProgress(newLevelExp);
         }, 600);
-
-        return () => clearTimeout(timer2);
       } else {
-        // Smoothly glide to new current level exp
         setBarProgress(newLevelExp);
       }
     }, 250);
 
-    return () => clearTimeout(timer1);
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      clearTimeout(timer1);
+      if (levelUpTimer) clearTimeout(levelUpTimer);
+    };
   }, [modalEvent]);
 
   if (!modalEvent) return null;
@@ -80,15 +82,17 @@ export default function ExpGainModal() {
   const { oldLevel, newLevel, didLevelUp, phaseTitle } = modalEvent;
   const currentShownLevel = showLevelUpEffect || !didLevelUp ? newLevel : oldLevel;
 
+  // --- UI ---
   return (
     <div
-      className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fade-in"
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-md bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] flex flex-col items-center text-center overflow-hidden"
+        className="relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] flex flex-col items-center text-center"
       >
+        {/* Accent strip reflects whether this reward includes a level-up. */}
         <div
           className={`absolute inset-x-0 top-0 h-px bg-linear-to-r transition-all duration-700 ${
             showLevelUpEffect

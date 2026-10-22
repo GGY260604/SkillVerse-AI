@@ -11,23 +11,24 @@ import RoleSelectorModal from "./RoleSelectorModal";
 export default function PlanModals() {
   const { isLoggedIn } = useAuth();
 
-  // Guard against unauthenticated modal presentation
+  // Assessment modals are only available to signed-in users.
   if (!isLoggedIn) {
     return null;
   }
 
+  // --- UI ---
   return (
     <>
-      {/* Mode Selection Pathway Overlay */}
+      {/* Assessment Pathway */}
       <PathwaySelectModal />
 
-      {/* Option 01: CV Upload Overlay */}
+      {/* Resume Upload */}
       <UploadOptionModal />
 
-      {/* Option 02: Guided Diagnostic Wizard Overlay */}
+      {/* Profile Wizard */}
       <WizardOptionModal />
 
-      {/* Top 5 Role Discovery & Reskilling Selection Overlay */}
+      {/* Role Selection */}
       <RoleSelectorModal />
     </>
   );

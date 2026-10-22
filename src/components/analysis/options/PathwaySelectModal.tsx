@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import Logo from "@/components/Logo";
 
-// --- Assessment Pathway Selector ---
+// --- Pathway Selection Modal ---
 // Route the authenticated user to resume extraction or the manual profile wizard.
 export default function PathwaySelectModal() {
   const t = useTranslations("home.plan");
@@ -14,6 +14,7 @@ export default function PathwaySelectModal() {
 
   const isOpen = activeModal === "pathway_select";
 
+  // --- Modal Lifecycle ---
   // Close the selector on Escape.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,23 +28,24 @@ export default function PathwaySelectModal() {
 
   if (!isOpen) return null;
 
+  // --- UI ---
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeModals();
       }}
     >
-      {/* Modal Container */}
+      {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-3xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up"
+        className="relative w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] animate-fade-in-up"
       >
-        {/* Top Controls: Brand & Close */}
+        {/* Header Controls */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6">
-          {/* Brand Logo & Name (Top-Left) */}
+          {/* Brand */}
           <Logo showBeta size="sm" />
 
           <button
@@ -58,7 +60,7 @@ export default function PathwaySelectModal() {
           </button>
         </div>
 
-        {/* Header Title & Subtitle */}
+        {/* Modal Heading */}
         <div className="text-center mb-8">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mb-2">
             {t("title")}
@@ -68,22 +70,22 @@ export default function PathwaySelectModal() {
           </p>
         </div>
 
-        {/* Pathway Dual Options Grid */}
+        {/* Assessment Pathways */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {/* Pathway Option 1 Column */}
+          {/* Resume Upload Pathway */}
           <div
             onClick={() => openUploadOption()}
             className="group flex flex-col cursor-pointer"
           >
-            {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
+            {/* Pathway Label */}
             <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted group-hover:text-accent transition-colors duration-200 mb-2 pl-0.5 block">
               {t("option_1_tag")}
             </span>
 
-            {/* Option 1: CV Upload Card Box */}
+            {/* Upload Option */}
             <div className="relative flex-1 rounded-xl border border-border-subtle group-hover:border-accent bg-bg-secondary/40 group-hover:bg-bg-secondary/70 p-6 flex flex-col justify-between transition-all duration-300 group-hover:shadow-[0_0_30px_var(--accent-glow)]">
               <div>
-                {/* Icon Row */}
+                {/* Upload Icon */}
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,20 +109,20 @@ export default function PathwaySelectModal() {
             </div>
           </div>
 
-          {/* Pathway Option 2 Column */}
+          {/* Profile Wizard Pathway */}
           <div
             onClick={() => openWizardOption()}
             className="group flex flex-col cursor-pointer"
           >
-            {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
+            {/* Pathway Label */}
             <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted group-hover:text-accent transition-colors duration-200 mb-2 pl-0.5 block">
               {t("option_2_tag")}
             </span>
 
-            {/* Option 2: Wizard Card Box */}
+            {/* Wizard Option */}
             <div className="relative flex-1 rounded-xl border border-border-subtle group-hover:border-accent bg-bg-secondary/40 group-hover:bg-bg-secondary/70 p-6 flex flex-col justify-between transition-all duration-300 group-hover:shadow-[0_0_30px_var(--accent-glow)]">
               <div>
-                {/* Icon Row */}
+                {/* Wizard Icon */}
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-bg-card border border-border-subtle flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

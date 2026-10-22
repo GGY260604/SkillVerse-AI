@@ -429,7 +429,7 @@ export default function AuthModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeAuthModal();
       }}
@@ -437,7 +437,7 @@ export default function AuthModal() {
       {/* Modal Container */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-md bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
+        className="relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)]"
       >
         {/* Subtle Ambient Radial Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-36 pointer-events-none" />

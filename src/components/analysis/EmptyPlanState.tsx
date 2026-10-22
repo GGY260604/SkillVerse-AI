@@ -3,25 +3,25 @@
 import { useTranslations } from "next-intl";
 import { usePlanModal } from "@/context/analysis/PlanModalContext";
 
-// --- Empty Roadmap State ---
-// Offer the authenticated user a path to start a new assessment when no roadmap exists.
+// --- Empty Plan State ---
+// Prompt the user to create a plan when no roadmap is available.
 export default function EmptyPlanState() {
   const t = useTranslations("analysis.empty");
   const { openPathwaySelect } = usePlanModal();
 
+  // --- UI ---
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] py-16 px-4 text-center">
-      {/* Main Empty State Heading */}
+      {/* Empty State Content */}
       <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2">
         {t("title")}
       </h2>
 
-      {/* Subtitle Description */}
       <p className="text-xs sm:text-sm text-text-secondary max-w-md mx-auto leading-relaxed mb-8">
         {t("desc")}
       </p>
 
-      {/* Action Button: Add New Plan */}
+      {/* Start Plan Button */}
       <button
         type="button"
         onClick={() => openPathwaySelect()}
