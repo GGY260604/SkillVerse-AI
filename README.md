@@ -1,38 +1,31 @@
-> [!IMPORTANT]
-> ## 📁 Submission Documents & Templates
-> **All required submission templates are in the Google Drive folder below. Download them before you start.**
->
-> ### 👉 [**OPEN THE GOOGLE DRIVE FOLDER**](https://drive.google.com/drive/folders/1xw7c2aN8N-at8hPEULzkcU76e_FFb0Ef) 👈
+# SkillVerse AI
 
----
-
-# Project Name
-
-> A one-sentence description of what your project does and who it is for.
+> An intelligent workforce navigation and reskilling platform that forecasts skill trajectories, matches individuals to future-ready roles, and synthesizes personalized roadmaps aligned with UN Sustainable Development Goals.
 
 ---
 
 ## Team Information
 
-| Field                  | Details                                     |
-| ---------------------- | ------------------------------------------- |
-| **Team Name**          | Your Team Name                              |
-| **Team Domain**        | Domain 1 / Domain 2 *(choose one)*          |
-| **SDG Track (1–17)**   | e.g. SDG 11 — Sustainable Cities and Communities |
-| **Team Leader**        | Leader Name                                 |
-| **University**         | University Name(s)                          |
-| **Number of Members**  | e.g. 4                                      |
+| Field                  | Details                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Team Name**          | I Love You 3000                                                    |
+| **Team Domain**        | Domain 1                                                           |
+| **SDG Track (1–17)**   | SDG 4 — Quality Education (Supporting SDG 5, SDG 8, SDG 9, SDG 10) |
+| **Team Leader**        | GUI GUANYU                                                         |
+| **University**         | UNIVERSITI TEKNOLOGI MALAYSIA (UTM)                                |
+| **Number of Members**  | 2                                                                  |
 
 ## Links
 
-| Resource          | Link                                           |
-| ----------------- | ---------------------------------------------- |
-| GitHub Repository | https://github.com/your-username/your-project  |
-| Replit Project    | https://replit.com/@your-username/your-project |
-| Live Demo         | https://your-project.replit.app                |
-| RunPod Endpoint   | https://api.runpod.ai/v2/your-endpoint-id      |
-| Slide Deck        | https://example.com/slides                     |
-| Demo Video        | https://example.com/demo-video                 |
+| Resource          | Link                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| GitHub Repository | https://github.com/njwongzhe/SkillVerse-AI                        |
+| Replit Project    | https://replit.com/@ngjaawei/SDC-HACKATHON-2026                   |
+| Live Demo         | https://www.skillverse-ai.site/                                   |
+|                   | https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/ |
+| RunPod Endpoint   |                                                                   |
+| Slide Deck        |                                                                   |
+| Demo Video        |                                                                   |
 
 ---
 
@@ -54,13 +47,13 @@ Explain how your project uses AI to solve the problem and what makes it valuable
 
 ### Tech Stack
 
-| Layer         | Technology                   |
-| ------------- | ---------------------------- |
-| Frontend      | e.g. HTML, React             |
-| Backend       | e.g. Python, Flask / FastAPI |
-| Database      | e.g. PostgreSQL, SQLite      |
-| AI / Compute  | RunPod (GPU)                 |
-| Hosting / Dev | Replit                       |
+| Layer         | Technology                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| Frontend      | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4                                        |
+| Backend       | Next.js Route Handlers, Python (FastAPI microservice in `src/fastapi`)                               |
+| Database      | Supabase (PostgreSQL 15 + `pgvector`), Prisma ORM                                                    |
+| AI / Compute  | Google Gemini 1.5 Flash (OCR & Multimodal Synthesis), RunPod / Render (GPU with `bge-m3` Embeddings) |
+| Hosting / Dev | Vercel, Replit, VSCode, Antigravity                                                                  |
 
 ---
 
@@ -92,9 +85,11 @@ Explain how your project uses AI to solve the problem and what makes it valuable
 ### Architecture
 
 ```
-User ──► Replit (App / API) ──► RunPod Endpoint (GPU model)
-                │
-                └──► Response returned to user
+User ──► Replit / Vercel Web App (Next.js 16 App & Route Handlers)
+                 │
+                 ├──► Supabase (PostgreSQL + pgvector & Prisma ORM)
+                 ├──► RunPod Endpoint (FastAPI + BAAI/bge-m3 GPU Inference + Google Gemini API (OCR & Pathway Synthesis))
+                 └──► Render Endpoint (FastAPI + BAAI/bge-m3 GPU Inference + Google Gemini API (OCR & Pathway Synthesis))
 ```
 
 ---
@@ -181,17 +176,16 @@ curl -X POST https://api.runpod.ai/v2/$RUNPOD_ENDPOINT_ID/runsync \
 
 ## Team
 
-| Name        | Role                | GitHub                                   |
-| ----------- | ------------------- | ---------------------------------------- |
-| Member Name | Team Lead / Backend | [@username](https://github.com/username) |
-| Member Name | Frontend            | [@username](https://github.com/username) |
-| Member Name | AI / RunPod         | [@username](https://github.com/username) |
+| Name        | Role                | GitHub                                     |
+| ----------- | ------------------- | ------------------------------------------ |
+| GUI GUANYU  | Team Lead / Backend | [@GGY260604](https://github.com/GGY260604) |
+| NG JAA WEI  | Frontend            | [@njwongzhe](https://github.com/njwongzhe) |
 
 ---
 
 ## Submission Checklist
 
-- [ ] Team name, domain (Domain 1 / Domain 2) and SDG track filled in
+- [/] Team name, domain (Domain 1 / Domain 2) and SDG track filled in
 - [ ] Slide deck link added
 - [ ] Demo video link added
 - [ ] Replit used, with proof of use in `submission/`
