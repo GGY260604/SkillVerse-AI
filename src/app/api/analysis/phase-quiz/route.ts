@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFastApiConfig } from "@/lib/fastapi/client";
+import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { phaseIndex = 1, phaseTitle = "Core Competency", skills = [], courseTopic, targetRole, locale = "en" } = body;
+
+    // If constant is true, return the rich mock quiz directly
+    if (USE_QUIZ_MOCK_DATA) {
+      const mock = getMockQuizData({
+        phaseIndex: Number(phaseIndex) || 1,
+        phaseTitle,
+        locale,
+      });
+      return NextResponse.json(mock);
+    }
 
     const fastApiConfig = getFastApiConfig();
     const endpoint = `${fastApiConfig.baseUrl}/api/v1/quiz/generate`;
@@ -31,33 +42,13 @@ export async function POST(req: NextRequest) {
       console.warn("[phase-quiz] Failed to reach FastAPI endpoint, serving deterministic fallback:", apiErr);
     }
 
-    // Local deterministic fallback
-    const expBase = phaseIndex === 1 ? 35 : phaseIndex === 2 ? 65 : 85;
-    const expReward = Math.max(5, Math.min(100, Math.round(expBase / 5) * 5));
-
-    const skillName = skills[0] || phaseTitle;
-    const questions = Array.from({ length: 10 }).map((_, idx) => ({
-      id: idx + 1,
-      question: `In a production deployment implementing ${skillName}, what is the verified best practice for scenario #${idx + 1}?`,
-      options: [
-        `Apply automated validation and structured error handling for ${skillName}`,
-        "Rely on unmonitored manual operational routines",
-        "Bypass testing protocols and documentation",
-        "Disable telemetry logging across pipeline nodes",
-      ],
-      correctIndex: 0,
-      explanation: `Automated validation and structured error handling in ${skillName} ensures resilient execution and enterprise-grade reliability.`,
-    }));
-
-    return NextResponse.json({
-      phaseIndex,
+    // Local deterministic fallback using mock quiz data
+    const fallbackQuiz = getMockQuizData({
+      phaseIndex: Number(phaseIndex) || 1,
       phaseTitle,
-      expReward,
-      expDifficultyTier: `Phase ${phaseIndex} Mastery (${expReward} EXP)`,
-      evaluationReason: `Cognitive audit for ${skillName} evaluated at ${expReward} EXP.`,
-      passingScore: 10,
-      questions,
+      locale,
     });
+    return NextResponse.json(fallbackQuiz);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

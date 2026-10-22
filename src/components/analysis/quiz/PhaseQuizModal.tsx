@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useLocale } from "next-intl";
+import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
 
 export interface QuizQuestion {
   id: number;
@@ -56,7 +57,7 @@ export default function PhaseQuizModal({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
 
-  // Fetch quiz when modal opens
+  // Fetch quiz when modal opens (or load Next.js mock data if USE_QUIZ_MOCK_DATA is true)
   useEffect(() => {
     if (!isOpen) {
       setQuizData(null);
@@ -64,6 +65,19 @@ export default function PhaseQuizModal({
       setCurrentQIndex(0);
       setIsSubmitted(false);
       setScore(0);
+      setError(null);
+      return;
+    }
+
+    // When constant USE_QUIZ_MOCK_DATA is true, load local mock data directly without calling backend API
+    if (USE_QUIZ_MOCK_DATA) {
+      const mock = getMockQuizData({
+        phaseIndex,
+        phaseTitle,
+        locale,
+      });
+      setQuizData(mock);
+      setIsLoading(false);
       setError(null);
       return;
     }

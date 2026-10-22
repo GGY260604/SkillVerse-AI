@@ -66,24 +66,31 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
 
     setTotalExp(resolvedExp);
 
-    // Fetch latest authoritative EXP from database for authenticated users
+    // Fetch latest authoritative EXP and level from database for authenticated users
     if (isLoggedIn && user?.id) {
-      fetch("/api/user/exp")
+      fetch("/api/user/exp", { cache: "no-store" })
         .then((r) => r.json())
         .then((data) => {
-          if (data && typeof data.totalExp === "number") {
-            setTotalExp((prev) => {
-              const maxVal = Math.max(prev, data.totalExp);
-              try {
-                localStorage.setItem(storageKey, maxVal.toString());
-              } catch {
-                // Ignore
+          if (data && (typeof data.totalExp === "number" || typeof data.level === "number")) {
+            let authoritativeExp = typeof data.totalExp === "number" ? data.totalExp : 0;
+            // If database has a specific level specified that is higher than exp implies, align exp to match
+            if (typeof data.level === "number" && data.level > 1) {
+              const minExpForLevel = (data.level - 1) * 100;
+              if (authoritativeExp < minExpForLevel) {
+                authoritativeExp = minExpForLevel;
               }
-              return maxVal;
-            });
+            }
+            setTotalExp(authoritativeExp);
+            try {
+              localStorage.setItem(storageKey, authoritativeExp.toString());
+            } catch {
+              // Ignore
+            }
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.warn("[UserLevelContext] Failed to fetch exp from server:", err);
+        });
     }
   }, [storageKey, user, isLoggedIn]);
 
