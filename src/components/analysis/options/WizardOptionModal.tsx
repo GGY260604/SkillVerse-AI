@@ -46,21 +46,22 @@ export default function WizardOptionModal() {
   const { activeModal, openPathwaySelect, openRoleSelect, closeModals, targetUserId, targetUserName } =
     usePlanModal();
 
-  // Multi-step index: 1 (Baseline), 2 (Skills & Toolchain), 3 (Future Aspirations), 4 (Learning Logistics)
+  // --- Wizard State ---
+  // Active step in the four-step profile wizard.
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Step 1: Baseline (Empty default unless autofilled)
+  // Step 1: Professional baseline
   const [employmentStatus, setEmploymentStatus] = useState<string>("");
   const [currentJobTitle, setCurrentJobTitle] = useState<string>("");
   const [industry, setIndustry] = useState<string>("");
   const [educationLevel, setEducationLevel] = useState<string>("");
   const [yearsOfExperience, setYearsOfExperience] = useState<string>("");
 
-  // Step 2: Skills & Competencies (Empty default unless autofilled)
+  // Step 2: Skills and tools
   const [skills, setSkills] = useState<UserSkillItem[]>([]);
   const [newSkillName, setNewSkillName] = useState("");
   const [toolsAndSoftware, setToolsAndSoftware] = useState<string[]>([]);
@@ -69,13 +70,13 @@ export default function WizardOptionModal() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [newLanguageName, setNewLanguageName] = useState("");
 
-  // Step 3: Future Aspirations (Empty default unless autofilled)
+  // Step 3: Career goals
   const [careerGoal, setCareerGoal] = useState<string>("");
   const [targetJobTitle, setTargetJobTitle] = useState<string>("");
   const [targetSectors, setTargetSectors] = useState<string[]>([]);
   const [workArrangement, setWorkArrangement] = useState<string>("");
 
-  // Step 4: Learning Logistics (Empty default unless autofilled)
+  // Step 4: Learning preferences
   const [weeklyCommitmentHours, setWeeklyCommitmentHours] = useState<string>("");
   const [learningProviders, setLearningProviders] = useState<string[]>([]);
 
@@ -107,7 +108,7 @@ export default function WizardOptionModal() {
     if (profile.educationLevel) setEducationLevel(profile.educationLevel);
     if (profile.yearsOfExperience) setYearsOfExperience(profile.yearsOfExperience);
 
-    // Normalize skills
+    // Normalize skill entries to the form's item shape.
     if (Array.isArray(profile.skills) && profile.skills.length > 0) {
       const normalizedSkills: UserSkillItem[] = profile.skills.map((s: any, idx: number) => {
         if (typeof s === "string") {
@@ -132,7 +133,7 @@ export default function WizardOptionModal() {
     if (Array.isArray(profile.languages) && profile.languages.length > 0) {
       setLanguages(profile.languages);
     } else {
-      // Only default to current selected language when profile in DB has no languages
+      // Default to the active locale only when no languages are saved.
       setLanguages([getDefaultLanguageForLocale(locale)]);
     }
 
@@ -149,8 +150,8 @@ export default function WizardOptionModal() {
     }
   }, [locale]);
 
-  // 1. On open, fetch the latest profile from /api/profile (including a selected target user
-  //    in shared-plan flows) and prefill the form; the API is the source of truth.
+  // --- Profile Loading ---
+  // Load the saved profile and prefill the form when the wizard opens.
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
@@ -204,7 +205,7 @@ export default function WizardOptionModal() {
     };
   }, [isOpen, targetUserId, locale, applyProfileToForm, tw]);
 
-  // Handle Escape key to dismiss modal
+  // Close the wizard on Escape.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen && !isSubmitting) {
@@ -215,7 +216,8 @@ export default function WizardOptionModal() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isSubmitting, closeModals]);
 
-  // Skills handlers
+  // --- Field Handlers ---
+  // Manage skills.
   const handleAddSkill = (e: React.KeyboardEvent | React.MouseEvent) => {
     if ("key" in e && e.key !== "Enter") return;
     e.preventDefault();
@@ -246,7 +248,7 @@ export default function WizardOptionModal() {
     setSkills(skills.map((s) => (s.id === id ? { ...s, proficiency } : s)));
   };
 
-  // Tools handlers
+  // Manage tools and software.
   const handleAddTool = (e: React.KeyboardEvent | React.MouseEvent) => {
     if ("key" in e && e.key !== "Enter") return;
     e.preventDefault();
@@ -262,7 +264,7 @@ export default function WizardOptionModal() {
     setToolsAndSoftware(toolsAndSoftware.filter((t) => t !== toolToRemove));
   };
 
-  // Target sectors toggle
+  // Toggle target sectors.
   const toggleSector = (sector: string) => {
     setErrorMessage(null);
     if (targetSectors.includes(sector)) {
@@ -272,7 +274,7 @@ export default function WizardOptionModal() {
     }
   };
 
-  // Learning providers toggle
+  // Toggle learning providers.
   const toggleProvider = (provider: string) => {
     setErrorMessage(null);
     if (learningProviders.includes(provider)) {
@@ -282,7 +284,7 @@ export default function WizardOptionModal() {
     }
   };
 
-  // Language handlers (Manual entry just like Skills & Tools)
+  // Manage spoken languages.
   const handleAddLanguage = (e: React.KeyboardEvent | React.MouseEvent) => {
     if ("key" in e && e.key !== "Enter") return;
     e.preventDefault();
@@ -298,7 +300,8 @@ export default function WizardOptionModal() {
     setLanguages(languages.filter((l) => l !== langToRemove));
   };
 
-  // Step completion status checkers
+  // --- Step Validation & Navigation ---
+  // Validate the required fields for each step.
   const isStep1Complete = Boolean(
     employmentStatus &&
     currentJobTitle.trim() &&
@@ -325,7 +328,7 @@ export default function WizardOptionModal() {
     learningProviders.length > 0
   );
 
-  // Step transition handlers (User is permitted to navigate freely between pages even if incomplete)
+  // Navigate between wizard steps.
   const handleNextStep = () => {
     setErrorMessage(null);
     setCurrentStep((prev) => Math.min(prev + 1, 4));
@@ -337,8 +340,7 @@ export default function WizardOptionModal() {
   };
 
   // --- Form Submission ---
-  // 2. Validate every required step, then persist the normalized form through /api/profile.
-  // 3. Only after a successful save, hand the same profile to RoleSelectorModal for matching.
+  // Validate and save the profile before starting role matching.
   const handleFinalSubmit = async () => {
     if (!isStep1Complete) {
       setCurrentStep(1);
@@ -424,21 +426,22 @@ export default function WizardOptionModal() {
 
   if (!isOpen) return null;
 
+  // --- UI ---
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSubmitting) closeModals();
       }}
     >
-      {/* Modal Container: Matches Option 1 (UploadOptionModal) */}
+      {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] min-h-0 bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up flex flex-col"
       >
-        {/* Top Controls: Back, Brand & Close (Identical to Option 1) */}
+        {/* Header Controls */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6 shrink-0">
           <div className="flex items-center gap-2.5">
             <button
@@ -481,7 +484,7 @@ export default function WizardOptionModal() {
           </div>
         ) : (
           <>
-            {/* Brand & Header Title (Matches Option 1 Title/Subtitle Pattern) */}
+            {/* Modal Heading */}
             <div className="mb-6 shrink-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="text-lg font-bold text-text-primary tracking-tight">
@@ -498,21 +501,19 @@ export default function WizardOptionModal() {
           </p>
         </div>
 
-        {/* Error Notice: Plain red text, no background, no border */}
+        {/* Form Error */}
         {errorMessage && (
           <p className="mb-4 text-xs text-rose-400 font-mono animate-fade-in shrink-0">
             {errorMessage}
           </p>
         )}
 
-        {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto pr-1.5 space-y-4">
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* STEP 1: Professional Baseline (1/4) */}
-          {/* ══════════════════════════════════════════════════════════ */}
+        {/* Wizard Steps */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1.5 space-y-4">
+          {/* --- Step 1: Professional Baseline --- */}
           {currentStep === 1 && (
             <div className="space-y-4 animate-fade-in">
-              {/* Box 1: Employment Status */}
+              {/* Employment Status */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("employment_status")}{" "}
@@ -558,7 +559,7 @@ export default function WizardOptionModal() {
                 </div>
               </div>
 
-              {/* Box 2: Current Job Title */}
+              {/* Current Job Title */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("current_job_title")}{" "}
@@ -576,7 +577,7 @@ export default function WizardOptionModal() {
                 />
               </div>
 
-              {/* Box 3: Industry & Experience Grid */}
+              {/* Industry and Experience */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                   <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -637,7 +638,7 @@ export default function WizardOptionModal() {
                 </div>
               </div>
 
-              {/* Box 4: Education Level */}
+              {/* Education Level */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("highest_qualification")}{" "}
@@ -669,12 +670,10 @@ export default function WizardOptionModal() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* STEP 2: Skills & Toolchain (2/4) */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* --- Step 2: Skills & Toolchain --- */}
           {currentStep === 2 && (
             <div className="space-y-4 animate-fade-in">
-              {/* Box 1: Skills Inventory */}
+              {/* Skills */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -705,7 +704,7 @@ export default function WizardOptionModal() {
                   </button>
                 </div>
 
-                {/* Free-flowing Blue-outlined Skills Chips (Rendered only when items exist) */}
+                {/* Selected Skills */}
                 {skills.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {skills.map((skill) => (
@@ -749,7 +748,7 @@ export default function WizardOptionModal() {
                 )}
               </div>
 
-              {/* Box 2: Tools & Software */}
+              {/* Tools and Software */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -780,7 +779,7 @@ export default function WizardOptionModal() {
                   </button>
                 </div>
 
-                {/* Free-flowing Blue-outlined Tools Chips (Rendered only when items exist) */}
+                {/* Selected Tools */}
                 {toolsAndSoftware.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {toolsAndSoftware.map((tool) => (
@@ -803,7 +802,7 @@ export default function WizardOptionModal() {
                 )}
               </div>
 
-              {/* Box 3: Languages Spoken / Written */}
+              {/* Languages */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -834,7 +833,7 @@ export default function WizardOptionModal() {
                   </button>
                 </div>
 
-                {/* Free-flowing Blue-outlined Languages Chips */}
+                {/* Selected Languages */}
                 {languages.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {languages.map((lang) => (
@@ -857,7 +856,7 @@ export default function WizardOptionModal() {
                 )}
               </div>
 
-              {/* Box 4: Casual Daily Work Description (Optional) */}
+              {/* Work Description */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -878,12 +877,10 @@ export default function WizardOptionModal() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* STEP 3: Future Aspirations (3/4) */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* --- Step 3: Future Aspirations --- */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-fade-in">
-              {/* Box 1: Career Goal Objective */}
+              {/* Career Goal */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("transformation_objective")}{" "}
@@ -929,7 +926,7 @@ export default function WizardOptionModal() {
                 </div>
               </div>
 
-              {/* Box 2: Target Job Title */}
+              {/* Target Job Title */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("target_job_title")}{" "}
@@ -947,7 +944,7 @@ export default function WizardOptionModal() {
                 />
               </div>
 
-              {/* Box 3: Target Growth Sectors */}
+              {/* Target Sectors */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -977,7 +974,7 @@ export default function WizardOptionModal() {
                       </button>
                     );
                   })}
-                  {/* Any custom sectors that were preserved from CV or DB */}
+                  {/* Custom Sectors */}
                   {targetSectors
                     .filter((s) => !TARGET_SECTORS_DATA.some((def) => def.id === s))
                     .map((customSector) => (
@@ -994,7 +991,7 @@ export default function WizardOptionModal() {
                 </div>
               </div>
 
-              {/* Box 4: Work Arrangement Preference */}
+              {/* Work Arrangement */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("work_arrangement")}{" "}
@@ -1027,12 +1024,10 @@ export default function WizardOptionModal() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* STEP 4: Learning Logistics (4/4) */}
-          {/* ══════════════════════════════════════════════════════════ */}
+          {/* --- Step 4: Learning Logistics --- */}
           {currentStep === 4 && (
             <div className="space-y-4 animate-fade-in">
-              {/* Box 1: Weekly Commitment Hours */}
+              {/* Weekly Commitment */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
                   {tw("weekly_learning_commitment")}{" "}
@@ -1070,7 +1065,7 @@ export default function WizardOptionModal() {
                 </div>
               </div>
 
-              {/* Box 2: Learning Resource Providers */}
+              {/* Learning Providers */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
@@ -1115,7 +1110,7 @@ export default function WizardOptionModal() {
           )}
         </div>
 
-            {/* Step Navigation Controls Footer: Matches Option 1 Footer */}
+            {/* Step Navigation */}
             <div className="flex items-center justify-between pt-6 border-t border-border-subtle mt-6 shrink-0">
               <div className="flex-1 flex justify-start">
                 {currentStep > 1 ? (
@@ -1131,7 +1126,7 @@ export default function WizardOptionModal() {
                 ) : null}
               </div>
 
-              {/* Centered Step Progress Indicator: Clean Light Grey Plain Text (1/4 -> 2/4 -> 3/4 -> 4/4) */}
+              {/* Step Progress */}
               <div className="font-mono text-xs text-text-muted select-none tracking-wider">
                 <span>{currentStep}/4</span>
               </div>

@@ -58,10 +58,10 @@ export default function ExistPlanState({
     setActiveHistoryPlans(historyPlans);
   }, [historyPlans]);
 
-  // Track selected-plan navigation and history expansion in this view.
+  // Track the selected roadmap shown in detail mode.
   const [selectedPlan, setSelectedPlan] = useState<PlanData | null>(null);
 
-  // State for collapsing / expanding multiple historical cards.
+  // Control how many archived roadmaps are visible.
   const [showAllHistory, setShowAllHistory] = useState<boolean>(false);
 
   // --- Phase Progress ---
@@ -98,16 +98,17 @@ export default function ExistPlanState({
       })
     );
 
-    // Call external handler if provided
+    // Notify the parent when a phase changes.
     onPhaseToggle?.(phaseId, isCompleted);
   };
 
+  // --- UI ---
   return (
     <div className="w-full flex-1">
-      {/* Page Header Bar with Conditional Edit Plan Button and Return Button */}
+      {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-8 sm:mb-10">
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Back button: returns to plan overview if in detail mode, or returns to shared users list if in shared overview mode */}
+          {/* Back Navigation */}
           {selectedPlan ? (
             <button
               type="button"
@@ -154,13 +155,13 @@ export default function ExistPlanState({
             </button>
           ) : null}
 
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
               {isSharedView && sharedUser
                 ? t("shared_title", { name: sharedUser.name })
                 : t("title")}
             </h1>
-            <p className="text-xs sm:text-sm text-text-secondary mt-1">
+            <p className="break-words text-xs sm:text-sm text-text-secondary mt-1">
               {isSharedView && sharedUser
                 ? t("shared_subtitle", {
                     name: sharedUser.name,
@@ -172,12 +173,11 @@ export default function ExistPlanState({
           </div>
         </div>
 
-        {/* Header Actions: Share Plan and Edit Plan Buttons */}
-        {/* Share button is NEVER rendered on shared view. */}
+        {/* Plan Actions */}
         {(!selectedPlan || selectedPlan.isCurrent) &&
           (selectedPlan || activeCurrentPlan) && (
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Share Plan Action Button - Strictly hidden in all shared views */}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">
+            {/* Share Plan */}
             {!isSharedView && (
               <button
                 type="button"
@@ -189,8 +189,9 @@ export default function ExistPlanState({
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
                 title={t("share_plan")}
+                aria-label={t("share_plan")}
               >
-                {/* Share Node Network SVG Icon */}
+                {/* Share Icon */}
                 <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -199,11 +200,11 @@ export default function ExistPlanState({
                     d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
                   />
                 </svg>
-                <span>{t("share_plan")}</span>
+                <span className="hidden sm:inline">{t("share_plan")}</span>
               </button>
             )}
 
-            {/* Edit Plan Action Button */}
+            {/* Edit Plan */}
             {canEdit ? (
               <button
                 type="button"
@@ -219,8 +220,9 @@ export default function ExistPlanState({
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
                 title={t("edit_plan")}
+                aria-label={t("edit_plan")}
               >
-                {/* Pencil SVG Icon */}
+                {/* Edit Icon */}
                 <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -229,7 +231,7 @@ export default function ExistPlanState({
                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                   />
                 </svg>
-                <span>{t("edit_plan")}</span>
+                <span className="hidden sm:inline">{t("edit_plan")}</span>
               </button>
             ) : (
               <button
@@ -237,8 +239,9 @@ export default function ExistPlanState({
                 disabled
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-muted bg-bg-card/50 border border-border-subtle rounded-xl shadow-sm opacity-60 cursor-not-allowed select-none"
                 title={t("viewable_only")}
+                aria-label={t("viewable_only")}
               >
-                {/* Lock SVG Icon */}
+                {/* Read-Only Icon */}
                 <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -247,16 +250,16 @@ export default function ExistPlanState({
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                <span>{t("viewable_only")}</span>
+                <span className="hidden sm:inline">{t("viewable_only")}</span>
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* Main Analysis Body Content */}
+      {/* Plan Content */}
       {selectedPlan ? (
-        /* Detailed View Mode: Display only the selected plan's comprehensive details */
+        /* Selected plan detail */
         <PlanDetailView
           key={selectedPlan.id}
           plan={selectedPlan}
@@ -266,9 +269,9 @@ export default function ExistPlanState({
           onPhaseToggle={handleInternalPhaseToggle}
         />
       ) : (
-        /* Overview Mode: Display Current Plan and History Plan Cards */
+        /* Current plan and history overview */
         <div className="flex flex-col gap-10">
-          {/* Section 1: Current Plan (Most Prominent) */}
+          {/* Current Plan */}
           {activeCurrentPlan && (
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -286,7 +289,7 @@ export default function ExistPlanState({
           </section>
           )}
 
-          {/* Section 2: History Plan (Subdued Muted Gray) */}
+          {/* Plan History */}
           {activeHistoryPlans.length > 0 && (
             <section>
               <div className="flex items-center justify-between mb-4">
@@ -299,7 +302,7 @@ export default function ExistPlanState({
                 </span>
               </div>
 
-              {/* History Cards List: Only first card shown by default if more than 1 */}
+              {/* History Cards */}
               <div className="flex flex-col gap-4">
                 {(showAllHistory ? activeHistoryPlans : activeHistoryPlans.slice(0, 1)).map(
                   (historyPlan) => (
@@ -312,7 +315,7 @@ export default function ExistPlanState({
                   )
                 )}
 
-                {/* View More / Collapse Toggle Button */}
+                {/* Expand or Collapse History */}
                 {historyPlans.length > 1 && (
                   <div className="flex justify-center pt-2">
                     <button

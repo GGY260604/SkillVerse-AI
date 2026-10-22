@@ -126,7 +126,17 @@ export default function RoleSelectorModal() {
     if (!isOpen || !activeProfile) return;
 
     let isCancelled = false;
+    let isShowingFallbackMessage = false;
     const requestController = new AbortController();
+    const slowMatchingTimer = window.setTimeout(() => {
+      if (isCancelled) return;
+
+      isShowingFallbackMessage = true;
+      setLoadingTitle(t("matching_fallback_title"));
+      setLoadingSubtitle(t("matching_fallback_description"));
+      setProgressPercent((current) => Math.min(50, Math.max(current, 25)));
+    }, 20_000);
+
     setErrorMessage(null);
     setTopRoles([]);
     setSelectedRoleId(null);
@@ -152,31 +162,40 @@ export default function RoleSelectorModal() {
           (evt) => {
             if (isCancelled) return;
 
-            // Map stream phases (1 to 4) smoothly across 15% -> 50%
+            // Map stream progress to the matching phase range.
             if (evt.percent) {
               const mappedPercent = Math.min(
                 50,
                 Math.max(15, Math.round(evt.percent * 0.5))
               );
-              setProgressPercent(mappedPercent);
+              setProgressPercent((current) =>
+                Math.max(
+                  current,
+                  mappedPercent,
+                  isShowingFallbackMessage ? 25 : 15
+                )
+              );
             }
 
-            if (evt.phase === 1) {
-              setLoadingTitle(t("matching_phase_1_title"));
-              setLoadingSubtitle(t("matching_phase_1_description"));
-            } else if (evt.phase === 2) {
-              setLoadingTitle(t("matching_phase_2_title"));
-              setLoadingSubtitle(t("matching_phase_2_description"));
-            } else if (evt.phase === 3) {
-              setLoadingTitle(t("matching_phase_3_title"));
-              setLoadingSubtitle(t("matching_phase_3_description"));
-            } else if (evt.phase === 4 || evt.phase === 5) {
-              setLoadingTitle(t("matching_phase_4_title"));
-              setLoadingSubtitle(t("matching_phase_4_description"));
+            if (!isShowingFallbackMessage) {
+              if (evt.phase === 1) {
+                setLoadingTitle(t("matching_phase_1_title"));
+                setLoadingSubtitle(t("matching_phase_1_description"));
+              } else if (evt.phase === 2) {
+                setLoadingTitle(t("matching_phase_2_title"));
+                setLoadingSubtitle(t("matching_phase_2_description"));
+              } else if (evt.phase === 3) {
+                setLoadingTitle(t("matching_phase_3_title"));
+                setLoadingSubtitle(t("matching_phase_3_description"));
+              } else if (evt.phase === 4 || evt.phase === 5) {
+                setLoadingTitle(t("matching_phase_4_title"));
+                setLoadingSubtitle(t("matching_phase_4_description"));
+              }
             }
           },
           requestController.signal
         );
+        window.clearTimeout(slowMatchingTimer);
 
         if (!isCancelled && result && result.topRoles && result.topRoles.length > 0) {
           const scenarioKey = "moderate";
@@ -188,13 +207,14 @@ export default function RoleSelectorModal() {
           setSelectedRoleId(rolesForScenario[0]?.roleId || null);
           setAnalysisResult(result);
           setSelectedScenario("moderate");
-          // Keep progress bar at 50% for user action
+          // Pause progress while the user selects a role.
           setProgressPercent(50);
           setIsMatching(false);
         } else if (!isCancelled && (!result || !result.topRoles || result.topRoles.length === 0)) {
           throw new Error(t("no_matching_roles"));
         }
       } catch (err: unknown) {
+        window.clearTimeout(slowMatchingTimer);
         if (!isCancelled) {
           setIsMatching(false);
           console.error("[RoleSelectorModal] Matching error:", err);
@@ -218,11 +238,12 @@ export default function RoleSelectorModal() {
 
     return () => {
       isCancelled = true;
+      window.clearTimeout(slowMatchingTimer);
       requestController.abort();
     };
   }, [isOpen, activeProfile, locale, t]);
 
-  // Switch scenarios using the already returned result; no new matching request is needed.
+  // Switch scenarios using the existing matching result.
   const handleScenarioChange = (newScenario: MacroScenarioType) => {
     setSelectedScenario(newScenario);
     const result = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
@@ -253,7 +274,7 @@ export default function RoleSelectorModal() {
       setErrorMessage(null);
       setIsSynthesizing(true);
 
-      // Do NOT reset progress bar - continue from 50% up to 100%!
+      // Continue progress from role selection through synthesis.
       setProgressPercent(60);
       setLoadingTitle(t("synthesis_title"));
       setLoadingSubtitle(t("synthesis_description", { role: chosenRole.titleLocalized || chosenRole.title }));
@@ -270,19 +291,19 @@ export default function RoleSelectorModal() {
         radarData: analysisResult?.radarData,
       };
 
-      // Progress bar moves to 75%
+      // Show synthesis progress.
       setTimeout(() => {
         setProgressPercent((prev) => Math.max(prev, 75));
       }, 400);
 
       const resp = await synthesizeSelectedRoadmap(synthesizeReq);
 
-      // Synthesis completed, progress advances to 90%
+      // Mark synthesis as complete before saving the roadmap.
       setProgressPercent(90);
       setLoadingTitle(t("saving_title"));
       setLoadingSubtitle(t("saving_description"));
 
-      // Brief delay to let the user see the database persistence feedback
+      // Briefly show the database persistence feedback.
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       setProgressPercent(100);
@@ -291,13 +312,12 @@ export default function RoleSelectorModal() {
       const planData = convertAssessmentToPlanData(resp, chosenRole);
       saveActivePlan(planData);
 
-      // Dispatch refresh event immediately after DB save is confirmed so the page
-      // re-fetches guaranteed-fresh data before the modal animates out.
+      // Refresh roadmap data after the save succeeds.
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("roadmap-refresh"));
       }
 
-      // Close modal smoothly after a short cosmetic delay
+      // Close the modal after the success state is visible.
       setTimeout(() => {
         setIsSynthesizing(false);
         closeModals();
@@ -317,19 +337,19 @@ export default function RoleSelectorModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isMatchingView && !isSynthesizingView) {
           closeModals();
         }
       }}
     >
-      {/* Modal Container: Matches Option 1 & 2 */}
+      {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] min-h-0 bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up flex flex-col"
       >
-        {/* Top Controls: Back, Brand & Close */}
+        {/* Header Controls */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6 shrink-0">
           <div className="flex items-center gap-2.5">
             <button
@@ -361,9 +381,9 @@ export default function RoleSelectorModal() {
           </button>
         </div>
 
-        {/* Dynamic Body: Loading State VS Role Selection List */}
+        {/* Loading or Role Selection */}
         {isMatchingView || isSynthesizingView ? (
-          /* Loading Animation (Replaces modal body with persistent progress bar) */
+          /* Loading state */
           <div className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
             <LoadingSpinner
               title={loadingTitle}
@@ -375,7 +395,7 @@ export default function RoleSelectorModal() {
             />
           </div>
         ) : (
-          /* Role Selection View */
+          /* Role selection */
           <>
             {/* Header Title & Subtitle */}
             <div className="mb-5 shrink-0">
@@ -387,7 +407,7 @@ export default function RoleSelectorModal() {
               </p>
             </div>
 
-            {/* Macro Scenario Simulation Switcher */}
+            {/* Scenario Selector */}
             <div className="mb-4 shrink-0">
               <div className="flex items-center justify-between mb-1.5 px-0.5">
                 <span className="text-[11px] font-mono font-medium text-text-muted flex items-center gap-1.5">
@@ -425,15 +445,15 @@ export default function RoleSelectorModal() {
               </p>
             </div>
 
-            {/* Error Message: Plain red text, no background, no border */}
+            {/* Matching Error */}
             {errorMessage && (
               <p className="mb-3 text-xs text-rose-400 font-mono animate-fade-in shrink-0">
                 {errorMessage}
               </p>
             )}
 
-            {/* Scrollable Roles List */}
-            <div className="flex-1 overflow-y-auto pr-1.5 space-y-3">
+            {/* Matched Roles */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1.5 space-y-3">
               {rolesToDisplay.map((role, idx) => {
                 const isSelected = roleIdToDisplay === role.roleId;
                 const matchPct = Math.round(role.matchScore * 100);
@@ -457,9 +477,9 @@ export default function RoleSelectorModal() {
                         : "border-border-subtle bg-bg-secondary/30 hover:border-accent/60 hover:bg-bg-secondary/60"
                     }`}
                   >
-                    {/* Line 1: (Role) and (%Match) */}
+                    {/* Role and Match Score */}
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs sm:text-sm font-bold font-mono text-text-primary">
+                      <span className="min-w-0 break-words text-xs sm:text-sm font-bold font-mono text-text-primary">
                         {idx + 1}. {role.titleLocalized || role.title}
                       </span>
                       <span className="text-xs font-mono font-bold text-accent shrink-0">
@@ -467,7 +487,7 @@ export default function RoleSelectorModal() {
                       </span>
                     </div>
 
-                    {/* Line 2: (SDG) - Plain text, no emoji, no background, no border. Shows full name on hover */}
+                    {/* Sustainable Development Goals */}
                     {role.sdgAlignments && role.sdgAlignments.length > 0 && (
                       <div className="text-[11px] font-mono text-emerald-400 mt-1 flex flex-wrap gap-x-2">
                         {role.sdgAlignments.map((sdg, sIdx) => (
@@ -483,7 +503,7 @@ export default function RoleSelectorModal() {
                       </div>
                     )}
 
-                    {/* Line 3: (Reason) - Short, plain text */}
+                    {/* Match Rationale */}
                     <p className="text-[11px] sm:text-xs text-text-secondary mt-1.5 leading-snug">
                       {reason}
                     </p>
@@ -492,7 +512,7 @@ export default function RoleSelectorModal() {
               })}
             </div>
 
-            {/* Bottom Action Footer */}
+            {/* Role Selection Actions */}
             <div className="flex items-center justify-end pt-4 border-t border-border-subtle mt-4 shrink-0">
               <button
                 type="button"

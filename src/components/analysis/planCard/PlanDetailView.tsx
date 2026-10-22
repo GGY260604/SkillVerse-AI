@@ -49,7 +49,6 @@ function getLocalizedList(
 
 interface PhaseSdgInfo {
   goalCode: string;
-  title: string;
   explanation: string;
 }
 
@@ -65,6 +64,8 @@ export default function PlanDetailView({
 
   const isCurrent = plan.isCurrent;
   const { addExp } = useExpGain();
+
+  // --- SDG Helpers ---
   const getPhaseSdgDetails = (
     phase: PlanPhase,
     phaseIndex: number
@@ -78,7 +79,6 @@ export default function PlanDetailView({
       if (explanation) {
         return {
           goalCode: phase.sdgGoal || plan.sdgs?.[0] || "SDG 8.2",
-          title: phase.sdgTitle || tCurrent("sdg_alignment_title"),
           explanation,
         };
       }
@@ -105,7 +105,6 @@ export default function PlanDetailView({
           : phaseIndex === 2
             ? "SDG 9.4 & 8.2"
             : plan.sdgs?.[0] || "SDG 8.2",
-      title: tCurrent(titleKey),
       explanation: tCurrent(explanationKey, { phase: phaseTitle }),
     };
   };
@@ -115,11 +114,12 @@ export default function PlanDetailView({
   const [phases, setPhases] = useState<PlanPhase[]>(plan.phases || []);
   const [updatingPhaseId, setUpdatingPhaseId] = useState<string | null>(null);
 
-  // Active quiz phase modal
+  // --- Quiz State ---
+  // Phase currently shown in the quiz modal.
   const [activeQuizPhase, setActiveQuizPhase] = useState<PlanPhase | null>(null);
   const [activeQuizIndex, setActiveQuizIndex] = useState<number>(1);
 
-  // Track expanded SDG section for each phase
+  // Track which phase has its SDG details expanded.
   const [expandedSdgPhases, setExpandedSdgPhases] = useState<Record<string, boolean>>({});
 
   const toggleSdgExpand = (phaseKey: string) => {
@@ -174,24 +174,25 @@ export default function PlanDetailView({
     addExp(expReward, phaseTitle);
   };
 
-  // Metrics calculation
+  // --- Progress Metrics ---
   const completedCount = phases.filter((p) => p.isCompleted).length;
   const totalPhases = phases.length;
   const progressPercent = totalPhases > 0 ? Math.round((completedCount / totalPhases) * 100) : 0;
 
-  // Localized plan header values based directly on system locale
+  // Prepare localized plan header values.
   const localizedRoleTitle = getLocalized(plan.targetTitleLocalized, locale, plan.targetRole);
   const localizedPlanDesc = getLocalized(plan.descriptionLocalized, locale, plan.description);
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
 
+  // --- UI ---
   return (
     <div
       className={`animate-fade-in flex flex-col gap-10 w-full ${
         !isCurrent ? "grayscale opacity-85 select-none" : ""
       }`}
     >
-      {/* Historical Sealed Notice Banner */}
+      {/* Archived Roadmap Notice */}
       {!isCurrent && (
         <div className="rounded-2xl bg-bg-card border border-border-subtle p-5 flex items-start gap-3.5 shadow-sm">
           <div>
@@ -205,7 +206,7 @@ export default function PlanDetailView({
         </div>
       )}
 
-      {/* Main Strategic Roadmap Header Card (Identical structure to outer PlanCard, without blue border) */}
+      {/* Roadmap Summary */}
       <div
         className={`rounded-2xl p-6 sm:p-7 transition-all duration-300 border ${
           isCurrent
@@ -213,7 +214,7 @@ export default function PlanDetailView({
             : "bg-bg-secondary/40 border-border-subtle/70"
         }`}
       >
-        {/* Top Header Row: Roadmap ID on Left, Generation Date on Right */}
+        {/* Roadmap Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle mb-5">
           <span className="text-xs font-mono font-medium text-text-muted">
             {tCurrent("roadmap_id")}: <span className="text-text-secondary font-mono">{plan.id}</span>
@@ -224,7 +225,7 @@ export default function PlanDetailView({
           </span>
         </div>
 
-        {/* Primary Role Info & Match Metric Row */}
+        {/* Role Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
           <div className="lg:col-span-2">
             <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
@@ -239,7 +240,7 @@ export default function PlanDetailView({
               {localizedPlanDesc}
             </p>
 
-            {/* SDGs Chips (without "Aligned UN Goals:" label) */}
+            {/* Sustainable Development Goals */}
             {plan.sdgs && plan.sdgs.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {plan.sdgs.map((sdg) => (
@@ -254,7 +255,7 @@ export default function PlanDetailView({
             )}
           </div>
 
-          {/* Match Score Block (Identical styling inside & outside, total time placed inside) */}
+          {/* Match Score */}
           <div className="rounded-xl border border-border-subtle p-4 flex flex-col items-center text-center justify-center bg-bg-secondary/50">
             <span className="text-[10px] font-mono uppercase text-text-muted tracking-wider mb-0.5">
               {tCurrent("match_score")}
@@ -284,7 +285,7 @@ export default function PlanDetailView({
           </div>
         </div>
 
-        {/* Global Roadmap Progress Bar (No % in Progress text) */}
+        {/* Overall Progress */}
         <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-text-secondary">
@@ -300,10 +301,10 @@ export default function PlanDetailView({
         </div>
       </div>
 
-      {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
+      {/* Skill Summary */}
+      <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain py-2 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible">
         {/* Matched Strengths */}
-        <div>
+        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
           <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
               {tCurrent("matched_strengths")}
@@ -323,7 +324,7 @@ export default function PlanDetailView({
         </div>
 
         {/* Skills to Acquire */}
-        <div>
+        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
           <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
               {tCurrent("skills_gap")}
@@ -342,8 +343,8 @@ export default function PlanDetailView({
           </ul>
         </div>
 
-        {/* Automation Alerts */}
-        <div>
+        {/* At-Risk Skills */}
+        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
           <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
               {tCurrent("at_risk_skills")}
@@ -363,18 +364,18 @@ export default function PlanDetailView({
         </div>
       </div>
 
-      {/* Phased Curriculum Timeline (Structured Phase Cards with moderate framing and clear separation) */}
+      {/* Phase Curriculum */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="pb-6 mb-2">
           <h3 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">
             {tCurrent("roadmap_timeline")}
           </h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.
+            {tCurrent("roadmap_instructions")}
           </p>
         </div>
 
-        {/* List of Phases with moderate containers and clear visual emphasis */}
+        {/* Phase List */}
         <div className="flex flex-col gap-6">
           {phases.map((phase, idx) => {
             const phaseIndex = phase.phaseIndex || idx + 1;
@@ -392,9 +393,9 @@ export default function PlanDetailView({
                     : "bg-bg-card/70 border-border-subtle border-l-4 border-l-accent hover:border-border-subtle/80 shadow-xs"
                 }`}
               >
-                {/* Phase Header Row: Phase Tag, Title, Duration, and Completion Checkbox */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle/60">
-                  <div className="flex flex-wrap items-baseline gap-3">
+                {/* Phase Header */}
+                <div className="flex flex-col gap-3 pb-4 border-b border-border-subtle/60">
+                  <div className="flex flex-col items-start gap-2">
                     <span
                       className={`px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider ${
                         phase.isCompleted
@@ -404,57 +405,58 @@ export default function PlanDetailView({
                     >
                       {tCurrent("phase_label", { phase: phaseIndex })}
                     </span>
-                    <h4 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+                    <h4 className="min-w-0 break-words text-lg sm:text-xl font-bold text-text-primary tracking-tight">
                       {phaseTitleLocalized}
                     </h4>
+                  </div>
+
+                  <div className="flex w-full items-center justify-between gap-3">
                     <span className="text-xs font-mono text-text-muted">
                       {tCurrent("phase_duration", {
                         weeks: phase.durationWeeks || 3,
                         hours: phase.estimatedHours || 15,
                       })}
                     </span>
+
+                    {/* Phase Assessment Status */}
+                    {phase.isCompleted ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs">
+                          {tCurrent("skill_mastered")}
+                        </span>
+
+                        {isCurrent && (!isSharedView || canEdit) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveQuizPhase(phase);
+                              setActiveQuizIndex(phaseIndex);
+                            }}
+                            className="shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-mono text-text-muted hover:text-text-primary bg-bg-secondary hover:bg-bg-elevated border border-border-subtle transition-colors cursor-pointer"
+                            title={tCurrent("retake_quiz")}
+                          >
+                            {tCurrent("retake_quiz")}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!isCurrent || (isSharedView && !canEdit) || isUpdating}
+                        onClick={() => {
+                          setActiveQuizPhase(phase);
+                          setActiveQuizIndex(phaseIndex);
+                        }}
+                        className={`inline-flex w-fit shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wide transition-all duration-300 border cursor-pointer ${
+                          !isCurrent || (isSharedView && !canEdit)
+                            ? "opacity-50 cursor-not-allowed bg-bg-secondary text-text-muted border-border-subtle"
+                            : "bg-accent/15 hover:bg-accent text-accent hover:text-bg-primary border-accent/40 hover:border-accent hover:shadow-[0_0_15px_var(--accent-glow)]"
+                        }`}
+                      >
+                        <span>{tCurrent("answer_quiz")}</span>
+                      </button>
+                    )}
                   </div>
-
-                  {/* Answer Quiz or Skill Mastered Badge */}
-                  {phase.isCompleted ? (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        {tCurrent("skill_mastered")}
-                      </span>
-
-                      {isCurrent && (!isSharedView || canEdit) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveQuizPhase(phase);
-                            setActiveQuizIndex(phaseIndex);
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-text-muted hover:text-text-primary bg-bg-secondary hover:bg-bg-elevated border border-border-subtle transition-colors cursor-pointer"
-                          title={tCurrent("retake_quiz")}
-                        >
-                          {tCurrent("retake_quiz")}
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={!isCurrent || (isSharedView && !canEdit) || isUpdating}
-                      onClick={() => {
-                        setActiveQuizPhase(phase);
-                        setActiveQuizIndex(phaseIndex);
-                      }}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wide transition-all duration-300 border cursor-pointer ${
-                        !isCurrent || (isSharedView && !canEdit)
-                          ? "opacity-50 cursor-not-allowed bg-bg-secondary text-text-muted border-border-subtle"
-                          : "bg-accent/15 hover:bg-accent text-accent hover:text-bg-primary border-accent/40 hover:border-accent hover:shadow-[0_0_15px_var(--accent-glow)]"
-                      }`}
-                    >
-                      <span>⚡</span>
-                      <span>{tCurrent("answer_quiz")}</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* Phase Description */}
@@ -464,10 +466,10 @@ export default function PlanDetailView({
                   </p>
                 )}
 
-                {/* Two Column Content: Objectives & Courses with clean dividers and highlighted key points */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-start pt-1">
+                {/* Learning Content */}
+                <div className="flex snap-x snap-mandatory items-start gap-5 overflow-x-auto overscroll-x-contain pt-1 lg:grid lg:grid-cols-2 lg:gap-8 lg:overflow-visible">
                   {/* Learning Objectives List */}
-                  <div className="flex flex-col gap-3">
+                  <div className="w-[85%] min-w-[230px] max-w-[380px] flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
@@ -485,7 +487,7 @@ export default function PlanDetailView({
                   </div>
 
                   {/* Recommended Courses List */}
-                  <div className="flex flex-col gap-3">
+                  <div className="w-[85%] min-w-[230px] max-w-[380px] flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
@@ -502,12 +504,12 @@ export default function PlanDetailView({
                               key={cIdx}
                               className="rounded-xl border border-border-subtle/70 p-3.5 bg-bg-secondary/40 hover:bg-bg-secondary/70 transition-colors flex flex-col gap-2"
                             >
-                              <div className="flex items-start justify-between gap-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0">
-                                  <h6 className="text-xs font-semibold text-text-primary tracking-tight">
+                                  <h6 className="break-words text-xs font-semibold text-text-primary tracking-tight">
                                     {courseTitle}
                                   </h6>
-                                  <span className="text-[11px] font-mono text-text-muted">
+                                  <span className="break-words text-[11px] font-mono text-text-muted">
                                     {tCurrent("platform")}: <span className="text-text-secondary">{course.platform}</span>
                                     {course.durationHours &&
                                       ` • ${tCurrent("course_duration", {
@@ -556,7 +558,7 @@ export default function PlanDetailView({
                   </div>
                 </div>
 
-                {/* Down Expandable UN SDG Alignment Section */}
+                {/* Expandable SDG Alignment */}
                 {(() => {
                   const phaseKey = phase.id || `phase-${idx}`;
                   const isSdgExpanded = Boolean(expandedSdgPhases[phaseKey]);
@@ -571,10 +573,6 @@ export default function PlanDetailView({
                         aria-expanded={isSdgExpanded}
                       >
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 group-hover:border-emerald-500/40 transition-colors">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            {sdgInfo.goalCode}
-                          </span>
                           <span className="text-xs sm:text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">
                             {tCurrent("sdg_why_relates")}
                           </span>
@@ -598,51 +596,20 @@ export default function PlanDetailView({
                         </div>
                       </button>
 
-                      {/* Expandable Drawer Content */}
+                      {/* SDG Details */}
                       {isSdgExpanded && (
-                        <div className="mt-3.5 p-4 sm:p-5 rounded-xl bg-linear-to-br from-emerald-950/20 via-bg-secondary/80 to-bg-secondary/40 border border-emerald-500/20 flex flex-col gap-3.5 animate-fade-in shadow-inner">
-                          {/* Target Header */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-500/15">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                {tCurrent("sdg_target_label")}
-                              </span>
-                              <h6 className="text-xs sm:text-sm font-bold text-text-primary">
-                                {sdgInfo.title}
-                              </h6>
-                            </div>
-
-                            <span className="text-[11px] font-mono text-emerald-400/90 font-medium">
+                        <div className="mt-3.5 flex flex-col gap-2.5 animate-fade-in">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
+                              {tCurrent("sdg_target_label")}
+                            </span>
+                            <span className="text-xs sm:text-sm font-semibold text-text-primary">
                               {sdgInfo.goalCode}
                             </span>
                           </div>
-
-                          {/* Explanation Rationale */}
                           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed m-0">
                             {sdgInfo.explanation}
                           </p>
-
-                          {/* 3 Impact Pillars */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-card/70 border border-border-subtle">
-                              <span className="text-emerald-400 text-sm">🛡️</span>
-                              <span className="text-[11px] font-mono text-text-secondary font-medium">
-                                {tCurrent("sdg_pillar_automation")}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-card/70 border border-border-subtle">
-                              <span className="text-accent text-sm">📈</span>
-                              <span className="text-[11px] font-mono text-text-secondary font-medium">
-                                {tCurrent("sdg_pillar_productivity")}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-card/70 border border-border-subtle">
-                              <span className="text-blue-400 text-sm">🌍</span>
-                              <span className="text-[11px] font-mono text-text-secondary font-medium">
-                                {tCurrent("sdg_pillar_sustainable")}
-                              </span>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -654,7 +621,7 @@ export default function PlanDetailView({
         </div>
       </div>
 
-      {/* 10-Question Skill Competency Assessment Modal */}
+      {/* Phase Quiz Modal */}
       {(activeQuizPhase || USE_PHASE_QUIZ_MODAL_TESTING) && (
         <PhaseQuizModal
           isOpen={Boolean(activeQuizPhase)}
@@ -677,7 +644,8 @@ export default function PlanDetailView({
               ? plan.skillsGap
               : [activeQuizPhase?.title ?? TESTING_QUIZ_PHASE.title]
           }
-          targetRole={plan.targetRole}
+          targetRole={localizedRoleTitle}
+          alreadyCompleted={Boolean(activeQuizPhase?.isCompleted)}
           onPassed={(expGained) => {
             if (!activeQuizPhase) return;
             const currentPhaseId = activeQuizPhase.id;

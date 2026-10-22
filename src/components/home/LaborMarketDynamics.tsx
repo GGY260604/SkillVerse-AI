@@ -251,29 +251,11 @@ export default function LaborMarketDynamics() {
         </div>
       </div>
 
-      {/* Mobile Horizontal Scroll Hint */}
-      <div className="flex lg:hidden items-center justify-end gap-1.5 text-xs text-text-muted mb-2 font-mono">
-        <span>{t("scroll_hint")}</span>
-        <svg
-          className="w-3.5 h-3.5 text-accent animate-pulse"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M14 5l7 7m0 0l-7 7m7-7H3"
-          />
-        </svg>
-      </div>
-
       {/* Charts Container */}
-      <div className="w-full overflow-x-auto pb-4 pt-1">
-        <div className="min-w-[760px] lg:min-w-0 grid grid-cols-2 gap-6 items-stretch">
+      <div className="-mx-4 w-full overflow-x-auto overscroll-x-contain px-4 pb-4 pt-1 snap-x snap-mandatory sm:-mx-6 sm:px-6 lg:mx-0 lg:overflow-visible lg:px-0">
+        <div className="flex min-w-0 items-stretch gap-4 lg:grid lg:grid-cols-2 lg:gap-6">
           {/* Chart 1: Ranking of Most Popular and In-Demand Skills */}
-          <div className={`glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg ${
+          <div className={`w-[88%] min-w-[280px] max-w-[440px] flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
             skillFilter === "emerging"
               ? "border-border-subtle hover:border-accent/40"
               : "border-border-subtle hover:border-rose-500/40"
@@ -383,7 +365,7 @@ export default function LaborMarketDynamics() {
           </div>
 
           {/* Chart 2: Most Popular Job Categories by Telemetry Share */}
-          <div className={`glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg ${
+          <div className={`w-[88%] min-w-[280px] max-w-[440px] flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
             skillFilter === "emerging"
               ? "border-border-subtle hover:border-accent/40"
               : "border-border-subtle hover:border-rose-500/40"
