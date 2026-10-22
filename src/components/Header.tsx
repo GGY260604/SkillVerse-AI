@@ -63,7 +63,7 @@ export default function Header() {
           isMobileMenuOpen ? "blur-sm opacity-60 md:blur-none md:opacity-100" : ""
         }`}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 max-[280px]:px-3 h-16">
           {/* Brand & Logo */}
           <Link href="/" className="no-underline">
             <Logo showBeta size="lg" />
@@ -179,7 +179,7 @@ export default function Header() {
           </div>
 
           {/* Mobile Right Controls: Profile Icon & Hamburger Button */}
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3 max-[280px]:gap-2 md:hidden">
             {/* Mobile Profile Icon / Login Button */}
             {isLoading ? (
               <div className="w-8 h-8 rounded-full bg-bg-card/40 animate-pulse border border-border-subtle/50" />
@@ -244,7 +244,7 @@ export default function Header() {
 
       {/* Mobile Navigation Sidebar Drawer */}
       <aside
-        className={`fixed top-0 right-0 z-60 h-full w-72 max-w-[85vw] bg-bg-secondary/95 backdrop-blur-2xl border-l border-border-subtle p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed top-0 right-0 z-60 h-dvh max-h-dvh w-72 max-w-[85vw] overflow-y-auto overscroll-contain bg-bg-secondary/95 backdrop-blur-2xl border-l border-border-subtle p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >

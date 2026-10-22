@@ -69,9 +69,9 @@ export default function Hero() {
 
       {/* Stats Cards Section */}
       <div className="animate-fade-in-up-delay-3 max-w-7xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12">
-        <div className="flex overflow-x-auto lg:grid lg:grid-cols-3 gap-4 pb-3 lg:pb-0 snap-x snap-mandatory lg:snap-none scroll-smooth">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
           {/* Stat Card 1: AI Skills Divide */}
-          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-rose-500/60 hover:shadow-[0_0_28px_rgba(244,63,94,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+          <div className="group w-[88%] min-w-[260px] max-w-[380px] flex-none snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-rose-500/60 hover:shadow-[0_0_28px_rgba(244,63,94,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between lg:w-auto lg:min-w-0 lg:max-w-none">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">{ts("card_1_label")}</span>
@@ -87,7 +87,7 @@ export default function Hero() {
           </div>
 
           {/* Stat Card 2: National Reskilling Crisis */}
-          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-amber-500/60 hover:shadow-[0_0_28px_rgba(245,158,11,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+          <div className="group w-[88%] min-w-[260px] max-w-[380px] flex-none snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-amber-500/60 hover:shadow-[0_0_28px_rgba(245,158,11,0.22)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between lg:w-auto lg:min-w-0 lg:max-w-none">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">{ts("card_2_label")}</span>
@@ -103,7 +103,7 @@ export default function Hero() {
           </div>
 
           {/* Stat Card 3: Sustainable Future Roles */}
-          <div className="group w-72 sm:w-80 lg:w-auto shrink-0 lg:shrink snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-accent hover:shadow-[0_0_28px_rgba(0,229,195,0.25)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between">
+          <div className="group w-[88%] min-w-[260px] max-w-[380px] flex-none snap-start bg-bg-card/85 backdrop-blur-xl border border-border-subtle hover:border-accent hover:shadow-[0_0_28px_rgba(0,229,195,0.25)] hover:bg-bg-card-hover/95 transition-all duration-300 rounded-xl p-5 sm:p-6 flex flex-col justify-between lg:w-auto lg:min-w-0 lg:max-w-none">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-semibold text-accent uppercase tracking-wider">{ts("card_3_label")}</span>

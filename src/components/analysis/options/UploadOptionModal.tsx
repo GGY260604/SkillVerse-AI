@@ -11,7 +11,7 @@ import { extractProfileDocument } from "@/lib/analysis/client";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
 const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
 
-// --- Resume Upload Option ---
+// --- Resume Upload Modal ---
 // Validate a CV, extract profile data, persist non-empty fields, then continue to the wizard.
 export default function UploadOptionModal() {
   const t = useTranslations("home.plan");
@@ -33,6 +33,7 @@ export default function UploadOptionModal() {
 
   const isOpen = activeModal === "upload";
 
+  // --- Modal Lifecycle ---
   // Handle Escape key to dismiss modal.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,7 +58,7 @@ export default function UploadOptionModal() {
   }, [isOpen]);
 
   // --- File Intake ---
-  // 1. Validate size and format before accepting a file from the picker or drop zone.
+  // Validate file size and format before accepting it.
   const validateAndSetFile = (file: File) => {
     setErrorMessage(null);
 
@@ -104,10 +105,7 @@ export default function UploadOptionModal() {
   };
 
   // --- Extraction Workflow ---
-  // 2. POST the file to /api/analysis/extract; the API calls FastAPI and saves returned
-  //    non-empty profile fields for the signed-in user.
-  // 3. On success, open the wizard, which reloads the saved profile from /api/profile.
-  //    The wizard submit then saves edits and starts role matching.
+  // Extract profile data, save it, then open the wizard to review and continue.
   const handleStartAnalysis = async () => {
     if (!selectedFile) return;
 
@@ -135,7 +133,7 @@ export default function UploadOptionModal() {
       await new Promise((r) => setTimeout(r, 700));
 
       setIsAnalyzing(false);
-      // Seamlessly transition to Option 2 (Wizard) which fetches fresh profile directly from database
+      // Continue to the wizard, which reloads the saved profile from the database.
       openWizardOption();
     } catch (err: unknown) {
       clearTimeout(step2Timer);
@@ -146,21 +144,22 @@ export default function UploadOptionModal() {
 
   if (!isOpen) return null;
 
+  // --- UI ---
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isAnalyzing) closeModals();
       }}
     >
-      {/* Modal Container */}
+      {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up"
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] animate-fade-in-up"
       >
-        {/* Top Controls: Back, Brand & Close */}
+        {/* Header Controls */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6">
           <div className="flex items-center gap-2.5">
             <button
@@ -192,7 +191,7 @@ export default function UploadOptionModal() {
           </button>
         </div>
 
-        {/* Brand & Header Title */}
+        {/* Modal Heading */}
         <h3 className="text-lg font-bold text-text-primary tracking-tight mb-1">
           {t("upload_title")}
         </h3>
@@ -200,10 +199,10 @@ export default function UploadOptionModal() {
           {t("upload_desc")}
         </p>
 
-        {/* Dynamic Area: Upload Widget VS Loading Animation */}
+        {/* Upload or Extraction State */}
         {!isAnalyzing ? (
           <div>
-            {/* File Drag & Drop Box */}
+            {/* File Upload Area */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -267,7 +266,7 @@ export default function UploadOptionModal() {
               )}
             </div>
 
-            {/* Error Message: Plain red text, no box, no background, no border */}
+            {/* Upload Error */}
             {errorMessage && (
               <p className="mt-2.5 text-xs text-rose-400 font-mono text-left animate-fade-in">
                 {errorMessage}
@@ -275,7 +274,7 @@ export default function UploadOptionModal() {
             )}
           </div>
         ) : (
-          /* Extraction Loading Telemetry (Replaces upload widget during processing) */
+          /* Extraction progress */
           <div className="min-h-60 sm:min-h-70 rounded-xl border border-border-subtle bg-bg-secondary/40 flex flex-col items-center justify-center p-6 sm:p-8 text-center animate-fade-in mb-2">
             <LoadingSpinner
               title={extractionStageTexts[analysisStep - 1] ?? t("analyzing_state")}
@@ -296,7 +295,7 @@ export default function UploadOptionModal() {
           </div>
         )}
 
-        {/* Action Button: Hidden while extraction is analyzing */}
+        {/* Footer Actions */}
         {!isAnalyzing && (
           <div className="flex items-center justify-end pt-6 border-t border-border-subtle mt-6">
             <button

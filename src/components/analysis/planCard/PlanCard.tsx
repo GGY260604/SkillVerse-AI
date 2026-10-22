@@ -29,6 +29,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
 
+  // --- UI ---
   // --- History Card ---
   // Archived records are visually sealed and provide a compact read-only summary.
   if (!isCurrent) {
@@ -37,7 +38,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
         onClick={() => onSelect?.(plan)}
         className="rounded-xl p-4 sm:p-5 transition-all duration-200 cursor-pointer group border bg-bg-secondary/40 border-zinc-800/80 hover:bg-bg-secondary/70 hover:border-zinc-700/90 shadow-sm"
       >
-        {/* Top Header Row: Archived Badge, Roadmap ID, Date */}
+        {/* Archived Plan Header */}
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-zinc-800/70 mb-3.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800/90 text-zinc-400 border border-zinc-700/50">
@@ -59,7 +60,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           </span>
         </div>
 
-        {/* Main Content: Title, 1-line description, and compact score */}
+        {/* Plan Summary */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3.5">
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors truncate">
@@ -87,7 +88,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
             </div>
           </div>
 
-          {/* Compact Match Score box (grey theme) */}
+          {/* Match Score */}
           <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-zinc-800/60 pt-2 sm:pt-0">
             <div className="flex items-baseline gap-1">
               <span className="text-[10px] font-mono uppercase text-zinc-500">{tCurrent("match_score")}:</span>
@@ -102,11 +103,11 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           </div>
         </div>
 
-        {/* Footer: Progress & View Details Link */}
+        {/* Progress and Details */}
         <div className="pt-3 border-t border-zinc-800/70 flex items-center justify-between gap-3 text-xs font-mono">
           <div className="flex items-center gap-2.5">
             <span className="text-[11px] text-zinc-500">
-              Progress: <strong className="text-zinc-300 font-semibold">{completedCount} / {totalPhases}</strong>
+              <strong className="text-zinc-300 font-semibold">{completedCount} / {totalPhases}</strong>
             </span>
             <div className="w-20 sm:w-24 bg-zinc-800 rounded-full h-1 overflow-hidden">
               <div
@@ -132,25 +133,25 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
       onClick={() => onSelect?.(plan)}
       className="rounded-2xl p-6 sm:p-7 transition-all duration-300 cursor-pointer group border bg-bg-card border-border-subtle hover:border-accent/40 hover:shadow-lg"
     >
-      {/* Top Header Row: Roadmap ID on Left, Generation Date on Right */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle mb-5">
-        <span className="text-xs font-mono font-medium text-text-muted">
-          Roadmap ID: <span className="text-text-secondary font-mono">{plan.id}</span>
+      {/* Plan Header */}
+      <div className="flex flex-nowrap items-center justify-between gap-2 pb-4 border-b border-border-subtle mb-5">
+        <span className="min-w-0 flex-1 truncate text-[clamp(0.5rem,2.5vw,0.75rem)] font-mono font-medium text-text-muted">
+          ID: <span className="text-text-secondary font-mono">{plan.id}</span>
         </span>
 
-        <span className="text-xs font-mono text-text-muted">
+        <span className="shrink-0 whitespace-nowrap text-[clamp(0.5rem,2.5vw,0.75rem)] font-mono text-text-muted">
           {displayDate}
         </span>
       </div>
 
-      {/* Primary Role Info & Match Score Row */}
+      {/* Role Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
         <div className="lg:col-span-2">
           <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
             {plan.roleCategory}
           </span>
 
-          <h3 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
+          <h3 className="break-words text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
             {displayRoleTitle}
           </h3>
 
@@ -158,7 +159,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
             {displayDescription}
           </p>
 
-          {/* SDGs Tags without "Aligned UN Goals:" label */}
+          {/* Sustainable Development Goals */}
           {plan.sdgs && plan.sdgs.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {plan.sdgs.map((sdg) => (
@@ -173,7 +174,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           )}
         </div>
 
-        {/* Match Score Block (Identical styling inside & outside, total time placed inside) */}
+        {/* Match Score */}
         <div className="rounded-xl border border-border-subtle p-4 flex flex-col items-center text-center justify-center bg-bg-secondary/50">
           <span className="text-[10px] font-mono uppercase text-text-muted tracking-wider mb-0.5">
             {tCurrent("match_score")}
@@ -203,14 +204,15 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
         </div>
       </div>
 
-      {/* Progress & Footer Bar (No % in Progress text) */}
-      <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Progress Display */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-text-secondary">
-            Progress: <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
+      {/* Progress and Details */}
+      <div className="pt-4 border-t border-border-subtle flex items-center justify-between gap-3">
+        {/* Roadmap Progress */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="shrink-0 whitespace-nowrap text-xs font-mono text-text-secondary">
+            <span className="hidden sm:inline">Progress: </span>
+            <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
           </span>
-          <div className="w-28 sm:w-36 bg-border-subtle rounded-full h-1.5 overflow-hidden">
+          <div className="h-1.5 min-w-10 max-w-36 flex-1 overflow-hidden rounded-full bg-border-subtle">
             <div
               className="h-full bg-emerald-500 transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
@@ -218,9 +220,9 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           </div>
         </div>
 
-        {/* View Details Link */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
-          <span className="text-xs font-mono font-semibold text-accent group-hover:underline inline-flex items-center gap-1">
+        {/* View Details */}
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-mono font-semibold text-accent group-hover:underline">
             <span>{tCurrent("view_details")}</span>
             <span>→</span>
           </span>

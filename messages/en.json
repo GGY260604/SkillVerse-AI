@@ -8,7 +8,7 @@
       "title_highlight_2": "Will Lead",
       "title_3": "in the AI Era.",
       "subtitle": "Empowering Malaysia's workforce for the AI era. Real-time intelligence, seamless cross-lingual reskilling, and sustainable career pathways for every professional.",
-      "cta_start_plan": "Start Your Plan"
+      "cta_start_plan": "Start"
     },
     "stats": {
       "card_1_label": "AI SKILLS DIVIDE",
@@ -63,14 +63,14 @@
       "upload_desc": "Extract semantic skill signatures directly from your existing resume in under 20 seconds.",
       "drag_drop_text": "Upload Resume or CV File",
       "drag_drop_subtext": "Supports PDF or Images (PNG, JPG, WEBP, up to 10MB)",
-      "btn_select_file": "Select File & Launch Analysis",
+      "btn_select_file": "Choose File",
       "option_2_tag": "OPTION 02 • NO RESUME REQUIRED",
       "time_estimate": "3 MINS",
       "wizard_title": "Interactive Assessment Wizard",
-      "wizard_desc": "No updated resume? Complete a structured diagnostic covering your current tooling, stack, and target career echelon.",
+      "wizard_desc": "Complete a structured diagnostic covering your current tooling, stack, and target career echelon.",
       "form_preview_title": "Guided Career Diagnostic Form",
       "form_preview_subtext": "4 Quick Sections • Domain, Stack & Target Echelon",
-      "btn_launch_wizard": "Fill Form & Start Assessment",
+      "btn_launch_wizard": "Start",
       "file_ready": "Ready for Semantic Ingestion",
       "remove_file": "Remove",
       "btn_back": "Back",
@@ -85,10 +85,10 @@
       "unsupported_file_format": "Unsupported format. Use a PDF or image file (PNG, JPG, WEBP) up to 10 MB.",
       "extraction_failed": "Failed to extract a profile from this document. Please try again.",
       "unexpected_extraction_error": "An unexpected error occurred during extraction.",
-      "extract_stage_1": "Uploading document...",
-      "extract_stage_2": "Parsing document...",
-      "extract_stage_3": "Updating database...",
-      "extract_stage_4": "Prefilling form..."
+      "extract_stage_1": "Uploading...",
+      "extract_stage_2": "Parsing...",
+      "extract_stage_3": "Updating...",
+      "extract_stage_4": "Filling form..."
     }
   },
   "analysis": {
@@ -117,6 +117,8 @@
       "close": "Close",
       "matching_title": "Evaluating future-ready roles...",
       "matching_description": "Comparing your skills and experience against occupational profiles.",
+      "matching_fallback_title": "No roles matched in the database. Generating new role suggestions...",
+      "matching_fallback_description": "Finding a role that fits your skills and experience. Please wait.",
       "matching_phase_1_title": "Assessing automation exposure...",
       "matching_phase_1_description": "Evaluating your competencies against current workforce trends.",
       "matching_phase_2_title": "Building your skills profile...",
@@ -148,7 +150,7 @@
       "strength_separator": ", ",
       "match_score": "{percent}% match",
       "selected_roles": "{count, plural, one {# role selected} other {# roles selected}} ({scenario})",
-      "confirm_generate": "Confirm and generate roadmap"
+      "confirm_generate": "Generate"
     },
     "wizard": {
       "incomplete_step": "Step {step} is incomplete. Complete all required fields (*).",
@@ -202,23 +204,36 @@
       "work_arrangement": "Work Arrangement Preference",
       "weekly_learning_commitment": "Weekly Learning Time Commitment",
       "preferred_learning_providers": "Preferred Course & Resource Types",
-      "saving_profile": "Saving profile...",
+      "saving_profile": "Saving...",
       "profile_saved": "✓ Profile Saved"
     },
     "quiz": {
       "generate_failed": "Failed to generate the quiz. Please try again.",
       "unexpected_error": "An unexpected error occurred while generating the quiz.",
-      "phase_exam": "Phase {phase} Mastery Exam",
-      "exp_bounty": "+{exp} EXP reward",
-      "strict_mastery_gate": "(All 10 answers must be correct)",
       "target_role": "Target role",
       "close_quiz": "Close quiz",
+      "confirm_start_title": "Ready to prove your mastery?",
+      "confirm_start_description": "Complete this assessment to verify what you have learned in this phase.",
+      "assessment_rule_label": "PASS REQUIREMENT",
+      "assessment_rule_value": "all correct",
+      "assessment_rule_description": "Answer all 10 questions correctly to pass and verify your mastery.",
+      "first_pass_reward_label": "FIRST-TIME REWARD",
+      "first_pass_reward_description": "Earn this phase's EXP reward after passing the assessment.",
+      "retake_start_title": "Challenge this phase again",
+      "retake_start_description": "Retake the assessment to review what you have learned. Your mastery status will remain complete.",
+      "retake_reward_label": "FIRST REWARD CLAIMED",
+      "no_additional_exp": "No extra EXP",
+      "retake_reward_description": "This phase's EXP reward is awarded only once, even if you pass again.",
+      "quiz_retry_hint": "You can come back and take the challenge anytime.",
+      "start_quiz": "Start",
       "evaluating_title": "Evaluating skill competencies...",
       "evaluating_description": "Creating 10 targeted questions from your learning objectives and assessing their difficulty.",
-      "close_try_later": "Close & Try Later",
+      "close_try_later": "Close",
       "verified_mastery_title": "Skill Mastered! Perfect Score: 10/10",
       "mastery_not_passed_title": "Mastery Not Verified (10/10 Required)",
-      "verified_mastery_description": "Milestone mastered. Awarding {exp} EXP...",
+      "verified_mastery_description": "Milestone mastered. Exit the quiz to claim {exp} EXP.",
+      "already_completed_description": "You have already mastered this phase. Retaking the quiz does not award EXP again.",
+      "exit_quiz": "Exit quiz",
       "mastery_not_passed_description": "You scored {score} out of 10. Answer every question correctly to verify this skill.",
       "retry_assessment": "Retry assessment",
       "question_review": "Question Review & Explanations",
@@ -226,9 +241,9 @@
       "go_to_question": "Go to question {question}",
       "answered_count": "{answered} / {total} answered",
       "question_progress": "Question {current} of {total}",
-      "previous": "← Previous",
-      "next_question": "Next Question →",
-      "submit_verify": "Submit & Verify Mastery"
+      "previous": "← Back",
+      "next_question": "Next →",
+      "submit_verify": "Submit"
     },
     "share_modal": {
       "title": "Share Career Roadmap",
@@ -274,15 +289,13 @@
       "skills_gap": "Skills to Acquire",
       "at_risk_skills": "Automation Alerts",
       "roadmap_timeline": "3-Phase Reskilling Roadmap",
-      "view_details": "View Full Details",
-      "collapse_details": "Collapse Details",
+      "roadmap_instructions": "Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.",
+      "view_details": "Details",
+      "collapse_details": "Hide",
       "sdg_impact_label": "UN SDG Impact & Alignment",
       "sdg_why_relates": "Why this phase connects to UN SDGs",
       "sdg_hide_rationale": "Hide SDG Alignment",
       "sdg_view_rationale": "Explore SDG Alignment",
-      "sdg_pillar_automation": "Automation Shield",
-      "sdg_pillar_productivity": "Productivity Multiplier",
-      "sdg_pillar_sustainable": "Sustainable Future",
       "answer_quiz": "Answer Quiz",
       "skill_mastered": "Skill Mastered",
       "retake_quiz": "Retake Quiz",
@@ -312,10 +325,10 @@
     "history": {
       "badge": "SUPERSEDED • ARCHIVED",
       "note": "This plan was discarded in favor of a newer roadmap, but is retained for historical skill telemetry.",
-      "view_details": "View Historical Details",
-      "collapse_details": "Collapse Details",
-      "view_more": "View More Historical Plans",
-      "collapse_history": "Collapse Historical Plans",
+      "view_details": "Details",
+      "collapse_details": "Hide",
+      "view_more": "More plans",
+      "collapse_history": "Hide history",
       "locked_banner_title": "Archived Roadmap • Permanently Sealed",
       "locked_banner_desc": "This roadmap has been superseded and is preserved as an immutable telemetry snapshot. All operations, file uploads, and AI verifications are disabled.",
       "locked_phase_label": "Sealed Historical Node (Read-Only)"
@@ -359,7 +372,7 @@
       "title": "Welcome Back",
       "description": "Sign in to your SkillVerse account with email and password",
       "button": "Sign In",
-      "signing_in": "Signing In...",
+      "signing_in": "Signing in...",
       "remember_me": "Remember Me",
       "forgot_password_link": "Forgot password?",
       "no_account": "Don't have an account?",
@@ -368,13 +381,13 @@
     "register": {
       "title": "Create Account",
       "description": "Join SkillVerse and start your AI workforce transformation",
-      "button": "Register & Send Code",
+      "button": "Register",
       "have_account": "Already have an account?"
     },
     "forgot_password": {
       "title": "Reset Password",
       "description": "Enter your email to receive a 6-digit verification code",
-      "button": "Send 6-Digit Code"
+      "button": "Send Code"
     },
     "verify_registration": {
       "title": "Verify Email",
@@ -383,7 +396,7 @@
     "reset_password": {
       "title": "New Password",
       "description": "Enter the 6-digit recovery code and set your new password",
-      "button": "Update Password & Sign In",
+      "button": "Update",
       "new_password_label": "New Password"
     },
     "common": {
@@ -399,8 +412,8 @@
       "verification_code_label": "6-Digit Verification Code",
       "verification_code_placeholder": "123456",
       "code_sent": "6-digit code has been sent to",
-      "processing": "Processing...",
-      "verify_button": "Verify & Complete",
+      "processing": "Working...",
+      "verify_button": "Verify",
       "signin_link": "Sign in here",
       "resend_code": "Resend Code",
       "resend_countdown": "Resend in {seconds}s",

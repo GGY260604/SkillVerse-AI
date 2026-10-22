@@ -148,7 +148,7 @@ export default function ProfileModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeProfileModal();
       }}
@@ -156,7 +156,7 @@ export default function ProfileModal() {
       {/* Modal Container */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up flex flex-col"
       >
         {/* Modal Header */}
         <div className="shrink-0 flex items-center justify-between mb-6">
@@ -200,7 +200,7 @@ export default function ProfileModal() {
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto space-y-6 overscroll-contain">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-6 overscroll-contain">
           {/* Header Title & Subtitle */}
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1">

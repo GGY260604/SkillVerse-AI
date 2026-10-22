@@ -66,7 +66,7 @@ export default function TransformationPlan() {
       </div>
 
       {/* Dual Options Grid */}
-      <div className="flex overflow-x-auto lg:grid lg:grid-cols-2 gap-6 sm:gap-8 items-stretch pt-3 pb-4 lg:pt-3 lg:pb-3 -mt-3 snap-x snap-mandatory lg:snap-none scroll-smooth">
+      <div className="-mx-4 flex snap-x snap-mandatory items-stretch gap-6 overflow-x-auto overscroll-x-contain px-4 pt-3 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-2 lg:gap-8 lg:overflow-visible lg:px-0 lg:pt-3 lg:pb-3 lg:-mt-3">
         {/* Option 1: CV Upload Mode Selection Card */}
         <div
           role="button"
@@ -78,7 +78,7 @@ export default function TransformationPlan() {
               handleSelectPathway("upload");
             }
           }}
-          className="group relative w-[86vw] max-w-125 lg:w-auto lg:max-w-none shrink-0 lg:shrink snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden"
+          className="group relative w-[88%] min-w-[270px] max-w-[420px] flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
         >
           {/* Ambient Hover Glow */}
           <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -147,7 +147,7 @@ export default function TransformationPlan() {
               handleSelectPathway("wizard");
             }
           }}
-          className="group relative w-[86vw] max-w-125 lg:w-auto lg:max-w-none shrink-0 lg:shrink snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden"
+          className="group relative w-[88%] min-w-[270px] max-w-[420px] flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
         >
           {/* Ambient Hover Glow */}
           <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />

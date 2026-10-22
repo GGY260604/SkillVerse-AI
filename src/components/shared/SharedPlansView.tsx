@@ -208,19 +208,19 @@ export default function SharedPlansView() {
       </div>
 
       {/* Search Bar Row */}
-      <div className="flex items-center gap-2.5 mb-6 shrink-0">
+      <div className="flex w-full min-w-0 flex-row items-center gap-2.5 mb-6 shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
           }}
-          className="relative flex-1"
+          className="relative min-w-0 flex-1"
         >
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={tModal("search_placeholder")}
-            className="w-full h-10 bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-4 pr-9 py-2 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono"
+            className="h-10 w-full min-w-0 bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-4 pr-9 py-2 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono"
           />
 
           {searchQuery && (
@@ -241,7 +241,7 @@ export default function SharedPlansView() {
           type="button"
           onClick={() => {}}
           disabled={!searchQuery.trim()}
-          className="w-10 h-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          className="h-10 w-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           title="Search"
           aria-label="Search"
         >
@@ -304,108 +304,110 @@ export default function SharedPlansView() {
               <div
                 key={item.id}
                 onClick={() => setActiveSharedId(item.id)}
-                className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-secondary/40 hover:bg-bg-secondary/70 p-4 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
+                className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-secondary/40 hover:bg-bg-secondary/70 p-4 transition-all duration-300 flex flex-col shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
               >
-                {/* Left Identity Card (Matching SharedPlansModal collaborator card styling) */}
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  {/* Avatar Circle with Linear Gradient & Level Badge */}
-                  <div className="relative w-10 h-10 shrink-0 group-hover:scale-105 transition-transform">
-                    <div className="w-full h-full rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm">
-                      {initial}
+                {/* Top Row: User Identity (Avatar, Name, Email, UID) & Trash Can Action Button */}
+                <div className="flex items-start justify-between gap-3.5">
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {/* Avatar Circle with Linear Gradient & Level Badge */}
+                    <div className="relative w-10 h-10 shrink-0 group-hover:scale-105 transition-transform">
+                      <div className="w-full h-full rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm">
+                        {initial}
+                      </div>
+                      <span className="absolute -right-2 -bottom-1 rounded-full border border-bg-card bg-bg-primary px-1 py-0.5 text-[8px] font-mono font-bold leading-none text-accent shadow-sm">
+                        Lv.{userLevel}
+                      </span>
                     </div>
-                    <span className="absolute -right-2 -bottom-1 rounded-full border border-bg-card bg-bg-primary px-1 py-0.5 text-[8px] font-mono font-bold leading-none text-accent shadow-sm">
-                      Lv.{userLevel}
-                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      {/* User Name */}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
+                          {displayName}
+                        </h4>
+                      </div>
+                      <span className="block truncate text-xs font-mono text-text-muted">
+                        {item.owner.email}
+                      </span>
+
+                      {/* User UID with 1-Click Copy Button */}
+                      <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-text-muted">
+                        <span className="font-semibold text-text-secondary">{tModal("uid")}</span>
+                        <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
+                          {item.owner.id}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyUid(item.owner.id);
+                          }}
+                          className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
+                          title={tModal("copy_uid")}
+                          aria-label={tModal("copy_uid")}
+                        >
+                          {copiedId === item.owner.id ? (
+                            <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
+                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>{tModal("copied")}</span>
+                            </span>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    {/* Top Row: User Name & Email */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
-                        {displayName}
-                      </h4>
-                      <span className="text-xs font-mono text-text-muted truncate">
-                        • {item.owner.email}
-                      </span>
-                    </div>
-
-                    {/* User UID with 1-Click Copy Button */}
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-text-muted">
-                      <span className="font-semibold text-text-secondary">{tModal("uid")}</span>
-                      <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
-                        {item.owner.id}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyUid(item.owner.id);
-                        }}
-                        className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
-                        title={tModal("copy_uid")}
-                        aria-label={tModal("copy_uid")}
-                      >
-                        {copiedId === item.owner.id ? (
-                          <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
-                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>{tModal("copied")}</span>
-                          </span>
-                        ) : (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Divider Line Between User Profile and Shared Roadmap */}
-                    <div className="border-t border-border-subtle/70 my-2.5" />
-
-                    {/* Bottom Row: Career Direction, Match Score & Date (No Diamond, Separate Line) */}
-                    <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
-                      <span className="font-semibold text-text-primary truncate max-w-sm">
-                        {item.currentPlan.targetRole}
-                      </span>
-                      <span className="text-text-muted">•</span>
-                      <span className="font-mono text-accent text-xs font-semibold">
-                        {item.currentPlan.matchScore}% {t("match_score")}
-                      </span>
-                      <span className="text-text-muted">•</span>
-                      <span className="font-mono text-[11px] text-text-muted">
-                        {t("shared_on")} {item.sharedAt}
-                      </span>
-                    </div>
+                  {/* Right Side Action Button: Trash Can aligned with User Info */}
+                  <div className="flex items-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setItemToDelete(item);
+                      }}
+                      className="p-2 rounded-xl text-text-muted hover:text-negative hover:bg-negative/10 border border-transparent hover:border-negative/30 transition-all duration-200 cursor-pointer"
+                      title={t("remove_user")}
+                      aria-label={t("remove_user")}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.8}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                {/* Right Side Action Button: Trash Can */}
-                <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setItemToDelete(item);
-                    }}
-                    className="p-2.5 rounded-xl text-text-muted hover:text-negative hover:bg-negative/10 border border-transparent hover:border-negative/30 transition-all duration-200 cursor-pointer"
-                    title={t("remove_user")}
-                    aria-label={t("remove_user")}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.8}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                {/* Divider Line (Inset from borders with mx-1) */}
+                <div className="mx-1 border-t border-border-subtle/70 my-3" />
+
+                {/* Bottom Row: Career Direction, Match Score & Date */}
+                <div className="px-1 flex items-center gap-2 text-xs text-text-secondary flex-wrap">
+                  <span className="font-semibold text-text-primary truncate max-w-sm">
+                    {item.currentPlan.targetRole}
+                  </span>
+                  <span className="text-text-muted">•</span>
+                  <span className="font-mono text-accent text-xs font-semibold">
+                    {item.currentPlan.matchScore}% {t("match_score")}
+                  </span>
+                  <span className="text-text-muted">•</span>
+                  <span className="font-mono text-[11px] text-text-muted">
+                    {t("shared_on")} {item.sharedAt}
+                  </span>
                 </div>
               </div>
             );
@@ -424,8 +426,8 @@ export default function SharedPlansView() {
 
       {/* Removal Confirmation Dialog Modal */}
       {itemToDelete && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-md bg-bg-card border border-border-subtle rounded-2xl p-6 shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain bg-bg-card border border-border-subtle rounded-2xl p-4 sm:p-6 shadow-2xl animate-scale-in">
             <h3 className="text-base font-bold text-text-primary tracking-tight mb-2">
               {t("remove_confirm_title")}
             </h3>
@@ -435,12 +437,12 @@ export default function SharedPlansView() {
               })}
             </p>
 
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
               <button
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setItemToDelete(null)}
-                className="px-4 py-2 text-xs font-mono font-semibold text-text-secondary hover:text-text-primary bg-bg-secondary hover:bg-bg-card-hover border border-border-subtle rounded-xl cursor-pointer transition-colors disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-xs font-mono font-semibold text-text-secondary hover:text-text-primary bg-bg-secondary hover:bg-bg-card-hover border border-border-subtle rounded-xl cursor-pointer transition-colors disabled:opacity-50"
               >
                 {t("cancel")}
               </button>
@@ -448,7 +450,7 @@ export default function SharedPlansView() {
                 type="button"
                 disabled={isDeleting}
                 onClick={handleConfirmRemove}
-                className="px-5 py-2 text-xs font-mono font-semibold text-white bg-negative hover:bg-negative/90 rounded-xl cursor-pointer shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="w-full sm:w-auto px-5 py-2 text-xs font-mono font-semibold text-white bg-negative hover:bg-negative/90 rounded-xl cursor-pointer shadow-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isDeleting && (
                   <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">

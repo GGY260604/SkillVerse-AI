@@ -8,7 +8,7 @@
       "title_highlight_2": "引领未来",
       "title_3": "的 AI 时代。",
       "subtitle": "以人工智能赋能马来西亚职场。为每位专业人士提供实时智能、无缝的跨语言技能重塑与可持续的职业发展路径。",
-      "cta_start_plan": "开启你的规划"
+      "cta_start_plan": "开始"
     },
     "stats": {
       "card_1_label": "AI 技能断层",
@@ -63,14 +63,14 @@
       "upload_desc": "在 20 秒内直接从现有简历中提取语义技能特征与能力图谱。",
       "drag_drop_text": "上传简历或 CV 文件",
       "drag_drop_subtext": "支持 PDF 或图片文件（PNG、JPG、WEBP，最大 10MB）",
-      "btn_select_file": "选择文件并启动分析",
+      "btn_select_file": "选文件",
       "option_2_tag": "选项 02 • 无需提供简历",
       "time_estimate": "3 分钟",
       "wizard_title": "交互式评估向导",
-      "wizard_desc": "暂无最新简历？通过结构化诊断涵盖您当前的工具栈、技术架构及目标职业层级。",
+      "wizard_desc": "通过结构化诊断涵盖您当前的工具栈、技术架构及目标职业层级。",
       "form_preview_title": "引导式职业诊断问卷",
       "form_preview_subtext": "4 个快速小节 • 涵盖技术栈、经验与晋升目标",
-      "btn_launch_wizard": "填写问卷并启动评估",
+      "btn_launch_wizard": "开始",
       "file_ready": "准备就绪，可启动语义分析",
       "remove_file": "移除",
       "btn_back": "返回",
@@ -85,10 +85,10 @@
       "unsupported_file_format": "不支持此格式。请使用不超过 10 MB 的 PDF 或图片（PNG、JPG、WEBP）。",
       "extraction_failed": "无法从此文件提取个人档案，请重试。",
       "unexpected_extraction_error": "提取过程中发生意外错误。",
-      "extract_stage_1": "正在上传文件...",
-      "extract_stage_2": "正在解析文件...",
-      "extract_stage_3": "正在更新数据库...",
-      "extract_stage_4": "正在预填写表格..."
+      "extract_stage_1": "上传中...",
+      "extract_stage_2": "解析中...",
+      "extract_stage_3": "更新中...",
+      "extract_stage_4": "填写中..."
     }
   },
   "analysis": {
@@ -117,6 +117,8 @@
       "close": "关闭",
       "matching_title": "正在评估适合您的未来岗位...",
       "matching_description": "正在根据您的技能与经验匹配职业要求。",
+      "matching_fallback_title": "数据库无法匹配角色，正在生成新角色...",
+      "matching_fallback_description": "正在尝试生成符合您技能与经验的岗位，请稍候。",
       "matching_phase_1_title": "正在评估技能自动化风险...",
       "matching_phase_1_description": "正在结合当前劳动力市场趋势评估您的技能。",
       "matching_phase_2_title": "正在构建技能档案...",
@@ -148,7 +150,7 @@
       "strength_separator": "、",
       "match_score": "匹配度 {percent}%",
       "selected_roles": "已选择 {count} 个岗位（{scenario}）",
-      "confirm_generate": "确认并生成路线图"
+      "confirm_generate": "生成"
     },
     "wizard": {
       "incomplete_step": "第 {step} 部分尚未填写完整，请完成所有必填项（*）。",
@@ -202,23 +204,36 @@
       "work_arrangement": "工作模式偏好",
       "weekly_learning_commitment": "每周学习投入时间",
       "preferred_learning_providers": "偏好的学习与课程提供方",
-      "saving_profile": "正在保存个人档案...",
+      "saving_profile": "保存中...",
       "profile_saved": "✓ 个人档案已保存"
     },
     "quiz": {
       "generate_failed": "测验生成失败，请重试。",
       "unexpected_error": "生成测验时发生意外错误。",
-      "phase_exam": "第 {phase} 阶段技能测验",
-      "exp_bounty": "+{exp} EXP 奖励",
-      "strict_mastery_gate": "（10 题必须全部答对）",
       "target_role": "目标岗位",
       "close_quiz": "关闭测验",
+      "confirm_start_title": "准备好验证本阶段的掌握情况了吗？",
+      "confirm_start_description": "完成本次测评，验证你对本阶段内容的掌握。",
+      "assessment_rule_label": "通关条件",
+      "assessment_rule_value": "全部答对",
+      "assessment_rule_description": "10 道题必须全部答对，才算通过并验证技能掌握情况。",
+      "first_pass_reward_label": "首次通过奖励",
+      "first_pass_reward_description": "首次通过测评后，即可获得本阶段的经验值。",
+      "retake_start_title": "再次挑战本阶段",
+      "retake_start_description": "重新作答以复习本阶段内容。已完成的掌握状态会保持不变。",
+      "retake_reward_label": "首次奖励已领取",
+      "no_additional_exp": "不再获得经验值",
+      "retake_reward_description": "本阶段经验值奖励仅发放一次；重测通过也不会重复发放。",
+      "quiz_retry_hint": "你可以随时再来挑战",
+      "start_quiz": "开始",
       "evaluating_title": "正在评估技能能力...",
       "evaluating_description": "根据您的学习目标生成 10 道针对性题目并评估难度。",
-      "close_try_later": "关闭并稍后再试",
+      "close_try_later": "关闭",
       "verified_mastery_title": "技能已掌握！满分：10/10",
       "mastery_not_passed_title": "尚未通过掌握验证（需答对 10/10）",
-      "verified_mastery_description": "已掌握此阶段，正在发放 {exp} EXP...",
+      "verified_mastery_description": "已掌握此阶段。退出测验后即可领取 {exp} EXP。",
+      "already_completed_description": "你已掌握此阶段。重做测验不会再次获得经验值。",
+      "exit_quiz": "退出测验",
       "mastery_not_passed_description": "您答对了 10 题中的 {score} 题。必须全部答对才能验证此技能。",
       "retry_assessment": "重新测验",
       "question_review": "题目回顾与解析",
@@ -228,7 +243,7 @@
       "question_progress": "第 {current} / {total} 题",
       "previous": "← 上一题",
       "next_question": "下一题 →",
-      "submit_verify": "提交并验证掌握情况"
+      "submit_verify": "提交"
     },
     "share_modal": {
       "title": "共享职业转型路线图",
@@ -274,15 +289,13 @@
       "skills_gap": "待补充技能缺口",
       "at_risk_skills": "高自动化风险技能",
       "roadmap_timeline": "3阶段能力重塑路线图",
-      "view_details": "查看完整详情",
-      "collapse_details": "收起详情",
+      "roadmap_instructions": "按照阶段课程逐步学习。完成每个阶段的 10 道 AI 能力测评（需全部答对），即可验证技能掌握程度并获得等级经验值。",
+      "view_details": "详情",
+      "collapse_details": "收起",
       "sdg_impact_label": "联合国可持续发展目标（SDG）赋能解析",
       "sdg_why_relates": "本阶段技能如何赋能联合国 SDG 目标",
       "sdg_hide_rationale": "收起 SDG 赋能解析",
       "sdg_view_rationale": "展开 SDG 赋能解析",
-      "sdg_pillar_automation": "自动化替代防御",
-      "sdg_pillar_productivity": "高附加值生产力",
-      "sdg_pillar_sustainable": "可持续职业升级",
       "answer_quiz": "作答技能测验",
       "skill_mastered": "技能已掌握",
       "retake_quiz": "重新测试",
@@ -312,10 +325,10 @@
     "history": {
       "badge": "已废弃 • 历史归档",
       "note": "该计划已被新规划取代并抛弃，但系统仍为您完整保留历史数据供成长轨迹审计。",
-      "view_details": "查看历史详情",
-      "collapse_details": "收起详情",
-      "view_more": "查看更多历史归档规划",
-      "collapse_history": "收起历史规划",
+      "view_details": "详情",
+      "collapse_details": "收起",
+      "view_more": "更多规划",
+      "collapse_history": "收起历史",
       "locked_banner_title": "历史规划 • 已完全封锁锁定",
       "locked_banner_desc": "该规划已被新规划取代并作为不可变成长快照保留。所有操作、文件上传与 AI 验证已全部封锁禁用。",
       "locked_phase_label": "已封锁历史节点（只读）"
@@ -368,13 +381,13 @@
     "register": {
       "title": "创建账户",
       "description": "加入 SkillVerse，开启您的 AI 技能转型之旅",
-      "button": "注册并发送验证码",
+      "button": "注册",
       "have_account": "已有账号？"
     },
     "forgot_password": {
       "title": "找回密码",
       "description": "输入您的注册邮箱以接收 6 位数验证码",
-      "button": "发送 6 位数验证码"
+      "button": "发送验证码"
     },
     "verify_registration": {
       "title": "邮箱验证",
@@ -383,7 +396,7 @@
     "reset_password": {
       "title": "设置新密码",
       "description": "输入 6 位数恢复验证码并设置您的全新密码",
-      "button": "更新密码并登录",
+      "button": "更新",
       "new_password_label": "新密码"
     },
     "common": {
@@ -400,7 +413,7 @@
       "verification_code_placeholder": "123456",
       "code_sent": "6 位数验证码已发送至",
       "processing": "处理中...",
-      "verify_button": "验证并完成",
+      "verify_button": "验证",
       "signin_link": "前往登录",
       "resend_code": "重新发送",
       "resend_countdown": "{seconds} 秒后重新发送",

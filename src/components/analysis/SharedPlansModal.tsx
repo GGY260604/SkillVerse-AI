@@ -23,6 +23,7 @@ export default function SharedPlansModal() {
   const isOpen = isSharedPlansModalOpen;
   const roadmapId = shareRoadmapData?.id;
 
+  // --- State ---
   const [searchQuery, setSearchQuery] = useState("");
   const [collaborators, setCollaborators] = useState<SharedCollaborator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,8 +35,7 @@ export default function SharedPlansModal() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // --- Collaborator Data ---
-  // 1. Load current shares on open; search requests matching users and their existing access.
-  // 2. The API resolves the active roadmap, reads users and permissions, and returns level data.
+  // Load current collaborators on open and search by user details.
   const fetchUsers = useCallback(
     async (queryText: string) => {
       setIsLoading(true);
@@ -73,7 +73,7 @@ export default function SharedPlansModal() {
     [roadmapId, t]
   );
 
-  // Reset to the roadmap's existing shared users each time the modal opens.
+  // Refresh collaborator state whenever the modal opens.
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
@@ -84,7 +84,7 @@ export default function SharedPlansModal() {
     }
   }, [isOpen, fetchUsers]);
 
-  // --- Modal Actions ---
+  // --- Modal Lifecycle & Actions ---
   // Close on Escape unless a collaborator request is still in progress.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,13 +96,13 @@ export default function SharedPlansModal() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isLoading, closeSharedPlansModal]);
 
-  // Submit an explicit UID/email search through the sharing API.
+  // Search collaborators by UID or email.
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     fetchUsers(searchQuery);
   };
 
-  // Persist a permission change, then mirror the result in the local list.
+  // Save the access change and update the local list.
   const handleAccessChange = async (targetUserId: string, newAccessLevel: "no_access" | "viewable") => {
     setUpdatingUserId(targetUserId);
     setErrorMsg(null);
@@ -158,17 +158,17 @@ export default function SharedPlansModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isLoading) closeSharedPlansModal();
       }}
     >
-      {/* Modal Container */}
+      {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] bg-bg-card/95 border border-border-subtle rounded-2xl p-4 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up flex flex-col"
       >
-        {/* Top Controls: Brand & Close */}
+        {/* Header Controls */}
         <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-6 shrink-0">
           <div className="flex items-center gap-2.5">
             <Logo size="sm" />
@@ -188,7 +188,7 @@ export default function SharedPlansModal() {
           </button>
         </div>
 
-        {/* Header Title & Subtitle */}
+        {/* Modal Heading */}
         <div className="mb-6 shrink-0 text-center">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mb-2">
             {t("title")}
@@ -198,17 +198,17 @@ export default function SharedPlansModal() {
           </p>
         </div>
 
-        {/* Search Bar & Access Filter Row (Rendered directly without outer wrapping box) */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-5 shrink-0">
-          {/* Search Input Box */}
-          <form onSubmit={handleSearchSubmit} className="relative flex-1">
+        {/* Collaborator Search */}
+        <div className="flex w-full min-w-0 flex-row items-center gap-2.5 mb-5 shrink-0">
+          {/* Search Field */}
+          <form onSubmit={handleSearchSubmit} className="relative min-w-0 flex-1">
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("search_placeholder")}
-              className="w-full h-10 bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-4 pr-9 py-2 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono"
+              className="h-10 w-full min-w-0 bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-4 pr-9 py-2 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono"
             />
 
             {searchQuery && (
@@ -228,12 +228,12 @@ export default function SharedPlansModal() {
             )}
           </form>
 
-          {/* Search Action Button (Square + Magnifying Glass) */}
+          {/* Search Button */}
           <button
             type="button"
             onClick={() => handleSearchSubmit()}
             disabled={!searchQuery.trim() || isLoading}
-            className="w-10 h-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="h-10 w-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             title={t("search")}
             aria-label={t("search")}
           >
@@ -274,9 +274,9 @@ export default function SharedPlansModal() {
           </div>
         )}
 
-        {/* Collaborators List Area */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1 focus:outline-none min-h-36">
-          {/* Loading state */}
+        {/* Collaborator List */}
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-1 focus:outline-none">
+          {/* Loading State */}
           {isLoading && (
             <div className="flex min-h-52 items-center justify-center">
               <LoadingSpinner
@@ -288,7 +288,7 @@ export default function SharedPlansModal() {
             </div>
           )}
 
-          {/* Simple Centered Gray Text When No Results (No dashed box, no icons) */}
+          {/* Empty State */}
           {!isLoading && collaborators.length === 0 && (
             <div className="flex-1 flex items-center justify-center py-16 text-center">
               <p className="text-xs sm:text-sm text-text-muted font-mono">
@@ -310,10 +310,10 @@ export default function SharedPlansModal() {
               return (
                 <div
                   key={user.id}
-                  className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-secondary/40 hover:bg-bg-secondary/70 p-4 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)]"
+                  className="group relative flex items-center gap-2.5 rounded-xl border border-border-subtle bg-bg-secondary/40 p-3 transition-all duration-300 hover:border-accent hover:bg-bg-secondary/70 hover:shadow-[0_0_25px_var(--accent-glow)] sm:gap-3.5 sm:p-4"
                 >
-                  {/* Left Identity Card (Styled like Profile user identity card) */}
-                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  {/* Collaborator Identity */}
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3.5">
                     <div className="relative w-10 h-10 shrink-0 group-hover:scale-105 transition-transform">
                       <div className="w-full h-full rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm">
                         {initial}
@@ -324,24 +324,24 @@ export default function SharedPlansModal() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex min-w-0 items-center gap-2">
                         <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors truncate">
                           {displayName}
                         </h4>
-                        <span className="text-xs font-mono text-text-muted truncate">
-                          • {user.email}
-                        </span>
                         {isShared && (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-accent/15 text-accent border-accent/40">
                             {t("shared")}
                           </span>
                         )}
                       </div>
+                      <span className="block truncate text-xs font-mono text-text-muted">
+                        {user.email}
+                      </span>
 
-                      {/* User UID with 1-Click Copy Button */}
-                      <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-text-muted">
-                        <span className="font-semibold text-text-secondary">{t("uid")}</span>
-                        <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
+                      {/* User ID */}
+                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-mono text-text-muted">
+                        <span className="shrink-0 font-semibold text-text-secondary">{t("uid")}</span>
+                        <span className="min-w-0 flex-1 select-all truncate text-text-muted">
                           {user.id}
                         </span>
                         <button
@@ -373,8 +373,8 @@ export default function SharedPlansModal() {
                     </div>
                   </div>
 
-                  {/* Right Side: Share Action Button (Share Icon) */}
-                  <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+                  {/* Access Controls */}
+                  <div className="flex shrink-0 items-center gap-2.5">
                     <button
                       type="button"
                       disabled={isUpdating}
