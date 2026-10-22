@@ -227,6 +227,7 @@ async def query_supabase_pgvector(
 
 _cached_active_roles: List[Dict[str, Any]] = []
 _last_active_roles_fetch_time: float = 0.0
+_declining_vectors_cache: Dict[str, List[float]] = {}
 
 
 async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
@@ -260,9 +261,14 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                 rows = resp.json()
                 if isinstance(rows, list) and len(rows) > 0:
                     formatted = []
+                    seen_ids = set()
                     for r in rows:
+                        rid = r.get("role_id")
+                        if not rid or rid in seen_ids:
+                            continue
+                        seen_ids.add(rid)
                         formatted.append({
-                            "roleId": r["role_id"],
+                            "roleId": rid,
                             "title": r["title"],
                             "titleLocalized": {
                                 "en": r["title"],
@@ -461,20 +467,41 @@ async def evaluate_roles(
         user_skills_list.extend(profile.toolsAndSoftware)
 
     # 1. Fetch live active ESCO roles dynamically from Supabase
-    active_roles = await fetch_active_roles_from_supabase()
+    raw_active_roles = await fetch_active_roles_from_supabase()
+    seen_role_ids = set()
+    active_roles = []
+    for r in raw_active_roles:
+        if r["roleId"] not in seen_role_ids:
+            seen_role_ids.add(r["roleId"])
+            active_roles.append(r)
 
     # Zero-Shot On-Demand Role Ingestion (User-Driven)
+    DISALLOWED_TARGET_TITLES = {
+        "none", "no", "n/a", "na", "experience", "experienced", "any", "not sure",
+        "nil", "tiada", "belum", "tidak", "fresh", "student", "null", "undefined",
+    }
     if profile.targetJobTitle and profile.targetJobTitle.strip():
-        target_norm = profile.targetJobTitle.strip().lower()
-        exists = any(target_norm in r["title"].lower() or r["title"].lower() in target_norm for r in active_roles)
-        if not exists:
-            custom_role = await synthesize_on_demand_role(
-                title=profile.targetJobTitle.strip(),
-                industry=profile.industry,
-                user_skills=user_skills_list,
+        target_clean = profile.targetJobTitle.strip()
+        target_norm = target_clean.lower()
+        clean_slug = target_norm.replace(" ", "-").replace("/", "-")
+        expected_custom_id = f"custom-{clean_slug}"
+
+        if len(target_clean) >= 3 and target_norm not in DISALLOWED_TARGET_TITLES:
+            exists = any(
+                r["roleId"] == expected_custom_id
+                or target_norm in r["title"].lower()
+                or r["title"].lower() in target_norm
+                for r in active_roles
             )
-            if custom_role:
-                active_roles.insert(0, custom_role)
+            if not exists:
+                custom_role = await synthesize_on_demand_role(
+                    title=target_clean,
+                    industry=profile.industry,
+                    user_skills=user_skills_list,
+                )
+                if custom_role and custom_role["roleId"] not in seen_role_ids:
+                    seen_role_ids.add(custom_role["roleId"])
+                    active_roles.insert(0, custom_role)
 
     # 2. Generate live 1024-dim ML semantic embedding for candidate profile
     profile_summary = (
@@ -502,6 +529,14 @@ async def evaluate_roles(
     declining_catalog = await fetch_declining_skills_from_supabase()
     at_risk_items: List[AtRiskSkillItem] = []
     matched_declining_keys = set()
+
+    # Pre-embed unique declining keys in parallel once into cache for sub-millisecond Tier 3 evaluation
+    uncached_declining = [k for k in declining_catalog.keys() if k not in _declining_vectors_cache]
+    if uncached_declining:
+        dec_vecs = await asyncio.gather(*(generate_embedding(k) for k in uncached_declining))
+        for k, v in zip(uncached_declining, dec_vecs):
+            if v:
+                _declining_vectors_cache[k] = v
 
     # Build multilingual user skill alias map from profile.skills localized_labels
     user_skill_alias_map: Dict[str, List[str]] = {}
@@ -547,10 +582,10 @@ async def evaluate_roles(
                 break
 
             # Tier 3: Cross-Lingual Semantic Vector Cosine Proximity (BGE-M3 / Gemini >= 0.65)
-            # Evaluates semantic alignment even when user enters raw Chinese (e.g. "手动录入") or Malay without exact dictionary match
+            # Evaluates semantic alignment with zero loop network calls using memory cache
             vec_u = user_skill_vectors.get(skill_name)
             if vec_u:
-                vec_declining = await generate_embedding(declining_key)
+                vec_declining = _declining_vectors_cache.get(declining_key)
                 if vec_declining and cosine_similarity(vec_u, vec_declining) >= 0.65:
                     matched_declining = (declining_key, info)
                     break
@@ -676,9 +711,13 @@ async def evaluate_roles(
         loc_title = role_def["titleLocalized"].get(locale, role_def["title"])
 
         sdg_items: List[SdgAlignmentItem] = []
+        seen_sdg_codes = set()
         for sdg in role_def.get("sdgAlignments", []):
             if isinstance(sdg, dict):
                 code = sdg.get("targetCode") or sdg.get("code") or sdg.get("sdg") or "SDG 8.2"
+                if code in seen_sdg_codes:
+                    continue
+                seen_sdg_codes.add(code)
                 title = sdg.get("targetTitle") or sdg.get("title") or sdg.get("sdg_title") or "Decent Work & Economic Growth"
                 score = float(sdg.get("affinityScore") or sdg.get("score") or 0.85)
                 explanation = sdg.get("impactExplanation") or get_sdg_impact_explanation(code, loc_title, locale)
@@ -712,7 +751,11 @@ async def evaluate_roles(
 
     for scen_key in ["moderate", "accelerated_ai", "green_economy"]:
         scen_list: List[MatchedRole] = []
+        seen_cand_ids = set()
         for cand in evaluated_candidates:
+            if cand["roleId"] in seen_cand_ids:
+                continue
+            seen_cand_ids.add(cand["roleId"])
             multiplier = cand["scenarioMultipliers"].get(scen_key, 1.0)
             final_score = round(min(1.0, max(0.15, cand["base_match"] * multiplier)), 3)
             scen_list.append(
@@ -730,9 +773,10 @@ async def evaluate_roles(
                 )
             )
         scen_list.sort(key=lambda x: x.matchScore, reverse=True)
-        scenario_roles[scen_key] = scen_list[:5]
+        top_scen = scen_list[:5]
+        scenario_roles[scen_key] = top_scen
         if scen_key == active_scenario_key:
-            matched_roles = scen_list
+            matched_roles = top_scen
 
     if not matched_roles and "moderate" in scenario_roles:
         matched_roles = scenario_roles["moderate"]

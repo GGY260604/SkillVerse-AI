@@ -94,11 +94,25 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
             # Phase 3 & 4: Execute real role evaluation
             yield f"data: {json.dumps({'phase': 3, 'title': 'Occupational Taxonomy Search', 'detail': 'Querying Supabase HNSW pgvector index & calculating soft overlaps...', 'percent': 75})}\n\n"
 
-            matched_roles, radar_data, scenario_roles = await evaluate_roles(
-                profile=request.profile,
-                scenario=request.macroScenario,
-                locale=request.locale,
+            eval_task = asyncio.create_task(
+                evaluate_roles(
+                    profile=request.profile,
+                    scenario=request.macroScenario,
+                    locale=request.locale,
+                )
             )
+
+            # Keep-alive heartbeat: while evaluate_roles is computing, yield SSE comments every 2 seconds
+            # so reverse proxies, Next.js idle timer, and client sockets never time out
+            hb_ticks = 0
+            while not eval_task.done():
+                await asyncio.sleep(2.0)
+                if eval_task.done():
+                    break
+                hb_ticks += 1
+                yield f": keep-alive {hb_ticks}\n\n"
+
+            matched_roles, radar_data, scenario_roles = await eval_task
 
             yield f"data: {json.dumps({'phase': 4, 'title': 'Calibrating SDG Alignment', 'detail': 'Calibrating competency radar axes & UN SDG impact goals...', 'percent': 90})}\n\n"
             await asyncio.sleep(0.1)

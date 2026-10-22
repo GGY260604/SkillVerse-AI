@@ -59,7 +59,7 @@ export async function analyzeWorkforceProfileStream(
 ): Promise<AnalyzeResponsePayload> {
   const controller = new AbortController();
   const abortFromCaller = () => controller.abort();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
+  const timeout = setTimeout(() => controller.abort(), 90_000);
 
   if (requestSignal?.aborted) {
     controller.abort();

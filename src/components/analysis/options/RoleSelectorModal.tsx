@@ -103,14 +103,18 @@ export default function RoleSelectorModal() {
     USE_ROLE_SELECTOR_MODAL_MOCK_DATA || activeModal === "role_select";
   const isMatchingView = !USE_ROLE_SELECTOR_MODAL_MOCK_DATA && isMatching;
   const isSynthesizingView = !USE_ROLE_SELECTOR_MODAL_MOCK_DATA && isSynthesizing;
-  const rolesToDisplay = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+  const rawRolesToDisplay = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
     ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles
     : topRoles;
+  const rolesToDisplay = rawRolesToDisplay.filter(
+    (role, index, self) =>
+      index === self.findIndex((r) => r.roleId === role.roleId)
+  );
   const roleIdToDisplay =
     selectedRoleId ??
     (USE_ROLE_SELECTOR_MODAL_MOCK_DATA
       ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles[0]?.roleId ?? null
-      : null);
+      : rolesToDisplay[0]?.roleId ?? null);
   const activeScenario =
     SCENARIO_OPTIONS.find((scenario) => scenario.id === selectedScenario) ?? SCENARIO_OPTIONS[0];
 
@@ -176,7 +180,10 @@ export default function RoleSelectorModal() {
 
         if (!isCancelled && result && result.topRoles && result.topRoles.length > 0) {
           const scenarioKey = "moderate";
-          const rolesForScenario = result.scenarioRoles?.[scenarioKey] || result.topRoles;
+          const rawRoles = result.scenarioRoles?.[scenarioKey] || result.topRoles;
+          const rolesForScenario = rawRoles.filter(
+            (r, idx, self) => idx === self.findIndex((x) => x.roleId === r.roleId)
+          );
           setTopRoles(rolesForScenario);
           setSelectedRoleId(rolesForScenario[0]?.roleId || null);
           setAnalysisResult(result);
@@ -190,23 +197,18 @@ export default function RoleSelectorModal() {
       } catch (err: unknown) {
         if (!isCancelled) {
           setIsMatching(false);
+          console.error("[RoleSelectorModal] Matching error:", err);
           const isTimeout =
             err instanceof Error &&
             (err.message === "MATCHING_TIMEOUT" ||
               (err as any).code === "MATCHING_TIMEOUT");
-          const isRoleMatchingFailed =
-            err instanceof Error &&
-            ((err as any).code === "ROLE_MATCHING_FAILED" ||
-              err.message === "ROLE_MATCHING_FAILED");
 
           setErrorMessage(
             isTimeout
               ? t("matching_timeout")
-              : isRoleMatchingFailed
-                ? t("matching_failed")
-                : err instanceof Error
-                  ? err.message
-                  : t("matching_failed")
+              : err instanceof Error
+                ? err.message
+                : t("matching_failed")
           );
         }
       }
@@ -226,8 +228,11 @@ export default function RoleSelectorModal() {
     const result = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
       ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT
       : analysisResult;
-    const candidateRoles =
+    const rawCandidates =
       result?.scenarioRoles?.[newScenario] || result?.topRoles || topRoles;
+    const candidateRoles = rawCandidates.filter(
+      (r, idx, self) => idx === self.findIndex((x) => x.roleId === r.roleId)
+    );
     setTopRoles(candidateRoles);
     if (!candidateRoles.some((r) => r.roleId === roleIdToDisplay)) {
       setSelectedRoleId(candidateRoles[0]?.roleId || null);
@@ -441,7 +446,7 @@ export default function RoleSelectorModal() {
 
                 return (
                   <div
-                    key={role.roleId}
+                    key={`${role.roleId}-${idx}`}
                     onClick={() => {
                       setSelectedRoleId(role.roleId);
                       setErrorMessage(null);
@@ -467,7 +472,7 @@ export default function RoleSelectorModal() {
                       <div className="text-[11px] font-mono text-emerald-400 mt-1 flex flex-wrap gap-x-2">
                         {role.sdgAlignments.map((sdg, sIdx) => (
                           <span
-                            key={sdg.targetCode}
+                            key={`${sdg.targetCode}-${sIdx}`}
                             title={`${sdg.targetCode}: ${sdg.targetTitle}`}
                             className="cursor-help hover:underline"
                           >
