@@ -1,3 +1,4 @@
+import asyncio
 import math
 import time
 from datetime import datetime, timezone
@@ -219,12 +220,14 @@ async def evaluate_team_skill_matrix(
             "Cross-functional Collaboration",
         ]
 
-    # Pre-generate embeddings for all required benchmark skills
-    req_skill_vectors: Dict[str, List[float]] = {}
-    for r_skill in req_skills:
-        vec = await generate_embedding(r_skill)
-        if vec:
-            req_skill_vectors[r_skill] = vec
+    # Pre-generate embeddings for all required benchmark skills in parallel
+    if req_skills:
+        raw_r_vecs = await asyncio.gather(*(generate_embedding(r) for r in req_skills))
+        req_skill_vectors: Dict[str, List[float]] = {
+            r: v for r, v in zip(req_skills, raw_r_vecs) if v
+        }
+    else:
+        req_skill_vectors = {}
 
     # 2. Evaluate Each Candidate
     evaluated_candidates: List[TeamMemberAnalysis] = []
@@ -244,12 +247,16 @@ async def evaluate_team_skill_matrix(
                 if clean_ms and clean_ms not in user_skills_dict:
                     user_skills_dict[clean_ms] = "intermediate"
 
-        # Pre-compute candidate skill vectors
-        user_skill_vectors: Dict[str, List[float]] = {}
-        for u_name in user_skills_dict.keys():
-            u_vec = await generate_embedding(u_name)
-            if u_vec:
-                user_skill_vectors[u_name] = u_vec
+        # Pre-compute candidate skill vectors in parallel
+        cand_keys = list(user_skills_dict.keys())
+        if cand_keys:
+            raw_cand_vecs = await asyncio.gather(*(generate_embedding(k) for k in cand_keys))
+            user_skill_vectors: Dict[str, List[float]] = {
+                k: v for k, v in zip(cand_keys, raw_cand_vecs) if v
+            }
+        else:
+            user_skill_vectors = {}
+
 
         skills_status_map: Dict[str, SkillEvaluationItem] = {}
         total_score_acc = 0.0

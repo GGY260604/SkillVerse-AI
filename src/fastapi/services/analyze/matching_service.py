@@ -489,10 +489,13 @@ async def evaluate_roles(
 
     evaluated_candidates: List[Dict[str, Any]] = []
 
-    # Pre-embed user skills for dynamic semantic similarity and cross-lingual evaluation (cached in memory)
-    user_skill_vectors: Dict[str, List[float]] = {}
-    for u_skill in user_skills_list:
-        user_skill_vectors[u_skill] = await generate_embedding(u_skill)
+    # Pre-embed user skills in parallel for dynamic semantic similarity and cross-lingual evaluation
+    if user_skills_list:
+        raw_u_vecs = await asyncio.gather(*(generate_embedding(u) for u in user_skills_list))
+        user_skill_vectors: Dict[str, List[float]] = dict(zip(user_skills_list, raw_u_vecs))
+    else:
+        user_skill_vectors = {}
+
 
     # Check at-risk skills across user competencies dynamically from Supabase trend signals
     declining_catalog = await fetch_declining_skills_from_supabase()
