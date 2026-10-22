@@ -479,6 +479,9 @@ async def evaluate_roles(
     DISALLOWED_TARGET_TITLES = {
         "none", "no", "n/a", "na", "experience", "experienced", "any", "not sure",
         "nil", "tiada", "belum", "tidak", "fresh", "student", "null", "undefined",
+        "all", "anything", "whatever", "any role", "flexible", "open",
+        "apa-apa", "apa sahaja", "sebarang", "tak kisah", "mana-mana",
+        "都可以", "随便", "任意", "无所谓", "没有", "看情况", "皆可", "不限",
     }
     if profile.targetJobTitle and profile.targetJobTitle.strip():
         target_clean = profile.targetJobTitle.strip()
@@ -486,11 +489,13 @@ async def evaluate_roles(
         clean_slug = target_norm.replace(" ", "-").replace("/", "-")
         expected_custom_id = f"custom-{clean_slug}"
 
-        if len(target_clean) >= 3 and target_norm not in DISALLOWED_TARGET_TITLES:
+        if len(target_clean) >= 2 and target_norm not in DISALLOWED_TARGET_TITLES:
             exists = any(
                 r["roleId"] == expected_custom_id
                 or target_norm in r["title"].lower()
                 or r["title"].lower() in target_norm
+                or (r.get("titleLocalized", {}).get("zh") and target_norm in r["titleLocalized"]["zh"].lower())
+                or (r.get("titleLocalized", {}).get("ms") and target_norm in r["titleLocalized"]["ms"].lower())
                 for r in active_roles
             )
             if not exists:
