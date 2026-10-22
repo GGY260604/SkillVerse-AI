@@ -45,7 +45,7 @@ FALLBACK_DECLINING_SKILLS = {
         "aliases": ["generic copywriting", "penulisan salinan generik", "通用文案撰写", "文案撰写", "copywriting"],
         "reason": "Large language models generating baseline marketing copy autonomously.",
         "reason_ms": "Model bahasa besar menghasilkan salinan pemasaran asas secara autonomi.",
-        "reason_zh": "大语言模型（LLM）已能自主批量生成基础营销与推广文案。",
+        "reason_zh": "大语言模型(LLM)已能自主批量生成基础营销与推广文案。",
     },
     "simple bookkeeping reconciliation": {
         "velocity": -0.32,
