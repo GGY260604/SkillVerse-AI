@@ -69,12 +69,12 @@ export async function POST(request: NextRequest) {
     });
 
     const roadmapMap = new Map<string, any>();
-    activeRoadmaps.forEach((r) => {
+    activeRoadmaps.forEach((r: any) => {
       if (r.userId) roadmapMap.set(r.userId, r);
     });
 
     // 2. Format teamMembers array matching TeamMemberInput schema
-    const teamMembers = users.map((u) => {
+    const teamMembers = users.map((u: any) => {
       let parsedSkills: any[] = [];
       if (Array.isArray(u.skills)) {
         parsedSkills = u.skills;
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         proficiency: typeof s === "object" && s.proficiency ? s.proficiency : "intermediate",
         category: typeof s === "object" ? s.category : undefined,
         verified: typeof s === "object" ? s.verified : undefined,
-      })).filter((s) => Boolean(s.name));
+      })).filter((s: any) => Boolean(s.name));
 
       const rMap = roadmapMap.get(u.id);
 

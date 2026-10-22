@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     });
 
     const historyMap = new Map<string, any[]>();
-    historyRoadmaps.forEach((hr) => {
+    historyRoadmaps.forEach((hr: any) => {
       if (hr.userId) {
         const list = historyMap.get(hr.userId) || [];
         list.push(formatRoadmapToPlanData(hr as any));
