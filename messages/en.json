@@ -373,6 +373,7 @@
     "loading_desc": "Retrieving peer roadmaps and synchronization status...",
     "btn_reset_demo": "Restore Demo Shared Users",
     "back_to_shared": "← Back to Shared Roadmaps",
+    "back_to_shared_list": "Back to shared plans list",
     "retry": "Retry"
   },
   "auth": {

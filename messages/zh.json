@@ -373,6 +373,7 @@
     "loading_desc": "正在同步并检索同行与团队成员共享的成长路线图...",
     "btn_reset_demo": "恢复演示用户数据",
     "back_to_shared": "← 返回共享规划列表",
+    "back_to_shared_list": "返回共享规划列表",
     "retry": "重试"
   },
   "auth": {

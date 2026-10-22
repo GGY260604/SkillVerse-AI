@@ -373,6 +373,7 @@
     "loading_desc": "Mendapatkan semula pelan kerjaya rakan sebaya dan status penyegerakan...",
     "btn_reset_demo": "Pulihkan Data Pengguna Demo",
     "back_to_shared": "← Kembali ke Senarai Dikongsi",
+    "back_to_shared_list": "Kembali ke senarai pelan dikongsi",
     "retry": "Cuba semula"
   },
   "auth": {
