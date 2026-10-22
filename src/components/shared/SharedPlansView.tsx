@@ -47,9 +47,6 @@ export default function SharedPlansView() {
   // State: Search filter query
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // State: Access level filter ("all" | "none")
-  const [filter, setFilter] = useState<"all" | "none">("all");
-
   // State: Targeted item pending deletion confirmation
   const [itemToDelete, setItemToDelete] = useState<SharedRoadmapItem | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -94,21 +91,13 @@ export default function SharedPlansView() {
     }
   }, [isLoggedIn, fetchSharedRoadmaps]);
 
-  // Filter roadmaps by access level and search query (matches name, email, UID, or target role)
-  // Defaults to displaying all shared roadmaps when query is empty and filter is "all"
+  // Filter roadmaps by search query within users who have shared roadmaps with you.
+  // Defaults to displaying all shared roadmaps when query is empty.
   const filteredRoadmaps = useMemo(() => {
-    // If in search mode ("none") and no search query entered, show empty list
-    if (filter === "none" && !searchQuery.trim()) {
-      return [];
-    }
-
-    let list = sharedRoadmaps;
-
-    // Apply search query within the shared roadmaps
-    if (!searchQuery.trim()) return list;
+    if (!searchQuery.trim()) return sharedRoadmaps;
 
     const query = searchQuery.toLowerCase().trim();
-    return list.filter((item) => {
+    return sharedRoadmaps.filter((item) => {
       const name = (item.owner.name || "").toLowerCase();
       const email = item.owner.email.toLowerCase();
       const uid = item.owner.id.toLowerCase();
@@ -122,7 +111,7 @@ export default function SharedPlansView() {
         category.includes(query)
       );
     });
-  }, [sharedRoadmaps, searchQuery, filter]);
+  }, [sharedRoadmaps, searchQuery]);
 
   // Active peer plan when drilling down
   const activeItem = useMemo(() => {
@@ -221,8 +210,8 @@ export default function SharedPlansView() {
         </div>
       </div>
 
-      {/* Search Bar & Access Filter Row (Identical structure and aesthetics to SharedPlansModal) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-6 shrink-0">
+      {/* Search Bar Row */}
+      <div className="flex items-center gap-2.5 mb-6 shrink-0">
         {/* Search Input Box */}
         <form
           onSubmit={(e) => {
@@ -270,27 +259,6 @@ export default function SharedPlansView() {
             />
           </svg>
         </button>
-
-        {/* Access Level Filter Dropdown: Only 'all' and 'none' (Search Mode) */}
-        <div className="relative shrink-0">
-          <select
-            value={filter}
-            onChange={(e) =>
-              setFilter(e.target.value as "all" | "none")
-            }
-            aria-label={tModal("filter_label")}
-            className="w-full sm:w-auto h-10 appearance-none bg-bg-card border border-border-subtle hover:border-border-hover focus:border-accent text-xs font-mono text-text-primary rounded-xl px-3.5 py-2 pr-8 outline-none cursor-pointer transition-colors"
-          >
-            <option value="all">{tModal("filter_all")}</option>
-            <option value="none">{tModal("filter_none")}</option>
-          </select>
-
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
       </div>
 
       {/* Error Alert */}
@@ -459,9 +427,7 @@ export default function SharedPlansView() {
       {!isLoading && filteredRoadmaps.length === 0 && (
         <div className="flex-1 flex items-center justify-center py-20 text-center animate-fade-in">
           <p className="text-xs sm:text-sm text-text-muted font-mono max-w-md mx-auto leading-relaxed">
-            {filter === "none" && !searchQuery.trim()
-              ? "Search for a peer by name, email, role, or UID..."
-              : searchQuery
+            {searchQuery.trim()
               ? "No shared roadmaps found matching your search."
               : "You currently have no career roadmaps shared by other members, or all have been removed."}
           </p>

@@ -23,38 +23,30 @@ export default function SharedPlansModal() {
   const roadmapId = shareRoadmapData?.id;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<"none" | "all">("none");
   const [collaborators, setCollaborators] = useState<SharedCollaborator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch users based on search term or filter
+  // Fetch users:
+  // If queryText is empty, defaults to fetching all shared users ("filter=all").
+  // If queryText is provided, searches across users in database ("search=queryText").
   const fetchUsers = useCallback(
-    async (queryText: string, filterMode: "none" | "all") => {
-      // If no filter selected and no search term, reset list to empty
-      if (filterMode === "none" && !queryText.trim()) {
-        setCollaborators([]);
-        setHasSearched(false);
-        return;
-      }
-
+    async (queryText: string) => {
       setIsLoading(true);
       setErrorMsg(null);
-      setHasSearched(true);
 
       try {
         const params = new URLSearchParams();
         if (roadmapId) params.set("roadmapId", roadmapId);
 
-        if (filterMode !== "none") {
-          params.set("filter", filterMode);
-        } else if (queryText.trim()) {
+        if (!queryText.trim()) {
+          params.set("filter", "all");
+        } else {
           params.set("search", queryText.trim());
         }
 
@@ -80,19 +72,16 @@ export default function SharedPlansModal() {
     [roadmapId]
   );
 
-  // Reset modal state on open
+  // Reset modal state on open: default load all shared users
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
-      setFilter("none");
-      setCollaborators([]);
-      setErrorMsg(null);
-      setHasSearched(false);
+      fetchUsers("");
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, fetchUsers]);
 
   // Handle Escape key to dismiss modal
   useEffect(() => {
@@ -108,22 +97,7 @@ export default function SharedPlansModal() {
   // Handle Search Submission
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (filter !== "none") {
-      setFilter("none");
-    }
-    fetchUsers(searchQuery, "none");
-  };
-
-  // Handle Filter Change
-  const handleFilterChange = (newFilter: "none" | "all") => {
-    setFilter(newFilter);
-    if (newFilter !== "none") {
-      setSearchQuery("");
-      fetchUsers("", newFilter);
-    } else {
-      setCollaborators([]);
-      setHasSearched(false);
-    }
+    fetchUsers(searchQuery);
   };
 
   // Handle Access Level Change
@@ -149,12 +123,14 @@ export default function SharedPlansModal() {
         return;
       }
 
-      // Update local state immediately
+      // Update local state immediately:
+      // If we are showing the default shared users list (!searchQuery.trim()), revoking access removes them from view.
+      // If in search results mode, update the card's access level.
       setCollaborators((prev) =>
         prev
           .map((c) => (c.id === targetUserId ? { ...c, accessLevel: newAccessLevel } : c))
           .filter((c) => {
-            if (filter === "all" && newAccessLevel === "no_access") return false;
+            if (!searchQuery.trim() && newAccessLevel === "no_access") return false;
             return true;
           })
       );
@@ -237,10 +213,7 @@ export default function SharedPlansModal() {
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
-                  if (filter === "none") {
-                    setCollaborators([]);
-                    setHasSearched(false);
-                  }
+                  fetchUsers("");
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 border-none bg-transparent cursor-pointer"
                 title="Clear search"
@@ -281,27 +254,6 @@ export default function SharedPlansModal() {
               </svg>
             )}
           </button>
-
-          {/* Access Level Filter Dropdown: Only Search Mode ('none') and All Shared ('all') */}
-          <div className="relative shrink-0">
-            <select
-              value={filter}
-              onChange={(e) =>
-                handleFilterChange(e.target.value as "none" | "all")
-              }
-              aria-label={t("filter_label")}
-              className="w-full sm:w-auto h-10 appearance-none bg-bg-card border border-border-subtle hover:border-border-hover focus:border-accent text-xs font-mono text-text-primary rounded-xl px-3.5 py-2 pr-8 outline-none cursor-pointer transition-colors"
-            >
-              <option value="none">{t("filter_none")}</option>
-              <option value="all">{t("filter_all")}</option>
-            </select>
-
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
         </div>
 
         {/* Error Alert */}
@@ -346,7 +298,9 @@ export default function SharedPlansModal() {
           {!isLoading && collaborators.length === 0 && (
             <div className="flex-1 flex items-center justify-center py-16 text-center">
               <p className="text-xs sm:text-sm text-text-muted font-mono">
-                No users found matching your search or filter.
+                {searchQuery.trim()
+                  ? "No users found matching your search."
+                  : "No members currently shared with this roadmap."}
               </p>
             </div>
           )}
