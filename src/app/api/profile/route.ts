@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+  createUnauthorizedResponse,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 import {
   normalizeWorkArrangement,
@@ -24,17 +27,12 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUserId = userData.user.id;
+    const currentUserId = user.id;
     const { searchParams } = new URL(request.url);
     const requestedUserId = searchParams.get("userId");
 
@@ -72,18 +70,19 @@ export async function GET(request: NextRequest) {
     const resolvedName =
       userRecord?.name ||
       (targetUserId === currentUserId
-        ? userData.user.user_metadata?.name || userData.user.user_metadata?.full_name || ""
+        ? user.user_metadata?.name || user.user_metadata?.full_name || user.name || ""
         : "");
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       profile: userRecord || null,
       user: {
         id: targetUserId,
-        email: userRecord?.email || (targetUserId === currentUserId ? userData.user.email : ""),
+        email: userRecord?.email || (targetUserId === currentUserId ? user.email : ""),
         name: resolvedName,
       },
     });
+    return applyAuthCookies(response, newTokens);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[/api/profile GET] Uncaught exception:", err);
@@ -98,17 +97,10 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = userData.user;
     const body = await request.json();
     const rawName = typeof body.name === "string" ? body.name.trim() : "";
 
@@ -185,7 +177,7 @@ export async function PATCH(request: NextRequest) {
       console.warn("[/api/profile PATCH] Auth metadata sync warning:", authErr);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Profile name updated successfully.",
       user: {
@@ -195,6 +187,7 @@ export async function PATCH(request: NextRequest) {
       },
       profile: updatedUser,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[/api/profile PATCH] Uncaught exception:", err);
@@ -210,17 +203,10 @@ export async function PATCH(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = userData.user;
     const body = await request.json();
     const admin = createAdminClient();
 
@@ -289,11 +275,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "User profile updated successfully in users table.",
       profile: updatedUser,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[/api/profile POST] Uncaught exception:", err);

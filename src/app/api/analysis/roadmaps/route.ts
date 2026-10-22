@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 
@@ -18,8 +20,8 @@ import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
  */
 export async function GET() {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({
         success: true,
         currentPlan: null,
@@ -27,16 +29,7 @@ export async function GET() {
       });
     }
 
-    const { data: userData } = await supabase.auth.getUser(accessToken);
-    const userId = userData?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json({
-        success: true,
-        currentPlan: null,
-        historyPlans: [],
-      });
-    }
+    const userId = user.id;
 
     // 1. Query this user's roadmaps directly with all flat trilingual columns & phases.
     let roadmaps: any[] = [];
@@ -135,11 +128,12 @@ export async function GET() {
       isCurrent: false,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       currentPlan,
       historyPlans,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (error: unknown) {
     console.error("[/api/analysis/roadmaps] Failed to fetch roadmaps:", error);
     return NextResponse.json(

@@ -4,8 +4,11 @@ import {
   getFastApiTargets,
   fetchWithFastApiFallback,
 } from "@/app/api/_lib/fastapi/client";
-import { supabase } from "@/lib/supabase/client";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+  createUnauthorizedResponse,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 
 // --- Route Handler ---
@@ -31,13 +34,12 @@ export async function POST(request: NextRequest) {
 
     // 1. Resolve the authenticated user ID for service requests and database ownership.
     let authenticatedUserId: string | undefined;
+    let newTokens: any = null;
     try {
-      const { accessToken } = await getAuthTokensFromCookies();
-      if (accessToken) {
-        const { data: userData } = await supabase.auth.getUser(accessToken);
-        if (userData?.user?.id) {
-          authenticatedUserId = userData.user.id;
-        }
+      const auth = await getAuthenticatedUser();
+      if (auth.user?.id) {
+        authenticatedUserId = auth.user.id;
+        newTokens = auth.newTokens;
       }
     } catch (authError) {
       console.warn("[/api/analysis/analyze] Session verification failed.", authError);
@@ -248,10 +250,7 @@ export async function POST(request: NextRequest) {
     // 3. Synthesize the selected role's roadmap, then persist it with its phases.
     if (action === "synthesize") {
       if (!authenticatedUserId) {
-        return NextResponse.json(
-          { success: false, error: "Unauthorized" },
-          { status: 401 }
-        );
+        return createUnauthorizedResponse();
       }
 
       let effectiveUserId = authenticatedUserId;

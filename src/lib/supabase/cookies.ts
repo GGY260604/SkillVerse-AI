@@ -63,3 +63,116 @@ export async function getAuthTokensFromCookies() {
   return { accessToken, refreshToken };
 }
 
+export interface AuthenticatedUserTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn?: number;
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  email?: string;
+  name?: string | null;
+  metadata?: Record<string, any>;
+  user_metadata?: Record<string, any>;
+}
+
+export interface AuthenticatedUserResult {
+  user: AuthenticatedUser | null;
+  newTokens: AuthenticatedUserTokens | null;
+}
+
+// Step 4: Resolve Authenticated User with Transparent Silent Refresh
+// Verifies accessToken first; if expired, seamlessly refreshes credentials via refreshToken.
+export async function getAuthenticatedUser(): Promise<AuthenticatedUserResult> {
+  const { accessToken, refreshToken } = await getAuthTokensFromCookies();
+  const { supabase } = await import("@/lib/supabase/client");
+
+  // 1. Fast Path: verify current accessToken against Supabase
+  if (accessToken) {
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+      if (!userError && userData?.user) {
+        const name = (userData.user.user_metadata?.name ||
+          userData.user.user_metadata?.full_name ||
+          null) as string | null;
+
+        return {
+          user: {
+            id: userData.user.id,
+            email: userData.user.email,
+            name,
+            metadata: userData.user.user_metadata,
+            user_metadata: userData.user.user_metadata,
+          },
+          newTokens: null,
+        };
+      }
+    } catch {}
+  }
+
+  // 2. Silent Refresh Path: if accessToken expired but refreshToken is valid, refresh session
+  if (refreshToken) {
+    try {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+        refresh_token: refreshToken,
+      });
+
+      if (!refreshError && refreshData.session && refreshData.user) {
+        const name = (refreshData.user.user_metadata?.name ||
+          refreshData.user.user_metadata?.full_name ||
+          null) as string | null;
+
+        return {
+          user: {
+            id: refreshData.user.id,
+            email: refreshData.user.email,
+            name,
+            metadata: refreshData.user.user_metadata,
+            user_metadata: refreshData.user.user_metadata,
+          },
+          newTokens: {
+            accessToken: refreshData.session.access_token,
+            refreshToken: refreshData.session.refresh_token,
+            expiresIn: refreshData.session.expires_in,
+          },
+        };
+      }
+    } catch {}
+  }
+
+  return { user: null, newTokens: null };
+}
+
+// Step 5: Attach Refreshed Credentials
+// Automatically attaches new auth cookies to server responses if a silent refresh occurred.
+export function applyAuthCookies(
+  response: NextResponse,
+  newTokens: AuthenticatedUserTokens | null
+): NextResponse {
+  if (newTokens) {
+    return attachAuthCookies(
+      response,
+      newTokens.accessToken,
+      newTokens.refreshToken,
+      newTokens.expiresIn
+    );
+  }
+  return response;
+}
+
+// Step 6: Create Standardized Unauthorized Response
+// Clears stale cookies and returns a 401 response with sessionExpired flag.
+export function createUnauthorizedResponse(message: string = "Unauthorized"): NextResponse {
+  const response = NextResponse.json(
+    {
+      success: false,
+      authenticated: false,
+      error: message,
+      sessionExpired: true,
+    },
+    { status: 401 }
+  );
+  return clearAuthCookies(response);
+}
+

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 
 /**
@@ -12,14 +14,9 @@ import { prisma } from "@/lib/supabase/prisma";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ success: true, guest: true, message: "Unauthenticated guest session." });
-    }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ success: true, guest: true, message: "Session expired or invalid." });
     }
 
     const body = await request.json();
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const calculatedLevel = level || Math.floor(totalExp / 100) + 1;
-    const userId = userData.user.id;
+    const userId = user.id;
     const admin = createAdminClient();
 
     // 1. Persist directly to `public.users` through Prisma.
@@ -57,7 +54,7 @@ export async function POST(request: NextRequest) {
     // 2. Persist directly to `auth.users` metadata through Supabase Auth.
     const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
       user_metadata: {
-        ...userData.user.user_metadata,
+        ...(user.user_metadata || user.metadata || {}),
         exp: totalExp,
         level: calculatedLevel,
       },
@@ -67,11 +64,12 @@ export async function POST(request: NextRequest) {
       console.error("[/api/profile/exp POST] auth.users update error:", updateError);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       totalExp,
       level: calculatedLevel,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[/api/profile/exp POST] Uncaught error:", err);
@@ -85,17 +83,12 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ totalExp: 0, level: 1, guest: true });
     }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json({ totalExp: 0, level: 1, guest: true });
-    }
-
-    const userId = userData.user.id;
+    const userId = user.id;
     let dbUser: { exp?: number | null; level?: number | null } | null = null;
 
     // 1. Try `public.users` through Prisma.
@@ -137,15 +130,16 @@ export async function GET() {
     }
 
     // 3. Fall back to `auth.users` metadata.
-    const metadata = userData.user.user_metadata || {};
+    const metadata = user.user_metadata || user.metadata || {};
     const totalExp = typeof metadata.exp === "number" ? metadata.exp : 0;
     const level = typeof metadata.level === "number" ? metadata.level : Math.floor(totalExp / 100) + 1;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       totalExp,
       level,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -406,6 +406,7 @@
     "common": {
       "login_required": "需要登录",
       "login_required_description": "请登录以访问此页面。",
+      "session_expired": "您的登录会话已过期，请重新登录以继续操作。",
       "go_home": "返回首页",
       "login_to_continue": "登录以继续",
       "email_label": "电子邮箱",

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+  createUnauthorizedResponse,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 
 /**
@@ -16,16 +19,11 @@ import { prisma } from "@/lib/supabase/prisma";
  */
 export async function GET(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    const currentUserId = userData?.user?.id;
-    if (userError || !currentUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const currentUserId = user.id;
 
     const { searchParams } = new URL(request.url);
     const roadmapIdParam = searchParams.get("roadmapId") || "";
@@ -191,16 +189,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    const currentUserId = userData?.user?.id;
-    if (userError || !currentUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const currentUserId = user.id;
 
     const body = await request.json();
     const { roadmapId: reqRoadmapId, targetUserId, accessLevel } = body;

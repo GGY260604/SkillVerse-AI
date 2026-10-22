@@ -406,6 +406,7 @@
     "common": {
       "login_required": "Log Masuk Diperlukan",
       "login_required_description": "Sila log masuk untuk mengakses halaman ini.",
+      "session_expired": "Sesi anda telah tamat. Sila log masuk semula untuk meneruskan.",
       "go_home": "Ke Laman Utama",
       "login_to_continue": "Log Masuk untuk Meneruskan",
       "email_label": "Alamat Emel",

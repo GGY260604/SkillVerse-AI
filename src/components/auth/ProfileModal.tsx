@@ -62,6 +62,13 @@ export default function ProfileModal() {
     }
   }, [isProfileModalOpen, user]);
 
+  // Auto-close ProfileModal when user session expires or logs out.
+  useEffect(() => {
+    if (isProfileModalOpen && !user) {
+      closeProfileModal();
+    }
+  }, [isProfileModalOpen, user, closeProfileModal]);
+
   // Handle Escape key to dismiss modal.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

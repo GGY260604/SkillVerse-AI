@@ -5,7 +5,7 @@
 // setAuthModalView(view) / setPendingEmail(email): update the current auth flow.
 // setUser(user) / checkAuth() / logout(): update or validate the authenticated user.
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 
 export type AuthModalView =
@@ -29,11 +29,13 @@ interface AuthContextType {
   isAuthModalOpen: boolean;
   authModalView: AuthModalView;
   pendingEmail: string;
-  openAuthModal: (view?: AuthModalView, email?: string) => void;
+  authModalNotice: string;
+  openAuthModal: (view?: AuthModalView, email?: string, notice?: string) => void;
   closeAuthModal: () => void;
   setAuthModalView: (view: AuthModalView) => void;
   setPendingEmail: (email: string) => void;
-  checkAuth: () => Promise<boolean>;
+  setAuthModalNotice: (notice: string) => void;
+  checkAuth: (isHeartbeat?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: AuthUser | null) => void;
 }
@@ -43,7 +45,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_CACHE_KEY = "skillverse_auth_cache";
 
 // --- Context Provider ---
-// Manage authentication state, session validation, and authentication modal visibility.
+// Manage authentication state, session validation, proactive heartbeat, and authentication modal visibility.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize user and loading consistently between SSR and client initial hydration to avoid hydration mismatch.
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -52,12 +54,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalView, setAuthModalView] = useState<AuthModalView>("login");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [authModalNotice, setAuthModalNotice] = useState("");
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
+  // Ref tracking current user state for timer and listener callbacks without stale closures.
+  const userRef = useRef<AuthUser | null>(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // --- Modal Actions ---
+  const openAuthModal = useCallback(
+    (view: AuthModalView = "login", email: string = "", notice?: string) => {
+      setAuthModalView(view);
+      if (email) setPendingEmail(email);
+      if (notice !== undefined) {
+        setAuthModalNotice(notice);
+      }
+      setIsAuthModalOpen(true);
+    },
+    []
+  );
+
+  const closeAuthModal = useCallback(() => {
+    setIsAuthModalOpen(false);
+    setAuthModalNotice("");
+  }, []);
+
+  // --- Session Expiration Handler ---
+  const handleSessionExpired = useCallback(() => {
+    setUser(null);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem(AUTH_CACHE_KEY);
+      } catch {}
+    }
+    openAuthModal("login", "", "session_expired");
+  }, [openAuthModal]);
+
   // --- Session Validation ---
-  const checkAuth = useCallback(async (): Promise<boolean> => {
+  const checkAuth = useCallback(async (isHeartbeat: boolean = false): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/session", { cache: "no-store" });
       if (res.ok) {
@@ -72,12 +110,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return true;
         }
       }
+
+      const hadPreviousUser =
+        Boolean(userRef.current) ||
+        (typeof window !== "undefined" && Boolean(sessionStorage.getItem(AUTH_CACHE_KEY)));
+
       setUser(null);
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem(AUTH_CACHE_KEY);
         } catch {}
       }
+
+      // If active session check detects that a logged-in user's session expired, inform the user
+      if (isHeartbeat && hadPreviousUser) {
+        openAuthModal("login", "", "session_expired");
+      }
+
       return false;
     } catch {
       setUser(null);
@@ -90,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [openAuthModal]);
 
   // --- Initial Session Restore ---
   useEffect(() => {
@@ -103,8 +152,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
 
-    checkAuth();
+    checkAuth(false);
   }, [checkAuth]);
+
+  // --- Proactive Session Heartbeat & Window Focus Check ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible" && userRef.current) {
+        checkAuth(true);
+      }
+    };
+
+    // Heartbeat every 2.5 minutes if logged in
+    const heartbeatInterval = setInterval(() => {
+      if (userRef.current) {
+        checkAuth(true);
+      }
+    }, 150000);
+
+    window.addEventListener("focus", onVisibilityOrFocus);
+    document.addEventListener("visibilitychange", onVisibilityOrFocus);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener("focus", onVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", onVisibilityOrFocus);
+    };
+  }, [checkAuth]);
+
+  // --- Global 401 Interception (Reactive Detection on User Actions) ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleSessionExpiredEvent = () => {
+      handleSessionExpired();
+    };
+
+    window.addEventListener("skillverse:session-expired", handleSessionExpiredEvent);
+
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await originalFetch(...args);
+
+      if (res.status === 401) {
+        const input = args[0];
+        let url = "";
+        if (typeof input === "string") {
+          url = input;
+        } else if (input instanceof Request) {
+          url = input.url;
+        } else if (input && typeof (input as any).href === "string") {
+          url = (input as any).href;
+        }
+
+        const isAuthEndpoint =
+          url.includes("/api/auth/login") ||
+          url.includes("/api/auth/verify-otp") ||
+          url.includes("/api/auth/forgot-password") ||
+          url.includes("/api/auth/reset-password") ||
+          url.includes("/api/auth/session");
+
+        const isInternalApi = url.includes("/api/");
+
+        if (isInternalApi && !isAuthEndpoint) {
+          window.dispatchEvent(new CustomEvent("skillverse:session-expired"));
+        }
+      }
+
+      return res;
+    };
+
+    return () => {
+      window.removeEventListener("skillverse:session-expired", handleSessionExpiredEvent);
+      window.fetch = originalFetch;
+    };
+  }, [handleSessionExpired]);
 
   // --- Auth Redirect Handling ---
   useEffect(() => {
@@ -115,26 +239,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [searchParams, user, isLoading]);
 
-  // --- Modal Actions ---
-  const openAuthModal = useCallback(
-    (view: AuthModalView = "login", email: string = "") => {
-      setAuthModalView(view);
-      if (email) setPendingEmail(email);
-      setIsAuthModalOpen(true);
-    },
-    []
-  );
-
-  const closeAuthModal = useCallback(() => {
-    setIsAuthModalOpen(false);
-  }, []);
-
   // --- Authentication Actions ---
   const logout = useCallback(async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
       setUser(null);
+      setAuthModalNotice("");
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem(AUTH_CACHE_KEY);
@@ -171,10 +282,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthModalOpen,
         authModalView,
         pendingEmail,
+        authModalNotice,
         openAuthModal,
         closeAuthModal,
         setAuthModalView,
         setPendingEmail,
+        setAuthModalNotice,
         checkAuth,
         logout,
         setUser: handleSetUser,

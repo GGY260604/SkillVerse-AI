@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+  createUnauthorizedResponse,
+} from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 
@@ -15,16 +18,11 @@ import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
  */
 export async function GET(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    const currentUserId = userData?.user?.id;
-    if (userError || !currentUserId) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const currentUserId = user.id;
 
     // 1. Read grants received by the signed-in user with owner identity and ordered roadmap phases.
     let sharedRecords: any[] = [];
@@ -173,16 +171,11 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    const currentUserId = userData?.user?.id;
-    if (userError || !currentUserId) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const currentUserId = user.id;
 
     const { searchParams } = new URL(request.url);
     let sharedId = searchParams.get("id");
