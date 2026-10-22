@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useLocale } from "next-intl";
 import { useAuth } from "@/context/auth/AuthContext";
@@ -15,7 +14,6 @@ import { PlanData } from "@/components/analysis/planCard/planData";
 // Read the authenticated user's current and archived roadmaps and render the matching dashboard state.
 export default function AnalysisPage() {
   const locale = useLocale();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { isLoggedIn, isLoading, openAuthModal } = useAuth();
   const { activePlan } = usePlanModal();
@@ -71,9 +69,6 @@ export default function AnalysisPage() {
     };
   }, [fetchRoadmaps]);
 
-  // Keep the explicit plan query override for manual empty/existing-state testing.
-  const planQuery = searchParams.get("plan");
-
   // Prevent flashing content while validating authentication or if unauthenticated.
   if (isLoading || !isLoggedIn) {
     return null;
@@ -105,12 +100,7 @@ export default function AnalysisPage() {
     );
   }
 
-  const hasAnyPlan =
-    planQuery === "false"
-      ? false
-      : planQuery === "true"
-      ? true
-      : Boolean(currentPlan || historyPlans.length > 0 || activePlan);
+  const hasAnyPlan = Boolean(currentPlan || historyPlans.length > 0 || activePlan);
 
   // Render blank state if user has no roadmaps in the database
   if (!hasAnyPlan) {
@@ -138,7 +128,7 @@ export default function AnalysisPage() {
   };
 
   // Render full dashboard when roadmap(s) exist
-  const effectiveCurrentPlan = currentPlan || activePlan || (historyPlans.length > 0 ? historyPlans[0] : undefined);
+  const effectiveCurrentPlan = currentPlan || activePlan || undefined;
 
   return (
     <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">

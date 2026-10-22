@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import PlanCard from "./planCard/PlanCard";
 import PlanDetailView from "./planCard/PlanDetailView";
-import { CURRENT_PLAN, HISTORY_PLANS, type PlanData, type PlanPhase } from "./planCard/planData";
+import { type PlanData, type PlanPhase } from "./planCard/planData";
 import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import { useSharedModal } from "@/context/analysis/SharedModalContext";
 
@@ -31,8 +31,8 @@ export interface ExistPlanStateProps {
 // --- Existing Roadmap Dashboard ---
 // Show the current roadmap, archived history, and detail view; the same view supports shared plans.
 export default function ExistPlanState({
-  currentPlan = CURRENT_PLAN,
-  historyPlans = HISTORY_PLANS,
+  currentPlan,
+  historyPlans = [],
   isSharedView = false,
   canEdit = true,
   sharedUser,
@@ -46,12 +46,12 @@ export default function ExistPlanState({
 
   // --- Dashboard State ---
   // Mirror server-provided current/history records so phase progress updates render immediately.
-  const [activeCurrentPlan, setActiveCurrentPlan] = useState<PlanData>(currentPlan);
+  const [activeCurrentPlan, setActiveCurrentPlan] = useState<PlanData | null>(currentPlan ?? null);
   const [activeHistoryPlans, setActiveHistoryPlans] = useState<PlanData[]>(historyPlans);
 
   // Keep the dashboard in sync when the page refreshes roadmap data from the API.
   useEffect(() => {
-    setActiveCurrentPlan(currentPlan);
+    setActiveCurrentPlan(currentPlan ?? null);
   }, [currentPlan]);
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function ExistPlanState({
     };
 
     setActiveCurrentPlan((prev) => {
-      if (prev.phases?.some((p) => p.id === phaseId)) {
+      if (prev?.phases?.some((p) => p.id === phaseId)) {
         const updated = {
           ...prev,
           phases: updatePhasesList(prev.phases),
@@ -174,18 +174,19 @@ export default function ExistPlanState({
 
         {/* Header Actions: Share Plan and Edit Plan Buttons */}
         {/* Share button is NEVER rendered on shared view. */}
-        {(!selectedPlan || selectedPlan.isCurrent) && (
+        {(!selectedPlan || selectedPlan.isCurrent) &&
+          (selectedPlan || activeCurrentPlan) && (
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Share Plan Action Button - Strictly hidden in all shared views */}
             {!isSharedView && (
               <button
                 type="button"
-                onClick={() =>
-                  openSharedPlansModal(
-                    selectedPlan?.id || activeCurrentPlan.id,
-                    selectedPlan?.targetRole || activeCurrentPlan.targetRole
-                  )
-                }
+                onClick={() => {
+                  const planToShare = selectedPlan ?? activeCurrentPlan;
+                  if (planToShare) {
+                    openSharedPlansModal(planToShare.id, planToShare.targetRole);
+                  }
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
                 title={t("share_plan")}
               >
@@ -268,6 +269,7 @@ export default function ExistPlanState({
         /* Overview Mode: Display Current Plan and History Plan Cards */
         <div className="flex flex-col gap-10">
           {/* Section 1: Current Plan (Most Prominent) */}
+          {activeCurrentPlan && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
@@ -282,6 +284,7 @@ export default function ExistPlanState({
               onSelect={(plan) => setSelectedPlan(plan)}
             />
           </section>
+          )}
 
           {/* Section 2: History Plan (Subdued Muted Gray) */}
           {activeHistoryPlans.length > 0 && (

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { PlanData, PlanPhase, CourseItem, LocalizedStringMap, LocalizedListMap } from "./planData";
 import { useExpGain } from "@/context/auth/ExpGainContext";
 import PhaseQuizModal from "@/components/analysis/quiz/PhaseQuizModal";
+import { USE_PHASE_QUIZ_MODAL_TESTING } from "@/constants/testing/quiz";
 
 // --- Roadmap Detail View ---
 // Display a roadmap's phases, persist current-plan progress, and support read-only shared/history views.
@@ -15,6 +16,15 @@ interface PlanDetailViewProps {
   canEdit?: boolean;
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
+
+const TESTING_QUIZ_PHASE: PlanPhase = {
+  id: "testing-quiz-phase",
+  phase: "Testing",
+  weeks: "1 week",
+  title: "Quiz Modal Preview",
+  desc: "Preview the phase quiz modal without selecting a roadmap phase.",
+  tasks: ["General competency assessment"],
+};
 
 // --- Localization Helpers ---
 // Prefer the active locale, then English, then the first available translation.
@@ -136,7 +146,7 @@ export default function PlanDetailView({
     onPhaseToggle?.(phaseId, true);
 
     try {
-      await fetch("/api/analysis/roadmaps/phase", {
+      const response = await fetch("/api/analysis/roadmaps/phase", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -144,8 +154,18 @@ export default function PlanDetailView({
           isCompleted: true,
         }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to persist phase completion.");
+      }
     } catch (error) {
       console.error("Failed to persist phase completion:", error);
+      setPhases((prevPhases) =>
+        prevPhases.map((phase) =>
+          phase.id === phaseId ? { ...phase, isCompleted: false } : phase
+        )
+      );
+      onPhaseToggle?.(phaseId, false);
+      return;
     } finally {
       setUpdatingPhaseId(null);
     }
@@ -635,22 +655,31 @@ export default function PlanDetailView({
       </div>
 
       {/* 10-Question Skill Competency Assessment Modal */}
-      {activeQuizPhase && (
+      {(activeQuizPhase || USE_PHASE_QUIZ_MODAL_TESTING) && (
         <PhaseQuizModal
           isOpen={Boolean(activeQuizPhase)}
           onClose={() => setActiveQuizPhase(null)}
-          phaseIndex={activeQuizIndex}
-          phaseTitle={getLocalized(activeQuizPhase.titleLocalized, locale, activeQuizPhase.title)}
-          phaseDescription={getLocalized(activeQuizPhase.descriptionLocalized, locale, activeQuizPhase.desc)}
+          phaseIndex={activeQuizPhase ? activeQuizIndex : 1}
+          phaseTitle={getLocalized(
+            activeQuizPhase?.titleLocalized,
+            locale,
+            activeQuizPhase?.title ?? TESTING_QUIZ_PHASE.title
+          )}
+          phaseDescription={getLocalized(
+            activeQuizPhase?.descriptionLocalized,
+            locale,
+            activeQuizPhase?.desc ?? TESTING_QUIZ_PHASE.desc
+          )}
           skills={
-            activeQuizPhase.tasks && activeQuizPhase.tasks.length > 0
+            activeQuizPhase?.tasks && activeQuizPhase.tasks.length > 0
               ? activeQuizPhase.tasks
               : plan.skillsGap && plan.skillsGap.length > 0
               ? plan.skillsGap
-              : [activeQuizPhase.title]
+              : [activeQuizPhase?.title ?? TESTING_QUIZ_PHASE.title]
           }
           targetRole={plan.targetRole}
           onPassed={(expGained) => {
+            if (!activeQuizPhase) return;
             const currentPhaseId = activeQuizPhase.id;
             const currentPhaseTitle = getLocalized(activeQuizPhase.titleLocalized, locale, activeQuizPhase.title);
             handleQuizPassed(currentPhaseId, expGained, currentPhaseTitle);

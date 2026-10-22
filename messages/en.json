@@ -545,5 +545,186 @@
       "tagline": "All content provided on this website is for reference purposes only; the final decision rests entirely with you.",
       "github": "GitHub Repository"
     }
+  },
+  "profile": {
+    "options": {
+      "employmentStatus": {
+        "employed_at_risk": {
+          "label": "Employed (At Risk)",
+          "desc": "Routine workflows facing AI disruption"
+        },
+        "fresh_grad_student": {
+          "label": "Fresh Graduate / Student",
+          "desc": "Entering labor market & seeking placement"
+        },
+        "career_switcher": {
+          "label": "Career Switcher",
+          "desc": "Pivoting across domains or industries"
+        },
+        "jobseeker": {
+          "label": "Jobseeker",
+          "desc": "Active candidate seeking opportunities"
+        }
+      },
+      "workArrangement": {
+        "any": {
+          "label": "Any"
+        },
+        "remote": {
+          "label": "Full Remote"
+        },
+        "hybrid": {
+          "label": "Hybrid"
+        },
+        "onsite": {
+          "label": "On-site"
+        }
+      },
+      "careerGoal": {
+        "upskill": {
+          "label": "Upskill",
+          "desc": "Advance in Current Field"
+        },
+        "reskill": {
+          "label": "Reskill",
+          "desc": "Pivot to AI / Tech"
+        },
+        "explore": {
+          "label": "Explore",
+          "desc": "High-Growth Opportunities"
+        }
+      },
+      "yearsOfExperience": {
+        "0-1": {
+          "label": "0 - 1 Year (Entry Level)"
+        },
+        "1-3": {
+          "label": "1 - 3 Years (Associate)"
+        },
+        "3-5": {
+          "label": "3 - 5 Years (Mid-Level)"
+        },
+        "5-10": {
+          "label": "5 - 10 Years (Senior)"
+        },
+        "10+": {
+          "label": "10+ Years (Lead / Director)"
+        }
+      },
+      "industry": {
+        "Software & Cloud Services": {
+          "label": "Software & Cloud Services"
+        },
+        "Banking & Financial Services": {
+          "label": "Banking & Financial Services"
+        },
+        "Clean Energy & ESG": {
+          "label": "Clean Energy & ESG"
+        },
+        "Healthcare & BioTech": {
+          "label": "Healthcare & BioTech"
+        },
+        "Industrial Automation & Robotics": {
+          "label": "Industrial Automation & Robotics"
+        },
+        "Smart Logistics & Supply Chain": {
+          "label": "Smart Logistics & Supply Chain"
+        },
+        "Clerical & Administrative": {
+          "label": "Clerical & Administrative"
+        },
+        "Marketing & Creative Media": {
+          "label": "Marketing & Creative Media"
+        },
+        "Public Sector & Education": {
+          "label": "Public Sector & Education"
+        }
+      },
+      "educationLevel": {
+        "Secondary / High School": {
+          "label": "Secondary / High School"
+        },
+        "Diploma / Vocational (TVET)": {
+          "label": "Diploma / Vocational (TVET)"
+        },
+        "Bachelor's Degree": {
+          "label": "Bachelor's Degree"
+        },
+        "Master's / Postgraduate": {
+          "label": "Master's / Postgraduate"
+        },
+        "Doctorate / PhD": {
+          "label": "Doctorate / PhD"
+        },
+        "Self-Taught / Industry Certified": {
+          "label": "Self-Taught / Industry Certified"
+        }
+      },
+      "weeklyCommitmentHours": {
+        "1-3": {
+          "label": "1 - 3 Hours",
+          "sub": "Micro-learning"
+        },
+        "3-5": {
+          "label": "3 - 5 Hours",
+          "sub": "Recommended"
+        },
+        "5-10": {
+          "label": "5 - 10 Hours",
+          "sub": "Accelerated"
+        },
+        "10+": {
+          "label": "10+ Hours",
+          "sub": "Full Immersion"
+        }
+      },
+      "learningProviders": {
+        "free_open": {
+          "label": "Free & Open-Source",
+          "desc": "Coursera Audit, YouTube, edX, MIT OpenCourseWare"
+        },
+        "hrd_corp": {
+          "label": "HRD Corp Claimable",
+          "desc": "Certified Malaysian enterprise training programs"
+        },
+        "industry_cert": {
+          "label": "Vendor Certifications",
+          "desc": "AWS, Google Cloud, Microsoft, Cisco, NVIDIA"
+        },
+        "university": {
+          "label": "University Micro-Credentials",
+          "desc": "Accredited modular higher-education credits"
+        }
+      },
+      "targetSectors": {
+        "Artificial Intelligence & Machine Learning": {
+          "label": "Artificial Intelligence & Machine Learning"
+        },
+        "Clean Energy & ESG": {
+          "label": "Clean Energy & ESG"
+        },
+        "Cloud & Infrastructure": {
+          "label": "Cloud & Infrastructure"
+        },
+        "Cybersecurity & Zero Trust": {
+          "label": "Cybersecurity & Zero Trust"
+        },
+        "Modern Finance & FinTech": {
+          "label": "Modern Finance & FinTech"
+        },
+        "Software Engineering": {
+          "label": "Software Engineering"
+        },
+        "Smart Logistics & Supply Chain": {
+          "label": "Smart Logistics & Supply Chain"
+        },
+        "Healthcare & BioTech": {
+          "label": "Healthcare & BioTech"
+        },
+        "Industrial Automation": {
+          "label": "Industrial Automation"
+        }
+      }
+    }
   }
 }

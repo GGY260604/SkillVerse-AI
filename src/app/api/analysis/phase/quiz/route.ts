@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchWithFastApiFallback } from "@/app/api/_lib/fastapi/client";
-import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
+import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/testing/quiz";
 
 // --- Route Handler ---
-// Endpoint: POST /api/analysis/phase-quiz
+// Endpoint: POST /api/analysis/phase/quiz.
 // Purpose: Return mock quiz data or generate a quiz through the FastAPI backend.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { phaseIndex = 1, phaseTitle = "Core Competency", skills = [], courseTopic, targetRole, locale = "en" } = body;
 
-    // If constant is true, return the rich mock quiz directly
+    // If the constant is true, return the rich mock quiz directly.
     if (USE_QUIZ_MOCK_DATA) {
       const mock = getMockQuizData({
         phaseIndex: Number(phaseIndex) || 1,
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(data);
       }
     } catch (apiErr) {
-      console.warn("[phase-quiz] Failed to reach FastAPI endpoint, serving deterministic fallback:", apiErr);
+      console.warn("[phase-quiz] Failed to reach FastAPI endpoint; serving deterministic fallback.", apiErr);
     }
 
     // Local deterministic fallback using mock quiz data

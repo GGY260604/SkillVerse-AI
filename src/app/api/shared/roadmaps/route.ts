@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 
 /**
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             email: true,
+            level: true,
             currentJobTitle: true,
             industry: true,
           },
@@ -113,6 +114,7 @@ export async function GET(request: NextRequest) {
             id: s.owner.id,
             name: s.owner.name,
             email: s.owner.email,
+            level: s.owner.level ?? 1,
             role: s.owner.currentJobTitle || s.roadmap.targetRoleTitle || "Professional",
             department: s.owner.industry || s.roadmap.roleCategory || "General",
           },

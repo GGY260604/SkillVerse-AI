@@ -1,6 +1,8 @@
 import React from "react";
 
-// Supported File Categories
+// --- File Format Classification ---
+// Purpose: Detect file types and provide stylized SVG icons with color badges.
+
 export type FileCategory =
   | "pdf"
   | "word"
@@ -9,7 +11,6 @@ export type FileCategory =
   | "spreadsheet"
   | "unknown";
 
-// File Format Details Definition
 export interface FileFormatInfo {
   category: FileCategory;
   label: string;
@@ -18,20 +19,23 @@ export interface FileFormatInfo {
   borderClass: string;
 }
 
-// Detect File Category from File Object or Filename
-// Identifies category via file extension and optional MIME type.
+export interface FileFormatIconProps {
+  fileOrName: File | string;
+  className?: string;
+  iconClassName?: string;
+}
+
+// 1. File Category Detection
+// Detect category from file extension or MIME type.
 export function getFileCategory(fileOrName: File | string): FileCategory {
   const filename = typeof fileOrName === "string" ? fileOrName : fileOrName.name;
   const mimeType = typeof fileOrName === "object" && fileOrName.type ? fileOrName.type.toLowerCase() : "";
-
   const ext = filename.split(".").pop()?.toLowerCase() || "";
 
-  // 1. PDF Documents
   if (ext === "pdf" || mimeType === "application/pdf") {
     return "pdf";
   }
 
-  // 2. Microsoft Word & Rich Documents
   if (
     ext === "doc" ||
     ext === "docx" ||
@@ -41,7 +45,6 @@ export function getFileCategory(fileOrName: File | string): FileCategory {
     return "word";
   }
 
-  // 3. Image Scans & Graphics
   if (
     ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "tiff"].includes(ext) ||
     mimeType.startsWith("image/")
@@ -49,91 +52,80 @@ export function getFileCategory(fileOrName: File | string): FileCategory {
     return "image";
   }
 
-  // 4. Plain Text & Markdown
   if (["txt", "md", "rtf"].includes(ext) || mimeType.startsWith("text/")) {
     return "text";
   }
 
-  // 5. Spreadsheets & CSV Data
   if (
     ["csv", "xls", "xlsx"].includes(ext) ||
     mimeType.includes("csv") ||
-    mimeType.includes("spreadsheet")
+    mimeType.includes("excel") ||
+    mimeType.includes("spreadsheetml")
   ) {
     return "spreadsheet";
   }
 
-  // Unrecognized File Format Fallback
   return "unknown";
 }
 
-// Retrieve Styling Metadata for Given Category
+// 2. Styling Metadata Resolver
+// Map file category to corresponding Tailwind colors and badge styles.
 export function getFileFormatInfo(category: FileCategory): FileFormatInfo {
   switch (category) {
     case "pdf":
       return {
-        category: "pdf",
+        category,
         label: "PDF Document",
         colorClass: "text-red-400",
-        bgClass: "bg-red-500/15",
+        bgClass: "bg-red-500/10",
         borderClass: "border-red-500/30",
       };
     case "word":
       return {
-        category: "word",
+        category,
         label: "Word Document",
-        colorClass: "text-sky-400",
-        bgClass: "bg-sky-500/15",
-        borderClass: "border-sky-500/30",
+        colorClass: "text-blue-400",
+        bgClass: "bg-blue-500/10",
+        borderClass: "border-blue-500/30",
       };
     case "image":
       return {
-        category: "image",
-        label: "Image Scan",
-        colorClass: "text-purple-400",
-        bgClass: "bg-purple-500/15",
-        borderClass: "border-purple-500/30",
+        category,
+        label: "Image / Scan",
+        colorClass: "text-emerald-400",
+        bgClass: "bg-emerald-500/10",
+        borderClass: "border-emerald-500/30",
       };
     case "text":
       return {
-        category: "text",
-        label: "Text Document",
-        colorClass: "text-emerald-400",
-        bgClass: "bg-emerald-500/15",
-        borderClass: "border-emerald-500/30",
+        category,
+        label: "Plain Text",
+        colorClass: "text-amber-400",
+        bgClass: "bg-amber-500/10",
+        borderClass: "border-amber-500/30",
       };
     case "spreadsheet":
       return {
-        category: "spreadsheet",
+        category,
         label: "Spreadsheet",
-        colorClass: "text-green-400",
-        bgClass: "bg-green-500/15",
-        borderClass: "border-green-500/30",
+        colorClass: "text-teal-400",
+        bgClass: "bg-teal-500/10",
+        borderClass: "border-teal-500/30",
       };
     case "unknown":
     default:
       return {
         category: "unknown",
-        label: "Unknown Format",
+        label: "Document",
         colorClass: "text-text-muted",
-        bgClass: "bg-bg-card",
+        bgClass: "bg-bg-secondary",
         borderClass: "border-border-subtle",
       };
   }
 }
 
-// Properties for File Format Icon Component
-export interface FileFormatIconProps {
-  // Input File instance or filename string.
-  fileOrName: File | string;
-  // Outer container dimension and styling classes.
-  className?: string;
-  // Inner SVG icon dimension class.
-  iconClassName?: string;
-}
-
-// Dynamic File Format Icon Component
-// Inspects file type and renders specialized document graphics with unknown fallback.
+// 3. File Format Icon Component
+// Render SVG icon corresponding to the categorized file format.
 export function FileFormatIcon({
   fileOrName,
   className = "w-12 h-12 rounded-xl",

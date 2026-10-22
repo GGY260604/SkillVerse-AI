@@ -76,7 +76,7 @@ export function ExpGainProvider({ children }: { children: React.ReactNode }) {
 
     // Fetch latest authoritative EXP and level from database for authenticated users
     if (isLoggedIn && user?.id) {
-      fetch("/api/user/exp", { cache: "no-store" })
+      fetch("/api/profile/exp", { cache: "no-store" })
         .then((r) => r.json())
         .then((data) => {
           if (data && (typeof data.totalExp === "number" || typeof data.level === "number")) {
@@ -131,7 +131,7 @@ export function ExpGainProvider({ children }: { children: React.ReactNode }) {
 
       // Persist the updated total for authenticated users.
       if (isLoggedIn) {
-        fetch("/api/user/exp", {
+        fetch("/api/profile/exp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ totalExp: newExp, level: newLevel }),
