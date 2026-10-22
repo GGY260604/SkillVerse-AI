@@ -303,7 +303,8 @@ async def synthesize_on_demand_role(
     this hook synthesizes its canonical competency profile, computes its 1024-dim
     embedding vector with BGE-M3/Gemini, and persists it into Supabase esco_roles.
     """
-    from .gemini_service import call_gemini_json
+    from services.gemini_service import call_gemini_json
+
 
     prompt = (
         f"You are an expert occupational taxonomist and future-workforce analyst for the UN Sustainable Development Goals.\n"
@@ -628,18 +629,20 @@ async def evaluate_roles(
     # Sort candidates by preliminary match score
     raw_evaluations.sort(key=lambda r: (r["is_target_role"], r["base_match"]), reverse=True)
 
-    # Phase 2: Parallel Semantic Vector Refinement ONLY on top candidate roles (Top 15)
-    # Eliminates 600+ sequential HTTP embedding calls, reducing latency from 180s to <1.5s
-    shortlist = raw_evaluations[:15]
+    # Phase 2: Parallel Semantic Vector Refinement ONLY on top candidate roles (Top 10)
+    # Only needed if candidate possesses skills to compare against (skips if empty skills)
+    shortlist = raw_evaluations[:10]
     unmatched_skills_to_embed = set()
-    for item in shortlist:
-        for sk in item["skills_gap"]:
-            unmatched_skills_to_embed.add(sk)
+    if user_skills_list:
+        for item in shortlist:
+            for sk in item["skills_gap"]:
+                unmatched_skills_to_embed.add(sk)
 
-    if unmatched_skills_to_embed:
-        unique_req_skills = list(unmatched_skills_to_embed)
+    if unmatched_skills_to_embed and user_skills_list:
+        unique_req_skills = list(unmatched_skills_to_embed)[:20]
         req_vectors = await asyncio.gather(*(generate_embedding(s) for s in unique_req_skills))
         req_vector_map = dict(zip(unique_req_skills, req_vectors))
+
 
         for item in shortlist:
             refined_matched = list(item["matched_strengths"])

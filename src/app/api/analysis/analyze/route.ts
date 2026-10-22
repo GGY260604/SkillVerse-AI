@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Stream role discovery results to the client for progressive progress updates.
     if (action === "stream") {
-      const streamIdleTimeoutMs = 15_000;
+      const streamIdleTimeoutMs = 45_000;
       const forwardPayload = {
         sessionId: body.sessionId,
         userId: authenticatedUserId,
