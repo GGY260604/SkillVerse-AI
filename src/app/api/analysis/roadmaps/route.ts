@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
@@ -7,7 +8,7 @@ import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 /**
  * GET /api/analysis/roadmaps
  * Returns the authenticated user's current roadmap and archived history roadmaps
- * queried from PostgreSQL via Prisma.
+ * queried directly from PostgreSQL with guaranteed trilingual columns.
  *
  * Data flow:
  * 1. Resolve the user from the Supabase session cookie; unauthenticated requests get empty results.
@@ -37,22 +38,40 @@ export async function GET() {
       });
     }
 
-    // 1. Query this user's roadmaps and ordered phases from PostgreSQL.
-    const roadmaps = await prisma.roadmap.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        phases: {
-          orderBy: {
-            phaseIndex: "asc",
+    // 1. Query this user's roadmaps directly with all flat trilingual columns & phases.
+    let roadmaps: any[] = [];
+    try {
+      const admin = createAdminClient();
+      const { data: dbRoadmaps, error: dbErr } = await admin
+        .from("roadmaps")
+        .select("*, phases:roadmap_phases(*)")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (!dbErr && dbRoadmaps && dbRoadmaps.length > 0) {
+        roadmaps = dbRoadmaps;
+      }
+    } catch (adminErr) {
+      console.warn("[/api/analysis/roadmaps] Admin query fallback to Prisma:", adminErr);
+    }
+
+    if (roadmaps.length === 0) {
+      roadmaps = await prisma.roadmap.findMany({
+        where: {
+          userId,
+        },
+        include: {
+          phases: {
+            orderBy: {
+              phaseIndex: "asc",
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
 
     if (!roadmaps || roadmaps.length === 0) {
       return NextResponse.json({

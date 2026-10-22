@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/auth/AuthContext";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
@@ -35,6 +35,7 @@ export default function SharedPlansView() {
   // --- Multi-Language Setup ---
   const t = useTranslations("shared");
   const tModal = useTranslations("analysis.share_modal");
+  const locale = useLocale();
   const router = useRouter();
 
   // --- Auth Context ---
@@ -228,7 +229,7 @@ export default function SharedPlansView() {
               type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 border-none bg-transparent cursor-pointer"
-              title="Clear search"
+              title={tModal("clear_search")}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -242,8 +243,8 @@ export default function SharedPlansView() {
           onClick={() => {}}
           disabled={!searchQuery.trim()}
           className="w-10 h-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-          title="Search"
-          aria-label="Search"
+          title={tModal("search")}
+          aria-label={tModal("search")}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -275,7 +276,7 @@ export default function SharedPlansView() {
             onClick={fetchSharedRoadmaps}
             className="text-xs underline hover:text-text-primary cursor-pointer border-none bg-transparent font-semibold"
           >
-            Retry
+            {t("retry")}
           </button>
         </div>
       )}
@@ -371,7 +372,7 @@ export default function SharedPlansView() {
                     {/* Bottom Row: Career Direction, Match Score & Date (No Diamond, Separate Line) */}
                     <div className="flex items-center gap-2 text-xs text-text-secondary flex-wrap">
                       <span className="font-semibold text-text-primary truncate max-w-sm">
-                        {item.currentPlan.targetRole}
+                        {item.currentPlan.targetTitleLocalized?.[locale] || item.currentPlan.targetRole}
                       </span>
                       <span className="text-text-muted">•</span>
                       <span className="font-mono text-accent text-xs font-semibold">

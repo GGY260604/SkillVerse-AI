@@ -58,7 +58,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="text-[11px] font-mono text-text-muted hover:text-text-primary transition-colors flex items-center justify-start sm:justify-end gap-1.5"
             >
-              <span>License:</span>
+              <span>{t("license")}:</span>
               <span className="text-text-secondary hover:text-accent underline decoration-border-subtle underline-offset-2">Apache-2.0</span>
             </a>
           </div>

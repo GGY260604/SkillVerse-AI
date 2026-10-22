@@ -122,7 +122,9 @@ Return ONLY valid JSON with this exact structure:
       "title_zh": "中文职位名称 (Simplified Chinese)",
       "industry": "Responsible AI & Digital Transformation",
       "description": "Clear 1-2 sentence description of what this professional does.",
-      "essentialSkills": ["skill 1", "skill 2", "skill 3", "skill 4", "skill 5"],
+      "essentialSkills": ["skill 1 in English", "skill 2 in English", "skill 3 in English", "skill 4 in English", "skill 5 in English"],
+      "essentialSkills_ms": ["kemahiran 1 dalam Bahasa Melayu", "kemahiran 2 dalam Bahasa Melayu", "kemahiran 3 dalam Bahasa Melayu", "kemahiran 4 dalam Bahasa Melayu", "kemahiran 5 dalam Bahasa Melayu"],
+      "essentialSkills_zh": ["技能 1 中文名称", "技能 2 中文名称", "技能 3 中文名称", "技能 4 中文名称", "技能 5 中文名称"],
       "sdgAlignment": "SDG 8.2",
       "sdgTitle": "Technological upgrading & productivity"
     }}
@@ -295,12 +297,26 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
             title = role.get("title", "Emerging Professional Role")
             title_ms = role.get("title_ms") or title
             title_zh = role.get("title_zh") or title
-            skills = role.get("essentialSkills", [])
+            skills_en = role.get("essentialSkills", [])
+            skills_ms = role.get("essentialSkills_ms") or []
+            skills_zh = role.get("essentialSkills_zh") or []
+            if not skills_ms or len(skills_ms) < len(skills_en):
+                from services.analyze.skill_translations import localize_skill_name
+                skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
+            if not skills_zh or len(skills_zh) < len(skills_en):
+                from services.analyze.skill_translations import localize_skill_name
+                skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
+
+            localized_skills = {
+                "en": skills_en,
+                "ms": skills_ms,
+                "zh": skills_zh,
+            }
             desc = role.get("description", "")
             industry = role.get("industry", "Responsible AI & Digital Transformation")
 
             # Generate 1024-dim dense embedding
-            embed_text = f"Role: {title}. Description: {desc}. Essential Skills: {', '.join(skills)}"
+            embed_text = f"Role: {title}. Description: {desc}. Essential Skills: {', '.join(skills_en)}"
             vector = await generate_embedding(embed_text)
 
             role_payload = {
@@ -310,7 +326,10 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 "title_ms": title_ms,
                 "title_zh": title_zh,
                 "industry": industry,
-                "required_skills": skills,
+                "required_skills": skills_en,
+                "required_skills_ms": skills_ms,
+                "required_skills_zh": skills_zh,
+                "required_skills_localized": localized_skills,
                 "embedding": vector,
                 "scenario_multipliers": {"conservative": 1.0, "moderate": 1.15, "disruptive": 1.30},
                 "sdg_alignments": [{"code": role.get("sdgAlignment", "SDG 8.2"), "title": role.get("sdgTitle", "Technological upgrading & productivity")}],

@@ -228,7 +228,9 @@ export default function PlanDetailView({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
           <div className="lg:col-span-2">
             <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
-              {plan.roleCategory}
+              {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
+                ? tCurrent("role_category_default")
+                : plan.roleCategory}
             </span>
 
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
@@ -279,7 +281,10 @@ export default function PlanDetailView({
             </div>
 
             <span className="text-[11px] font-mono text-text-secondary font-medium">
-              {plan.roadmapWeeks} • {plan.roadmapHours}
+              {tCurrent("duration_summary", {
+                weeks: plan.roadmapWeeks?.replace(/\D/g, "") || "10",
+                hours: plan.roadmapHours?.replace(/\D/g, "") || "45",
+              })}
             </span>
           </div>
         </div>
@@ -301,67 +306,94 @@ export default function PlanDetailView({
       </div>
 
       {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
-        {/* Matched Strengths */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-              {tCurrent("matched_strengths")}
-            </h3>
-            <span className="text-xs font-mono text-emerald-400 font-semibold">
-              {plan.matchedStrengths.length}
-            </span>
-          </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.matchedStrengths.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {/* Itemized Skills Section (Direct database trilingual render, zero client translation lists) */}
+      {(() => {
+        const currentLocale = (locale || "en").toLowerCase();
+        const displayedStrengths =
+          currentLocale === "zh"
+            ? (plan.matchedStrengthsZh?.length ? plan.matchedStrengthsZh : plan.matchedStrengthsLocalized?.zh || plan.matchedStrengths)
+            : currentLocale === "ms"
+            ? (plan.matchedStrengthsMs?.length ? plan.matchedStrengthsMs : plan.matchedStrengthsLocalized?.ms || plan.matchedStrengths)
+            : (plan.matchedStrengthsLocalized?.en || plan.matchedStrengths);
 
-        {/* Skills to Acquire */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
-              {tCurrent("skills_gap")}
-            </h3>
-            <span className="text-xs font-mono text-amber-400 font-semibold">
-              {plan.skillsGap.length}
-            </span>
-          </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.skillsGap.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        const displayedGaps =
+          currentLocale === "zh"
+            ? (plan.skillsGapZh?.length ? plan.skillsGapZh : plan.skillsGapLocalized?.zh || plan.skillsGap)
+            : currentLocale === "ms"
+            ? (plan.skillsGapMs?.length ? plan.skillsGapMs : plan.skillsGapLocalized?.ms || plan.skillsGap)
+            : (plan.skillsGapLocalized?.en || plan.skillsGap);
 
-        {/* Automation Alerts */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
-              {tCurrent("at_risk_skills")}
-            </h3>
-            <span className="text-xs font-mono text-rose-400 font-semibold">
-              {plan.atRiskSkills.length}
-            </span>
+        const displayedAtRisk =
+          currentLocale === "zh"
+            ? (plan.atRiskSkillsZh?.length ? plan.atRiskSkillsZh : plan.atRiskSkillsLocalized?.zh || plan.atRiskSkills)
+            : currentLocale === "ms"
+            ? (plan.atRiskSkillsMs?.length ? plan.atRiskSkillsMs : plan.atRiskSkillsLocalized?.ms || plan.atRiskSkills)
+            : (plan.atRiskSkillsLocalized?.en || plan.atRiskSkills);
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
+            {/* Matched Strengths */}
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  {tCurrent("matched_strengths")}
+                </h3>
+                <span className="text-xs font-mono text-emerald-400 font-semibold">
+                  {displayedStrengths.length}
+                </span>
+              </div>
+              <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+                {displayedStrengths.map((skill) => (
+                  <li key={skill} className="flex items-start gap-2">
+                    <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                    <span className="text-text-primary font-medium">{skill}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Skills to Acquire */}
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
+                  {tCurrent("skills_gap")}
+                </h3>
+                <span className="text-xs font-mono text-amber-400 font-semibold">
+                  {displayedGaps.length}
+                </span>
+              </div>
+              <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+                {displayedGaps.map((skill) => (
+                  <li key={skill} className="flex items-start gap-2">
+                    <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
+                    <span className="text-text-primary font-medium">{skill}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Automation Alerts */}
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
+                  {tCurrent("at_risk_skills")}
+                </h3>
+                <span className="text-xs font-mono text-rose-400 font-semibold">
+                  {displayedAtRisk.length}
+                </span>
+              </div>
+              <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+                {displayedAtRisk.map((skill) => (
+                  <li key={skill} className="flex items-start gap-2">
+                    <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
+                    <span className="text-text-primary font-medium">{skill}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.atRiskSkills.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Phased Curriculum Timeline (Structured Phase Cards with moderate framing and clear separation) */}
       <div className="pt-6 border-t border-border-subtle">
@@ -370,7 +402,7 @@ export default function PlanDetailView({
             {tCurrent("roadmap_timeline")}
           </h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.
+            {tCurrent("roadmap_timeline_subtitle")}
           </p>
         </div>
 

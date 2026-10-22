@@ -437,7 +437,12 @@ export default function RoleSelectorModal() {
               {rolesToDisplay.map((role, idx) => {
                 const isSelected = roleIdToDisplay === role.roleId;
                 const matchPct = Math.round(role.matchScore * 100);
-                const strengths = role.matchedStrengths?.slice(0, 3) ?? [];
+                const roleStrengths =
+                  ((role as any).matchedStrengthsLocalized?.[locale] as string[]) ||
+                  ((role as any).matchedStrengthsLocalized?.en as string[]) ||
+                  role.matchedStrengths ||
+                  [];
+                const strengths = roleStrengths.slice(0, 3);
                 const reason = strengths.length
                   ? t("reason_with_strengths", {
                       skills: strengths.join(t("strength_separator")),

@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       const targetUsers = targetIds.length > 0
         ? await prisma.user.findMany({
             where: { id: { in: targetIds } },
-            select: { id: true, name: true, email: true, level: true },
+            select: { id: true, name: true, email: true },
           })
         : [];
 
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
             id: user.id,
             name: user.name,
             email: user.email,
-            level: user.level,
+            level: (user as any).level ?? 1,
             accessLevel: s.accessLevel,
           };
         });
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
 
       const matchingUsers = await prisma.user.findMany({
         where: userWhere,
-        select: { id: true, name: true, email: true, level: true },
+        select: { id: true, name: true, email: true },
         take: 20,
       });
 
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
         id: u.id,
         name: u.name,
         email: u.email,
-        level: u.level,
+        level: (u as any).level ?? 1,
         accessLevel: shareMap.get(u.id) || "no_access",
       }));
 

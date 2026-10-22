@@ -68,7 +68,10 @@ model EscoRole {
   titleMs             String                       @map("title_ms")
   titleZh             String                       @map("title_zh")
   industry            String
-  requiredSkills      String[]                     @map("required_skills")
+  requiredSkills          String[]                     @map("required_skills")
+  requiredSkillsMs        String[]                     @default([]) @map("required_skills_ms")
+  requiredSkillsZh        String[]                     @default([]) @map("required_skills_zh")
+  requiredSkillsLocalized Json?                        @default("{}") @map("required_skills_localized") // { en: string[], ms: string[], zh: string[] }
   sdgAlignments       Json                         @default("[]") @map("sdg_alignments")
   scenarioMultipliers Json                         @default("{\"moderate\": 1.0, \"accelerated_ai\": 1.0, \"green_economy\": 1.0}") @map("scenario_multipliers")
   radarRequirements   Json                         @default("{}") @map("radar_requirements")
@@ -156,9 +159,18 @@ model Roadmap {
   matchScoreBasis      String?          @map("match_score_basis")
   
   sdgs                 String[]         @default([]) // e.g. ["SDG 8.2", "SDG 9.4"]
-  matchedStrengths     String[]         @default([]) @map("matched_strengths")
-  skillsGap            String[]         @default([]) @map("skills_gap")
-  atRiskSkills         String[]         @default([]) @map("at_risk_skills")
+  matchedStrengths          String[]         @default([]) @map("matched_strengths")
+  matchedStrengthsMs        String[]         @default([]) @map("matched_strengths_ms")
+  matchedStrengthsZh        String[]         @default([]) @map("matched_strengths_zh")
+  matchedStrengthsLocalized Json?            @map("matched_strengths_localized") // { en: string[], ms: string[], zh: string[] }
+  skillsGap                 String[]         @default([]) @map("skills_gap")
+  skillsGapMs               String[]         @default([]) @map("skills_gap_ms")
+  skillsGapZh               String[]         @default([]) @map("skills_gap_zh")
+  skillsGapLocalized        Json?            @map("skills_gap_localized") // { en: string[], ms: string[], zh: string[] }
+  atRiskSkills              String[]         @default([]) @map("at_risk_skills")
+  atRiskSkillsMs            String[]         @default([]) @map("at_risk_skills_ms")
+  atRiskSkillsZh            String[]         @default([]) @map("at_risk_skills_zh")
+  atRiskSkillsLocalized     Json?            @map("at_risk_skills_localized") // { en: string[], ms: string[], zh: string[] }
   
   totalWeeks           Int              @default(10) @map("total_weeks")
   totalHours           Int              @default(45) @map("total_hours")

@@ -109,8 +109,11 @@ class MatchedRole(BaseModel):
     scenarioMultiplierApplied: float = Field(default=1.0, description="Multiplier from the active macro scenario")
     sdgAlignments: List[SdgAlignmentItem] = Field(default_factory=list)
     matchedStrengths: List[str] = Field(default_factory=list, description="Overlapping skills already possessed")
+    matchedStrengthsLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual strengths: en, ms, zh")
     skillsGap: List[str] = Field(default_factory=list, description="Missing competencies required for role")
+    skillsGapLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual gaps: en, ms, zh")
     atRiskCompetencies: List[AtRiskSkillItem] = Field(default_factory=list)
+    atRiskSkillsLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual at-risk competencies: en, ms, zh")
 
 
 class RecommendedCourse(BaseModel):

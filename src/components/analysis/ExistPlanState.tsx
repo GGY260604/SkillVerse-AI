@@ -52,10 +52,22 @@ export default function ExistPlanState({
   // Keep the dashboard in sync when the page refreshes roadmap data from the API.
   useEffect(() => {
     setActiveCurrentPlan(currentPlan ?? null);
+    setSelectedPlan((prev) => {
+      if (!prev) return null;
+      if (currentPlan && prev.id === currentPlan.id) {
+        return currentPlan;
+      }
+      return prev;
+    });
   }, [currentPlan]);
 
   useEffect(() => {
     setActiveHistoryPlans(historyPlans);
+    setSelectedPlan((prev) => {
+      if (!prev) return null;
+      const matched = historyPlans.find((hp) => hp.id === prev.id);
+      return matched || prev;
+    });
   }, [historyPlans]);
 
   // Track selected-plan navigation and history expansion in this view.

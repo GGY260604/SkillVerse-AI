@@ -9,17 +9,21 @@ import Logo from "@/components/Logo";
 function PasswordEyeToggle({
   show,
   onToggle,
+  showLabel = "Show password",
+  hideLabel = "Hide password",
 }: {
   show: boolean;
   onToggle: () => void;
+  showLabel?: string;
+  hideLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onToggle}
       className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-1 rounded-md transition-colors border-none bg-transparent cursor-pointer flex items-center justify-center"
-      aria-label={show ? "Hide password" : "Show password"}
-      title={show ? "Hide password" : "Show password"}
+      aria-label={show ? hideLabel : showLabel}
+      title={show ? hideLabel : showLabel}
       tabIndex={-1}
     >
       {show ? (
@@ -251,7 +255,7 @@ export default function AuthModal() {
 
       setPendingEmail(email.trim());
       setResendCooldown(60);
-      setSuccessMsg("Verification code dispatched to your email.");
+      setSuccessMsg(t("common.verification_code_sent"));
       setAuthModalView("verify-register");
     } catch {
       setErrorMsg(t("common.errors.network"));
@@ -325,7 +329,7 @@ export default function AuthModal() {
 
       setPendingEmail(email.trim());
       setResendCooldown(60);
-      setSuccessMsg("Password recovery code sent to your email.");
+      setSuccessMsg(t("common.recovery_code_sent"));
       setAuthModalView("verify-forgot");
     } catch {
       setErrorMsg(t("common.errors.network"));
@@ -688,7 +692,7 @@ export default function AuthModal() {
                 onClick={() => setAuthModalView("register")}
                 className="hover:text-text-primary border-none bg-transparent cursor-pointer p-0"
               >
-                ← Back
+                ← {t("common.back")}
               </button>
               <button
                 type="button"
@@ -844,7 +848,7 @@ export default function AuthModal() {
                 onClick={() => setAuthModalView("forgot")}
                 className="hover:text-text-primary border-none bg-transparent cursor-pointer p-0"
               >
-                ← Back
+                ← {t("common.back")}
               </button>
               <button
                 type="button"

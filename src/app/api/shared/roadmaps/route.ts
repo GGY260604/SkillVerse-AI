@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
@@ -26,35 +27,54 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Read grants received by the signed-in user with owner identity and ordered roadmap phases.
-    const sharedRecords = await (prisma.sharedRoadmap as any).findMany({
-      where: {
-        targetUserId: currentUserId,
-      },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            level: true,
-            currentJobTitle: true,
-            industry: true,
-          },
+    let sharedRecords: any[] = [];
+    try {
+      const admin = createAdminClient();
+      const { data: dbShares, error: dbErr } = await admin
+        .from("shared_roadmaps")
+        .select(
+          "*, owner:users!shared_roadmaps_owner_id_fkey(id, name, email, level, currentJobTitle, industry), roadmap:roadmaps(*, phases:roadmap_phases(*))"
+        )
+        .eq("target_user_id", currentUserId)
+        .order("created_at", { ascending: false });
+
+      if (!dbErr && dbShares && dbShares.length > 0) {
+        sharedRecords = dbShares;
+      }
+    } catch (adminErr) {
+      console.warn("[/api/shared/roadmaps] Admin query fallback to Prisma:", adminErr);
+    }
+
+    if (sharedRecords.length === 0) {
+      sharedRecords = await (prisma.sharedRoadmap as any).findMany({
+        where: {
+          targetUserId: currentUserId,
         },
-        roadmap: {
-          include: {
-            phases: {
-              orderBy: {
-                phaseIndex: "asc",
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              currentJobTitle: true,
+              industry: true,
+            },
+          },
+          roadmap: {
+            include: {
+              phases: {
+                orderBy: {
+                  phaseIndex: "asc",
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
 
     if (!sharedRecords || sharedRecords.length === 0) {
       return NextResponse.json({
@@ -65,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Load each owner's archived plans once and group them for the directory response.
     const ownerIds: string[] = [
-      ...new Set(sharedRecords.map((s: any) => s.ownerId).filter(Boolean)),
+      ...new Set(sharedRecords.map((s: any) => s.ownerId || s.owner_id).filter(Boolean)),
     ] as string[];
 
     const historyRoadmaps = await prisma.roadmap.findMany({
@@ -102,21 +122,31 @@ export async function GET(request: NextRequest) {
           isCurrent: true,
         };
 
-        const ownerHistory = historyMap.get(s.ownerId) || [];
+        const ownerId = s.ownerId || s.owner_id;
+        const ownerHistory = historyMap.get(ownerId) || [];
 
         return {
           id: s.id, // ID of the shared_roadmap record
-          roadmapId: s.roadmapId,
-          ownerId: s.ownerId,
-          accessLevel: s.accessLevel || "viewable", // "viewable" | "editable"
-          sharedAt: new Date(s.createdAt).toISOString().split("T")[0],
+          roadmapId: s.roadmapId || s.roadmap_id,
+          ownerId,
+          accessLevel: s.accessLevel || s.access_level || "viewable", // "viewable" | "editable"
+          sharedAt: new Date(s.createdAt || s.created_at).toISOString().split("T")[0],
           owner: {
             id: s.owner.id,
             name: s.owner.name,
             email: s.owner.email,
             level: s.owner.level ?? 1,
-            role: s.owner.currentJobTitle || s.roadmap.targetRoleTitle || "Professional",
-            department: s.owner.industry || s.roadmap.roleCategory || "General",
+            role:
+              s.owner.currentJobTitle ||
+              s.owner.current_job_title ||
+              s.roadmap.targetRoleTitle ||
+              s.roadmap.target_role_title ||
+              "Professional",
+            department:
+              s.owner.industry ||
+              s.roadmap.roleCategory ||
+              s.roadmap.role_category ||
+              "General",
           },
           currentPlan,
           historyPlans: ownerHistory,

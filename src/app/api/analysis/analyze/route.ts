@@ -433,8 +433,61 @@ export async function POST(request: NextRequest) {
               : 0.85;
 
           const roleTitle = selectedRole.title || data.targetRoleTitle || "Target Role";
-          const roleTitleLoc =
+          const rawRoleTitleLoc =
             selectedRole.titleLocalized || selectedRole.title || data.targetRoleTitle || roleTitle;
+
+          // Compute complete trilingual representations for terms
+          const targetTitleLocalized =
+            typeof rawRoleTitleLoc === "object" && rawRoleTitleLoc?.zh
+              ? rawRoleTitleLoc
+              : {
+                  en: roleTitle,
+                  ms: typeof rawRoleTitleLoc === "string" ? rawRoleTitleLoc : roleTitle,
+                  zh: typeof rawRoleTitleLoc === "string" ? rawRoleTitleLoc : roleTitle,
+                };
+
+          const matchedStrengthsLocalized =
+            selectedRole.matchedStrengthsLocalized || {
+              en: matchedStrengths,
+              ms: selectedRole.matchedStrengthsMs || matchedStrengths,
+              zh: selectedRole.matchedStrengthsZh || matchedStrengths,
+            };
+
+          const skillsGapLocalized =
+            selectedRole.skillsGapLocalized || {
+              en: skillsGap,
+              ms: selectedRole.skillsGapMs || skillsGap,
+              zh: selectedRole.skillsGapZh || skillsGap,
+            };
+
+          const atRiskSkillsLocalized =
+            selectedRole.atRiskSkillsLocalized || {
+              en: atRiskSkills,
+              ms: selectedRole.atRiskSkillsMs || atRiskSkills,
+              zh: selectedRole.atRiskSkillsZh || atRiskSkills,
+            };
+
+          const enrichedTopRoles = (data.topRoles || []).map((tr: any) => ({
+            ...tr,
+            matchedStrengthsLocalized:
+              tr.matchedStrengthsLocalized || {
+                en: tr.matchedStrengths || [],
+                ms: tr.matchedStrengthsMs || tr.matchedStrengths || [],
+                zh: tr.matchedStrengthsZh || tr.matchedStrengths || [],
+              },
+            skillsGapLocalized:
+              tr.skillsGapLocalized || {
+                en: tr.skillsGap || [],
+                ms: tr.skillsGapMs || tr.skillsGap || [],
+                zh: tr.skillsGapZh || tr.skillsGap || [],
+              },
+            atRiskSkillsLocalized:
+              tr.atRiskSkillsLocalized || {
+                en: (tr.atRiskCompetencies || []).map((a: any) => (typeof a === "string" ? a : a.skillName)),
+                ms: (tr.atRiskCompetencies || []).map((a: any) => (typeof a === "string" ? a : a.skillName)),
+                zh: (tr.atRiskCompetencies || []).map((a: any) => (typeof a === "string" ? a : a.skillName)),
+              },
+          }));
 
           // 4. Atomically archive the existing current roadmap(s) and create the new current plan.
           const createdRoadmap = await prisma.$transaction(async (tx) => {
@@ -457,20 +510,21 @@ export async function POST(request: NextRequest) {
                 status: "current",
                 targetRoleId: String(data.targetRoleId || selectedRole.roleId || "custom-role"),
                 targetRoleTitle: roleTitle,
-                targetTitleLocalized: {
-                  en: roleTitle,
-                  ms: roleTitleLoc,
-                  zh: roleTitleLoc,
-                },
+                targetTitleLocalized,
                 roleCategory: selectedRole.industry || "Target Horizon Role",
-                description: `Targeting ${roleTitleLoc} in ${selectedRole.industry || "emerging sectors"
-                  }. Aligned with UN ${finalSdgs.join(", ")}.`,
+                description: `Targeting ${targetTitleLocalized.en} in ${
+                  selectedRole.industry || "emerging sectors"
+                }. Aligned with UN ${finalSdgs.join(", ")}.`,
                 descriptionLocalized: {
-                  en: `Targeting ${roleTitle} in ${selectedRole.industry || "emerging sectors"}.`,
-                  ms: `Menyasarkan ${roleTitleLoc} dalam sektor ${selectedRole.industry || "muncul"
-                    }.`,
-                  zh: `聚焦于 ${roleTitleLoc} 职业路线，位于 ${selectedRole.industry || "前沿产业"
-                    }。`,
+                  en: `Targeting ${targetTitleLocalized.en} in ${
+                    selectedRole.industry || "emerging sectors"
+                  }.`,
+                  ms: `Menyasarkan ${targetTitleLocalized.ms} dalam sektor ${
+                    selectedRole.industry || "muncul"
+                  }.`,
+                  zh: `聚焦于 ${targetTitleLocalized.zh} 职业路线，位于 ${
+                    selectedRole.industry || "前沿产业"
+                  }。`,
                 },
                 scenario: String(data.activeScenario || "moderate"),
                 matchScore,
@@ -480,12 +534,21 @@ export async function POST(request: NextRequest) {
                     : "Soft Overlap + BGE-M3 Cosine",
                 sdgs: finalSdgs,
                 matchedStrengths,
+                matchedStrengthsMs: matchedStrengthsLocalized.ms || [],
+                matchedStrengthsZh: matchedStrengthsLocalized.zh || [],
+                matchedStrengthsLocalized,
                 skillsGap,
+                skillsGapMs: skillsGapLocalized.ms || [],
+                skillsGapZh: skillsGapLocalized.zh || [],
+                skillsGapLocalized,
                 atRiskSkills,
+                atRiskSkillsMs: atRiskSkillsLocalized.ms || [],
+                atRiskSkillsZh: atRiskSkillsLocalized.zh || [],
+                atRiskSkillsLocalized,
                 totalWeeks,
                 totalHours,
                 radarData: data.radarData || [],
-                topRoles: data.topRoles || [],
+                topRoles: enrichedTopRoles,
                 phases: {
                   create: phasesData,
                 },
