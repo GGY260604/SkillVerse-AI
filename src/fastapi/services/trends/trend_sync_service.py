@@ -5,8 +5,8 @@ from typing import List, Dict, Any
 import httpx
 
 from config import settings
-from .gemini_service import call_gemini_with_fallback
-from .embedding_service import generate_embedding
+from services.gemini_service import call_gemini_with_fallback
+from services.embedding_service import generate_embedding
 
 
 ARXIV_API_URL = (

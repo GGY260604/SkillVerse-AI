@@ -17,21 +17,8 @@ from .analysis import (
     SelectedRoleRoadmap,
     RadarAxisItem,
     AnalyzeResponsePayload,
-)
-from .mentor import (
-    MentorQueryPayload,
-    MentorResponsePayload,
-    QuickCheckQuiz,
-)
-from .credential import (
-    ExtractedCertificateDetails,
-    IssuedBadge,
-    CertificateVerificationResult,
-)
-from .replan import (
-    ModifiedMilestoneItem,
-    ReplanRequestPayload,
-    ShiftAdvisoryPayload,
+    SynthesizeRoadmapRequest,
+    SynthesizeRoadmapResponse,
 )
 from .quiz import (
     QuizQuestion,
@@ -40,11 +27,13 @@ from .quiz import (
 )
 
 __all__ = [
+    # Profile schemas
     "EmploymentStatus",
     "SkillProficiency",
     "UserSkillItem",
     "ProfileIntakePayload",
     "ExtractionResponse",
+    # Analysis schemas
     "MacroScenario",
     "AnalyzeProfileData",
     "AnalyzeRequestPayload",
@@ -56,17 +45,10 @@ __all__ = [
     "SelectedRoleRoadmap",
     "RadarAxisItem",
     "AnalyzeResponsePayload",
-    "MentorQueryPayload",
-    "MentorResponsePayload",
-    "QuickCheckQuiz",
-    "ExtractedCertificateDetails",
-    "IssuedBadge",
-    "CertificateVerificationResult",
-    "ModifiedMilestoneItem",
-    "ReplanRequestPayload",
-    "ShiftAdvisoryPayload",
+    "SynthesizeRoadmapRequest",
+    "SynthesizeRoadmapResponse",
+    # Quiz schemas
+    "QuizQuestion",
+    "PhaseQuizRequest",
+    "PhaseQuizResponse",
 ]
-
-
-
-

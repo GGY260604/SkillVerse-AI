@@ -12,8 +12,7 @@ from schemas.analysis import (
     SynthesizeRoadmapResponse,
     MatchedRole,
 )
-from services.matching_service import evaluate_roles
-from services.pathway_service import synthesize_pathway
+from services.analyze import evaluate_roles, synthesize_pathway
 
 router = APIRouter()
 

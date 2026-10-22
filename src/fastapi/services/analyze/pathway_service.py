@@ -7,7 +7,7 @@ from schemas.analysis import (
     MatchedRole,
     AnalyzeProfileData,
 )
-from .gemini_service import call_gemini_with_fallback
+from services.gemini_service import call_gemini_with_fallback
 
 
 PATHWAY_PROMPT_TEMPLATE = """

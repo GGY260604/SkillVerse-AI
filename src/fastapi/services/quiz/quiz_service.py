@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, List
-from .gemini_service import call_gemini_with_fallback
+from services.gemini_service import call_gemini_with_fallback
 from schemas.quiz import PhaseQuizRequest, PhaseQuizResponse, QuizQuestion
 
 logger = logging.getLogger("skillverse.quiz")

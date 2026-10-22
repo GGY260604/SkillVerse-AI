@@ -3,7 +3,7 @@ import time
 import httpx
 from typing import List, Dict, Any, Tuple, Optional
 from config import settings
-from .embedding_service import generate_embedding
+from services.embedding_service import generate_embedding, cosine_similarity, persist_embedding_cache
 from schemas.analysis import (
     MacroScenario,
     MatchedRole,
@@ -134,8 +134,6 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
 
     return FALLBACK_DECLINING_SKILLS
 
-
-from .embedding_service import generate_embedding, cosine_similarity
 
 
 def compute_string_similarity(s1: str, s2: str) -> float:
@@ -684,9 +682,7 @@ async def evaluate_roles(
             )
         )
 
-    # Flush newly generated skill vectors to persistent disk cache
     try:
-        from .embedding_service import persist_embedding_cache
         persist_embedding_cache()
     except Exception:
         pass
