@@ -83,18 +83,18 @@ export async function GET(request: NextRequest) {
       });
 
       const targetIds: string[] = shares.map((s) => s.targetUserId).filter(Boolean);
-      const targetUsers = targetIds.length > 0
+      const targetUsers: any[] = targetIds.length > 0
         ? await prisma.user.findMany({
             where: { id: { in: targetIds } },
             select: { id: true, name: true, email: true },
           })
         : [];
 
-      const userMap = new Map(targetUsers.map((u) => [u.id, u]));
+      const userMap = new Map<string, any>(targetUsers.map((u: any) => [u.id, u]));
 
       const users = shares
-        .filter((s) => userMap.has(s.targetUserId))
-        .map((s) => {
+        .filter((s: any) => userMap.has(s.targetUserId))
+        .map((s: any) => {
           const user = userMap.get(s.targetUserId)!;
           return {
             id: user.id,
@@ -134,13 +134,13 @@ export async function GET(request: NextRequest) {
         ];
       }
 
-      const matchingUsers = await prisma.user.findMany({
+      const matchingUsers: any[] = await prisma.user.findMany({
         where: userWhere,
         select: { id: true, name: true, email: true },
         take: 20,
       });
 
-      const targetUserIds = matchingUsers.map((u) => u.id);
+      const targetUserIds = matchingUsers.map((u: any) => u.id);
       const existingShares: any[] = await (prisma.sharedRoadmap as any).findMany({
         where: {
           roadmapId: targetRoadmap.id,
@@ -149,9 +149,9 @@ export async function GET(request: NextRequest) {
       });
 
       const shareMap = new Map<string, string>();
-      existingShares.forEach((s) => shareMap.set(s.targetUserId, s.accessLevel));
+      existingShares.forEach((s: any) => shareMap.set(s.targetUserId, s.accessLevel));
 
-      const users = matchingUsers.map((u) => ({
+      const users = matchingUsers.map((u: any) => ({
         id: u.id,
         name: u.name,
         email: u.email,

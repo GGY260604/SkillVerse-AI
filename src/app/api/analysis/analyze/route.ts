@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
           }));
 
           // 4. Atomically archive the existing current roadmap(s) and create the new current plan.
-          const createdRoadmap = await prisma.$transaction(async (tx) => {
+          const createdRoadmap = await prisma.$transaction(async (tx: any) => {
             // Archive any currently active roadmaps for this user
             await tx.roadmap.updateMany({
               where: {
