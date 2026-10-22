@@ -47,8 +47,8 @@ export default function SharedPlansView() {
   // State: Search filter query
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // State: Access level filter ("all" | "viewable" | "editable")
-  const [filter, setFilter] = useState<"all" | "viewable" | "editable">("all");
+  // State: Access level filter ("all" | "none")
+  const [filter, setFilter] = useState<"all" | "none">("all");
 
   // State: Targeted item pending deletion confirmation
   const [itemToDelete, setItemToDelete] = useState<SharedRoadmapItem | null>(null);
@@ -97,14 +97,12 @@ export default function SharedPlansView() {
   // Filter roadmaps by access level and search query (matches name, email, UID, or target role)
   // Defaults to displaying all shared roadmaps when query is empty and filter is "all"
   const filteredRoadmaps = useMemo(() => {
-    let list = sharedRoadmaps;
-
-    // Apply access level filter
-    if (filter === "viewable") {
-      list = list.filter((item) => item.accessLevel === "viewable");
-    } else if (filter === "editable") {
-      list = list.filter((item) => item.accessLevel === "editable");
+    // If in search mode ("none") and no search query entered, show empty list
+    if (filter === "none" && !searchQuery.trim()) {
+      return [];
     }
+
+    let list = sharedRoadmaps;
 
     // Apply search query within the shared roadmaps
     if (!searchQuery.trim()) return list;
@@ -170,25 +168,6 @@ export default function SharedPlansView() {
     }
   };
 
-  // Update phase toggle locally if user modifies an editable plan
-  const handlePeerPhaseToggle = (phaseId: string, isCompleted: boolean) => {
-    setSharedRoadmaps((prev) =>
-      prev.map((item) => {
-        if (activeItem && item.id === activeItem.id) {
-          return {
-            ...item,
-            currentPlan: {
-              ...item.currentPlan,
-              phases: item.currentPlan.phases?.map((p) =>
-                p.id === phaseId ? { ...p, isCompleted } : p
-              ),
-            },
-          };
-        }
-        return item;
-      })
-    );
-  };
 
   // Prevent flash before auth validation
   if (isAuthLoading || !isLoggedIn) {
@@ -202,7 +181,6 @@ export default function SharedPlansView() {
   // =========================================================================
   if (activeItem) {
     const displayName = activeItem.owner.name || activeItem.owner.email.split("@")[0] || "Peer";
-    const canEdit = activeItem.accessLevel === "editable";
 
     return (
       <div className="animate-fade-in max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
@@ -210,7 +188,7 @@ export default function SharedPlansView() {
           currentPlan={activeItem.currentPlan}
           historyPlans={activeItem.historyPlans}
           isSharedView={true}
-          canEdit={canEdit}
+          canEdit={false}
           sharedUser={{
             id: activeItem.owner.id,
             name: displayName,
@@ -220,7 +198,6 @@ export default function SharedPlansView() {
             department: activeItem.owner.department,
           }}
           onBackToSharedList={() => setActiveSharedId(null)}
-          onPhaseToggle={canEdit ? handlePeerPhaseToggle : undefined}
         />
       </div>
     );
@@ -294,19 +271,18 @@ export default function SharedPlansView() {
           </svg>
         </button>
 
-        {/* Access Level Filter Dropdown */}
+        {/* Access Level Filter Dropdown: Only 'all' and 'none' (Search Mode) */}
         <div className="relative shrink-0">
           <select
             value={filter}
             onChange={(e) =>
-              setFilter(e.target.value as "all" | "viewable" | "editable")
+              setFilter(e.target.value as "all" | "none")
             }
             aria-label={tModal("filter_label")}
             className="w-full sm:w-auto h-10 appearance-none bg-bg-card border border-border-subtle hover:border-border-hover focus:border-accent text-xs font-mono text-text-primary rounded-xl px-3.5 py-2 pr-8 outline-none cursor-pointer transition-colors"
           >
             <option value="all">{tModal("filter_all")}</option>
-            <option value="viewable">{tModal("filter_viewable")}</option>
-            <option value="editable">{tModal("filter_editable")}</option>
+            <option value="none">{tModal("filter_none")}</option>
           </select>
 
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
@@ -369,7 +345,6 @@ export default function SharedPlansView() {
           {filteredRoadmaps.map((item) => {
             const displayName = item.owner.name || item.owner.email.split("@")[0] || "Peer";
             const initial = (item.owner.name || item.owner.email || "P").charAt(0).toUpperCase();
-            const isEditable = item.accessLevel === "editable";
 
             return (
               <div
@@ -392,15 +367,9 @@ export default function SharedPlansView() {
                       <span className="text-xs font-mono text-text-muted truncate">
                         • {item.owner.email}
                       </span>
-                      {/* Access Level Badge */}
-                      <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold ${
-                          isEditable
-                            ? "bg-accent/15 text-accent border-accent/40"
-                            : "bg-blue-500/15 text-blue-400 border-blue-500/40"
-                        }`}
-                      >
-                        {isEditable ? "Can Edit" : "View Only"}
+                      {/* Access Level Badge: Always View Only */}
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-blue-500/15 text-blue-400 border-blue-500/40">
+                        View Only
                       </span>
                     </div>
 
@@ -490,8 +459,10 @@ export default function SharedPlansView() {
       {!isLoading && filteredRoadmaps.length === 0 && (
         <div className="flex-1 flex items-center justify-center py-20 text-center animate-fade-in">
           <p className="text-xs sm:text-sm text-text-muted font-mono max-w-md mx-auto leading-relaxed">
-            {searchQuery || filter !== "all"
-              ? "No shared roadmaps found matching your search or filter."
+            {filter === "none" && !searchQuery.trim()
+              ? "Search for a peer by name, email, role, or UID..."
+              : searchQuery
+              ? "No shared roadmaps found matching your search."
               : "You currently have no career roadmaps shared by other members, or all have been removed."}
           </p>
         </div>

@@ -24,7 +24,7 @@ export default function EmptyPlanState() {
       {/* Action Button: Add New Plan */}
       <button
         type="button"
-        onClick={openPathwaySelect}
+        onClick={() => openPathwaySelect()}
         className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold bg-accent text-bg-primary rounded-xl border-none cursor-pointer tracking-wide hover:opacity-95 hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300 font-mono"
       >
         <span>{t("btn_add_plan")}</span>

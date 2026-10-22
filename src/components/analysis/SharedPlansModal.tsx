@@ -23,7 +23,7 @@ export default function SharedPlansModal() {
   const roadmapId = shareRoadmapData?.id;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState<"none" | "all" | "viewable" | "editable">("none");
+  const [filter, setFilter] = useState<"none" | "all">("none");
   const [collaborators, setCollaborators] = useState<SharedCollaborator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export default function SharedPlansModal() {
 
   // Fetch users based on search term or filter
   const fetchUsers = useCallback(
-    async (queryText: string, filterMode: "none" | "all" | "viewable" | "editable") => {
+    async (queryText: string, filterMode: "none" | "all") => {
       // If no filter selected and no search term, reset list to empty
       if (filterMode === "none" && !queryText.trim()) {
         setCollaborators([]);
@@ -115,7 +115,7 @@ export default function SharedPlansModal() {
   };
 
   // Handle Filter Change
-  const handleFilterChange = (newFilter: "none" | "all" | "viewable" | "editable") => {
+  const handleFilterChange = (newFilter: "none" | "all") => {
     setFilter(newFilter);
     if (newFilter !== "none") {
       setSearchQuery("");
@@ -127,7 +127,7 @@ export default function SharedPlansModal() {
   };
 
   // Handle Access Level Change
-  const handleAccessChange = async (targetUserId: string, newAccessLevel: "no_access" | "viewable" | "editable") => {
+  const handleAccessChange = async (targetUserId: string, newAccessLevel: "no_access" | "viewable") => {
     setUpdatingUserId(targetUserId);
     setErrorMsg(null);
 
@@ -154,8 +154,6 @@ export default function SharedPlansModal() {
         prev
           .map((c) => (c.id === targetUserId ? { ...c, accessLevel: newAccessLevel } : c))
           .filter((c) => {
-            if (filter === "viewable" && newAccessLevel !== "viewable") return false;
-            if (filter === "editable" && newAccessLevel !== "editable") return false;
             if (filter === "all" && newAccessLevel === "no_access") return false;
             return true;
           })
@@ -284,20 +282,18 @@ export default function SharedPlansModal() {
             )}
           </button>
 
-          {/* Access Level Filter Dropdown (Cannot filter by No Access as specified) */}
+          {/* Access Level Filter Dropdown: Only Search Mode ('none') and All Shared ('all') */}
           <div className="relative shrink-0">
             <select
               value={filter}
               onChange={(e) =>
-                handleFilterChange(e.target.value as "none" | "all" | "viewable" | "editable")
+                handleFilterChange(e.target.value as "none" | "all")
               }
               aria-label={t("filter_label")}
               className="w-full sm:w-auto h-10 appearance-none bg-bg-card border border-border-subtle hover:border-border-hover focus:border-accent text-xs font-mono text-text-primary rounded-xl px-3.5 py-2 pr-8 outline-none cursor-pointer transition-colors"
             >
               <option value="none">{t("filter_none")}</option>
               <option value="all">{t("filter_all")}</option>
-              <option value="viewable">{t("filter_viewable")}</option>
-              <option value="editable">{t("filter_editable")}</option>
             </select>
 
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
@@ -340,7 +336,7 @@ export default function SharedPlansModal() {
                       <div className="h-2.5 w-48 bg-bg-card/60 rounded" />
                     </div>
                   </div>
-                  <div className="w-28 h-8 bg-bg-card rounded-lg" />
+                  <div className="w-10 h-10 bg-bg-card rounded-xl" />
                 </div>
               ))}
             </div>
@@ -361,6 +357,7 @@ export default function SharedPlansModal() {
               const displayName = user.name || user.email.split("@")[0] || "User";
               const initial = (user.name || user.email || "U").charAt(0).toUpperCase();
               const isUpdating = updatingUserId === user.id;
+              const isShared = user.accessLevel === "viewable" || (user.accessLevel as string) === "editable";
 
               return (
                 <div
@@ -381,6 +378,11 @@ export default function SharedPlansModal() {
                         <span className="text-xs font-mono text-text-muted truncate">
                           • {user.email}
                         </span>
+                        {isShared && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-accent/15 text-accent border-accent/40">
+                            Shared
+                          </span>
+                        )}
                       </div>
 
                       {/* User UID with 1-Click Copy Button */}
@@ -418,48 +420,42 @@ export default function SharedPlansModal() {
                     </div>
                   </div>
 
-                  {/* Right Side: Access Permission Dropdown */}
+                  {/* Right Side: Share Action Button (Share Icon) */}
                   <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                    <div className="relative">
-                      <select
-                        value={user.accessLevel}
-                        disabled={isUpdating}
-                        onChange={(e) =>
-                          handleAccessChange(
-                            user.id,
-                            e.target.value as "no_access" | "viewable" | "editable"
-                          )
-                        }
-                        className={`appearance-none text-xs font-mono font-semibold rounded-lg px-3.5 py-2 pr-8 border transition-all cursor-pointer outline-none shadow-sm ${
-                          user.accessLevel === "editable"
-                            ? "bg-accent/15 text-accent border-accent/40 hover:bg-accent/25"
-                            : user.accessLevel === "viewable"
-                            ? "bg-blue-500/15 text-blue-400 border-blue-500/40 hover:bg-blue-500/25"
-                            : "bg-bg-card text-text-muted border-border-subtle hover:text-text-primary"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        <option value="no_access">{t("access_no_access")}</option>
-                        <option value="viewable">{t("access_viewable")}</option>
-                        <option value="editable">{t("access_editable")}</option>
-                      </select>
-
-                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-current opacity-70">
-                        {isUpdating ? (
-                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
-                          </svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      onClick={() =>
+                        handleAccessChange(user.id, isShared ? "no_access" : "viewable")
+                      }
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer border ${
+                        isShared
+                          ? "bg-accent text-bg-primary border-accent hover:opacity-90 shadow-sm shadow-accent/20"
+                          : "bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-accent border-border-subtle hover:border-accent"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={isShared ? "Shared (Click to revoke)" : "Share roadmap"}
+                      aria-label={isShared ? "Shared" : "Share roadmap"}
+                    >
+                      {isUpdating ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
               );

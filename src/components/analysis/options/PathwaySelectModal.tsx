@@ -75,7 +75,7 @@ export default function PathwaySelectModal() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {/* Pathway Option 1 Column */}
           <div
-            onClick={openUploadOption}
+            onClick={() => openUploadOption()}
             className="group flex flex-col cursor-pointer"
           >
             {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
@@ -112,7 +112,7 @@ export default function PathwaySelectModal() {
 
           {/* Pathway Option 2 Column */}
           <div
-            onClick={openWizardOption}
+            onClick={() => openWizardOption()}
             className="group flex flex-col cursor-pointer"
           >
             {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
