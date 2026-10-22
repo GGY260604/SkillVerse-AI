@@ -13,6 +13,7 @@ export interface GenerateEmailOptions {
   email: string;
   locale?: string;
   redirectTo?: string;
+  theme?: "dark" | "light" | string;
 }
 
 export interface GeneratedEmail {
@@ -72,6 +73,7 @@ export async function generateLocalizedEmail(options: GenerateEmailOptions): Pro
   const { actionType, email, redirectTo } = options;
   const token = options.token || "------";
   const locale = normalizeLocale(options.locale);
+  const isLight = options.theme === "light";
 
   const catalog = await loadEmailCatalog(locale);
   const safeCategory = (actionType in catalog && actionType !== "common"
@@ -100,8 +102,52 @@ ${categoryCopy.security_notice}
 ${commonCopy.footer_rights}
 `.trim();
 
-  // 5. HTML Layout Generation
-  // Structure email markup matching AuthModal.tsx visual design tokens.
+  // 5. Theme Palette Configuration
+  // Provide harmonious styling matching app globals.css in both Light and Dark modes.
+  const colors = isLight
+    ? {
+        bodyBg: "#e2e8f0",
+        cardBg: "#f1f5f9",
+        cardBorder: "rgba(15, 23, 42, 0.12)",
+        cardShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+        accentBar: "#0f766e",
+        textPrimary: "#0f172a",
+        textSecondary: "#334155",
+        textMuted: "#64748b",
+        accentText: "#0f766e",
+        otpBoxBg: "#ffffff",
+        otpBoxBorder: "rgba(15, 118, 110, 0.4)",
+        otpText: "#0f766e",
+        alertBg: "rgba(225, 29, 72, 0.08)",
+        alertBorder: "rgba(225, 29, 72, 0.25)",
+        alertText: "#e11d48",
+        buttonBg: "#0f766e",
+        buttonText: "#ffffff",
+        dividerBorder: "rgba(15, 23, 42, 0.12)",
+      }
+    : {
+        bodyBg: "#080808",
+        cardBg: "#141414",
+        cardBorder: "rgba(255, 255, 255, 0.08)",
+        cardShadow: "0 0 60px rgba(0, 0, 0, 0.9)",
+        accentBar: "#00e5c3",
+        textPrimary: "#f5f5f7",
+        textSecondary: "#9e9e9e",
+        textMuted: "#666666",
+        accentText: "#00e5c3",
+        otpBoxBg: "#0f0f0f",
+        otpBoxBorder: "rgba(0, 229, 195, 0.4)",
+        otpText: "#00e5c3",
+        alertBg: "rgba(239, 68, 68, 0.08)",
+        alertBorder: "rgba(239, 68, 68, 0.25)",
+        alertText: "#f87171",
+        buttonBg: "#00e5c3",
+        buttonText: "#080808",
+        dividerBorder: "rgba(255, 255, 255, 0.08)",
+      };
+
+  // 6. HTML Layout Generation
+  // Structure email markup matching AuthModal.tsx visual design tokens in selected theme.
   const html = `
 <!DOCTYPE html>
 <html lang="${locale}">
@@ -110,17 +156,17 @@ ${commonCopy.footer_rights}
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #080808; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f5f5f7; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #080808; min-height: 100vh; padding: 48px 16px;">
+<body style="margin: 0; padding: 0; background-color: ${colors.bodyBg}; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${colors.textPrimary}; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${colors.bodyBg}; min-height: 100vh; padding: 48px 16px;">
     <tr>
-      <td align="center" valign="center">
+      <td align="center" valign="middle">
         
         <!-- Modal Card Container (mirrors AuthModal.tsx) -->
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 440px; background-color: #141414; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 440px; background-color: ${colors.cardBg}; border: 1px solid ${colors.cardBorder}; border-radius: 16px; overflow: hidden; box-shadow: ${colors.cardShadow};">
           
-          <!-- Subtle Top Accent Glow Line -->
+          <!-- Top Accent Glow Line -->
           <tr>
-            <td height="2" style="background-color: #00e5c3;"></td>
+            <td height="3" style="background-color: ${colors.accentBar};"></td>
           </tr>
 
           <tr>
@@ -133,7 +179,7 @@ ${commonCopy.footer_rights}
                     <img src="cid:skillverse-logo" alt="SkillVerse Auth Logo" width="20" height="20" style="display: block; width: 20px; height: 20px; border-radius: 4px; border: 0;" />
                   </td>
                   <td valign="middle">
-                    <span style="font-size: 14px; font-weight: 700; color: #f5f5f7; letter-spacing: -0.2px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <span style="font-size: 14px; font-weight: 700; color: ${colors.textPrimary}; letter-spacing: -0.2px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
                       ${commonCopy.badge}
                     </span>
                   </td>
@@ -141,44 +187,44 @@ ${commonCopy.footer_rights}
               </table>
 
               <!-- Title -->
-              <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700; color: #f5f5f7; letter-spacing: -0.3px; line-height: 1.3;">
+              <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700; color: ${colors.textPrimary}; letter-spacing: -0.3px; line-height: 1.3;">
                 ${categoryCopy.title}
               </h1>
 
               <!-- Description -->
-              <p style="margin: 0 0 4px 0; font-size: 13px; line-height: 1.5; color: #9e9e9e;">
+              <p style="margin: 0 0 4px 0; font-size: 13px; line-height: 1.5; color: ${colors.textSecondary};">
                 ${categoryCopy.description}
               </p>
 
               <!-- Recipient Email Notice -->
-              <p style="margin: 0 0 24px 0; font-size: 12px; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; color: #00e5c3; word-break: break-all;">
+              <p style="margin: 0 0 24px 0; font-size: 12px; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; font-weight: 600; color: ${colors.accentText}; word-break: break-all;">
                 ${email}
               </p>
 
               <!-- OTP Form Input Block -->
               <div style="margin-bottom: 24px;">
-                <div style="font-size: 11px; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #9e9e9e; margin-bottom: 6px;">
+                <div style="font-size: 11px; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: ${colors.textMuted}; margin-bottom: 6px;">
                   ${categoryCopy.otp_label}
                 </div>
                 
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                   <tr>
-                    <td align="center" style="background-color: #0f0f0f; border: 1px solid rgba(0, 229, 195, 0.4); border-radius: 12px; padding: 18px 12px;">
-                      <div style="font-size: 32px; font-weight: 700; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; color: #00e5c3; letter-spacing: 10px; margin-left: 10px;">
+                    <td align="center" style="background-color: ${colors.otpBoxBg}; border: 1px solid ${colors.otpBoxBorder}; border-radius: 12px; padding: 18px 12px;">
+                      <div style="font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', Consolas, Menlo, monospace; color: ${colors.otpText}; letter-spacing: 10px; margin-left: 10px;">
                         ${token}
                       </div>
                     </td>
                   </tr>
                 </table>
 
-                <div style="margin-top: 8px; font-size: 11px; color: #666666; font-family: 'Inter', sans-serif;">
+                <div style="margin-top: 8px; font-size: 11px; color: ${colors.textMuted}; font-family: 'Inter', sans-serif;">
                   ${categoryCopy.expiry_notice}
                 </div>
               </div>
 
               <!-- Security Notice Alert -->
-              <div style="background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 10px 14px; margin-bottom: 24px;">
-                <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #f87171;">
+              <div style="background-color: ${colors.alertBg}; border: 1px solid ${colors.alertBorder}; border-radius: 8px; padding: 10px 14px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 11px; line-height: 1.5; color: ${colors.alertText};">
                   ${categoryCopy.security_notice}
                 </p>
               </div>
@@ -186,7 +232,7 @@ ${commonCopy.footer_rights}
               ${
                 redirectTo
                   ? `<div style="text-align: center; margin-bottom: 24px;">
-                      <a href="${redirectTo}" style="display: inline-block; width: 100%; box-sizing: border-box; text-align: center; padding: 12px 16px; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 1px; color: #080808; background-color: #00e5c3; border-radius: 12px; text-decoration: none;">
+                      <a href="${redirectTo}" style="display: inline-block; width: 100%; box-sizing: border-box; text-align: center; padding: 12px 16px; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 1px; color: ${colors.buttonText}; background-color: ${colors.buttonBg}; border-radius: 12px; text-decoration: none;">
                         ${commonCopy.btn_return}
                       </a>
                     </div>`
@@ -194,8 +240,8 @@ ${commonCopy.footer_rights}
               }
 
               <!-- Divider and Footer -->
-              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px; text-align: center;">
-                <p style="margin: 0; font-size: 11px; color: #666666; line-height: 1.5;">
+              <div style="border-top: 1px solid ${colors.dividerBorder}; padding-top: 20px; text-align: center;">
+                <p style="margin: 0; font-size: 11px; color: ${colors.textMuted}; line-height: 1.5;">
                   ${commonCopy.footer_rights}
                 </p>
               </div>

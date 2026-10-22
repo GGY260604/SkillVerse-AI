@@ -3,7 +3,9 @@
 @source "../components";
 @source ".";
 
-:root {
+:root,
+html.dark,
+html[data-theme="dark"] {
   /* --- Core Backgrounds: Pure Achromatic Black and Dark Charcoal Neutrals --- */
   --bg-primary: #080808;
   --bg-secondary: #0f0f0f;
@@ -36,6 +38,39 @@
   /* --- Fonts --- */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* --- Light Mode Color System (Comfortable Muted Warm Slate / Sanded Studio Finish) --- */
+html.light,
+html[data-theme="light"] {
+  /* --- Core Backgrounds: Grounded Soft Slate-Stone Tones --- */
+  --bg-primary: #e2e8f0;
+  --bg-secondary: #cbd5e1;
+  --bg-card: #edf2f7;
+  --bg-card-hover: #f8fafc;
+  --bg-elevated: #f1f5f9;
+
+  /* --- Accent: Elegant Deep Teal Emerald with Controlled Glow --- */
+  --accent: #0f766e;
+  --accent-dim: #134e4a;
+  --accent-glow: rgba(15, 118, 110, 0.14);
+  --accent-glow-strong: rgba(15, 118, 110, 0.24);
+  --accent-gradient-end: #047857;
+
+  /* --- Text: Deep Rich Charcoal Slate for High Legibility --- */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  /* --- Borders: Clean Defining Borders --- */
+  --border-subtle: rgba(15, 23, 42, 0.12);
+  --border-hover: rgba(15, 23, 42, 0.22);
+  --border-accent: rgba(15, 118, 110, 0.40);
+
+  /* --- Status --- */
+  --positive: #0f766e;
+  --negative: #e11d48;
+  --warning: #d97706;
 }
 
 @theme inline {

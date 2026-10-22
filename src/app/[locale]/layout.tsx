@@ -4,6 +4,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import Script from "next/script";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
@@ -16,6 +17,7 @@ import { ProfileModalProvider } from "@/context/auth/ProfileModalContext";
 import { ExpGainProvider } from "@/context/auth/ExpGainContext";
 import { PlanModalProvider } from "@/context/analysis/PlanModalContext";
 import { SharedModalProvider } from "@/context/analysis/SharedModalContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
@@ -62,7 +64,7 @@ export default async function LocaleLayout({
 
   // --- UI ---
   return (
-    <html lang={locale} className="dark scheme-dark">
+    <html lang={locale} className="dark" data-theme="dark" suppressHydrationWarning>
       <head>
         {/* Google Fonts Preconnect */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -71,43 +73,67 @@ export default async function LocaleLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
+        {/* Inline Theme Detection Script: Instantly applies theme class and data-theme to prevent flash */}
+        <Script
+          id="theme-detector"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var theme = localStorage.getItem('skillverse-theme');
+                if (theme === 'light') {
+                  document.documentElement.classList.remove('dark', 'scheme-dark');
+                  document.documentElement.classList.add('light');
+                  document.documentElement.setAttribute('data-theme', 'light');
+                  document.documentElement.style.colorScheme = 'light';
+                } else {
+                  document.documentElement.classList.add('dark', 'scheme-dark');
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.style.colorScheme = 'dark';
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           <Suspense fallback={<div className="min-h-screen bg-bg-primary" />}>
-            <AuthProvider>
-              <ProfileModalProvider>
-                <ExpGainProvider>
-                  <PlanModalProvider>
-                    <SharedModalProvider>
-                      {/* Global Header Navigation */}
-                      <Header />
+            <ThemeProvider>
+              <AuthProvider>
+                <ProfileModalProvider>
+                  <ExpGainProvider>
+                    <PlanModalProvider>
+                      <SharedModalProvider>
+                        {/* Global Header Navigation */}
+                        <Header />
 
-                      {/* Main Content Area */}
-                      <main className="flex-1 flex flex-col">{children}</main>
+                        {/* Main Content Area */}
+                        <main className="flex-1 flex flex-col">{children}</main>
 
-                      {/* Global Footer */}
-                      <Footer />
+                        {/* Global Footer */}
+                        <Footer />
 
-                      {/* Global Auth Overlay Modal */}
-                      <AuthModal />
+                        {/* Global Auth Overlay Modal */}
+                        <AuthModal />
 
-                      {/* Global Profile Overlay Modal */}
-                      <ProfileModal />
+                        {/* Global Profile Overlay Modal */}
+                        <ProfileModal />
 
-                      {/* Global Plan & Option Overlay Modals */}
-                      <PlanModals />
+                        {/* Global Plan & Option Overlay Modals */}
+                        <PlanModals />
 
-                      {/* Global Shared Plans Overlay Modal */}
-                      <SharedPlansModal />
+                        {/* Global Shared Plans Overlay Modal */}
+                        <SharedPlansModal />
 
-                      {/* Global EXP & Level Up Celebration Modal */}
-                      <ExpGainModal />
-                    </SharedModalProvider>
-                  </PlanModalProvider>
-                </ExpGainProvider>
-              </ProfileModalProvider>
-            </AuthProvider>
+                        {/* Global EXP & Level Up Celebration Modal */}
+                        <ExpGainModal />
+                      </SharedModalProvider>
+                    </PlanModalProvider>
+                  </ExpGainProvider>
+                </ProfileModalProvider>
+              </AuthProvider>
+            </ThemeProvider>
           </Suspense>
         </NextIntlClientProvider>
       </body>

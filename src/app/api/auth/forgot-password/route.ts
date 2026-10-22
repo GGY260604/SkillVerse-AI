@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // 1. Request Body Parsing and Validation
     // Parse incoming payload and verify email presence.
     const body = await request.json();
-    const { email, locale } = body;
+    const { email, locale, theme } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.trim().toLowerCase();
     const userLocale = locale || "en";
+    const userTheme = theme || "dark";
 
     // 2. Recovery Link Generation via Admin Client
     // Generate recovery link and one-time password while bypassing built-in email templates.
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
         token: otp,
         email: normalizedEmail,
         locale: userLocale,
+        theme: userTheme,
       });
 
       await sendEmail({

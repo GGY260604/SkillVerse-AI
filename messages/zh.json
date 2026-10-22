@@ -450,6 +450,7 @@
       "password_hide": "隐藏密码",
       "verification_code_sent": "验证码已发送至您的邮箱。",
       "recovery_code_sent": "密码重置验证码已发送至您的邮箱。",
+      "fresh_code_sent": "新的 6 位验证码已发送。",
       "resend_code": "重新发送",
       "resend_countdown": "{seconds} 秒后重新发送",
       "errors": {
@@ -591,7 +592,10 @@
       "signup": "注册",
       "profile": "个人资料",
       "logout": "退出登录",
-      "language": "语言"
+      "language": "语言",
+      "theme": "主题",
+      "lightMode": "浅色模式",
+      "darkMode": "深色模式"
     },
     "footer": {
       "copyright": "SkillVerse AI",

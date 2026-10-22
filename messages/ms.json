@@ -450,6 +450,7 @@
       "password_hide": "Sembunyikan kata laluan",
       "verification_code_sent": "Kod pengesahan telah dihantar ke e-mel anda.",
       "recovery_code_sent": "Kod pemulihan kata laluan telah dihantar ke e-mel anda.",
+      "fresh_code_sent": "Kod 6-digit baharu telah dihantar.",
       "resend_code": "Hantar Semula Kod",
       "resend_countdown": "Hantar semula dalam {seconds}s",
       "errors": {
@@ -591,7 +592,10 @@
       "signup": "Daftar",
       "profile": "Profil",
       "logout": "Log Keluar",
-      "language": "Bahasa"
+      "language": "Bahasa",
+      "theme": "Tema",
+      "lightMode": "Mod Cerah",
+      "darkMode": "Mod Gelap"
     },
     "footer": {
       "copyright": "SkillVerse AI",

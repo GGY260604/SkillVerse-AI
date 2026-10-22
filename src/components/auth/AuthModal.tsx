@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth, AuthModalView } from "@/context/auth/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import Logo from "@/components/Logo";
 
 // --- Password Visibility Toggle Component ---
@@ -62,6 +63,7 @@ function PasswordEyeToggle({
 export default function AuthModal() {
   const t = useTranslations("auth");
   const locale = useLocale();
+  const { theme } = useTheme();
   const {
     isAuthModalOpen,
     authModalView,
@@ -249,7 +251,7 @@ export default function AuthModal() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password, locale }),
+        body: JSON.stringify({ email: email.trim(), password, locale, theme }),
       });
       const data = await res.json();
 
@@ -323,7 +325,7 @@ export default function AuthModal() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), locale }),
+        body: JSON.stringify({ email: email.trim(), locale, theme }),
       });
       const data = await res.json();
 
@@ -405,8 +407,8 @@ export default function AuthModal() {
 
       const payload =
         authModalView === "verify-register"
-          ? { email: email.trim(), password: password || "TempPassword123!", locale }
-          : { email: email.trim(), locale };
+          ? { email: email.trim(), password: password || "TempPassword123!", locale, theme }
+          : { email: email.trim(), locale, theme };
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -421,7 +423,7 @@ export default function AuthModal() {
       }
 
       setResendCooldown(60);
-      setSuccessMsg("A fresh 6-digit code has been sent.");
+      setSuccessMsg(t("common.fresh_code_sent"));
     } catch {
       setErrorMsg(t("common.errors.network"));
     } finally {

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import simpleheat from "simpleheat";
 import type { SharedRoadmapItem } from "@/components/shared/SharedPlansView";
 import { getAvatarInitials } from "@/lib/avatar";
+import { useTheme, type Theme } from "@/context/ThemeContext";
 
 // --- Type Definitions ---
 
@@ -63,6 +64,7 @@ export default function HeatMapView({
 }: HeatMapViewProps) {
   const t = useTranslations("shared");
   const locale = useLocale();
+  const { theme } = useTheme();
 
   const [roleInput, setRoleInput] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -185,26 +187,38 @@ export default function HeatMapView({
     return map;
   }, [matrixData]);
 
-  // Sort members in descending order of overall match score.
+  // Sort members in descending order of overall match score, strictly respecting candidate rank on ties.
   const sortedMembers = React.useMemo(() => {
     if (!matrixData?.candidates || matrixData.candidates.length === 0) {
       return selectedMembers;
     }
     return [...selectedMembers].sort((a, b) => {
-      const scoreA = candidateMap.get(a.owner.id)?.matchPercentage ?? -1;
-      const scoreB = candidateMap.get(b.owner.id)?.matchPercentage ?? -1;
+      const candA = candidateMap.get(a.owner.id);
+      const candB = candidateMap.get(b.owner.id);
+      const rankA = candA?.rank ?? 9999;
+      const rankB = candB?.rank ?? 9999;
+      if (rankA !== rankB) return rankA - rankB;
+
+      const scoreA = candA?.matchPercentage ?? -1;
+      const scoreB = candB?.matchPercentage ?? -1;
       return scoreB - scoreA;
     });
   }, [selectedMembers, matrixData, candidateMap]);
 
-  // Sort fallback user IDs in descending order of overall match score.
+  // Sort fallback user IDs in descending order of overall match score, strictly respecting candidate rank on ties.
   const sortedUserIds = React.useMemo(() => {
     if (!matrixData?.candidates || matrixData.candidates.length === 0) {
       return selectedUserIds;
     }
     return [...selectedUserIds].sort((a, b) => {
-      const scoreA = candidateMap.get(a)?.matchPercentage ?? -1;
-      const scoreB = candidateMap.get(b)?.matchPercentage ?? -1;
+      const candA = candidateMap.get(a);
+      const candB = candidateMap.get(b);
+      const rankA = candA?.rank ?? 9999;
+      const rankB = candB?.rank ?? 9999;
+      if (rankA !== rankB) return rankA - rankB;
+
+      const scoreA = candA?.matchPercentage ?? -1;
+      const scoreB = candB?.matchPercentage ?? -1;
       return scoreB - scoreA;
     });
   }, [selectedUserIds, matrixData, candidateMap]);
@@ -454,24 +468,24 @@ export default function HeatMapView({
                       >
                         {overallPct !== null ? (
                           <div className="flex flex-col items-center justify-center">
-                            <span className={`text-xs font-mono font-bold ${
+                            <span className={`text-xs font-mono font-black ${
                               overallPct >= 70
-                                ? "text-emerald-400"
+                                ? theme === "light" ? "text-emerald-900" : "text-emerald-300"
                                 : overallPct >= 40
-                                ? "text-amber-400"
-                                : "text-rose-400"
+                                ? theme === "light" ? "text-amber-950" : "text-amber-300"
+                                : theme === "light" ? "text-rose-900" : "text-rose-300"
                             }`}>
                               {overallPct}%
                             </span>
                             <span
-                              className={`text-[9px] font-mono px-1.5 py-0.2 rounded-sm mt-0.5 font-bold ${
+                              className={`text-[9px] font-mono px-2 py-0.5 rounded-sm mt-0.5 font-black uppercase tracking-wider ${
                                 rank === 1
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+                                  ? "bg-amber-500 text-zinc-950 border border-amber-600 shadow-sm"
                                   : rank === 2
-                                  ? "bg-slate-300/20 text-slate-200 border border-slate-300/40"
+                                  ? "bg-slate-800 text-white border border-slate-900 shadow-sm"
                                   : rank === 3
-                                  ? "bg-amber-700/25 text-amber-500 border border-amber-600/40"
-                                  : "text-text-muted"
+                                  ? "bg-amber-900 text-amber-100 border border-amber-950 shadow-sm"
+                                  : "text-text-muted font-bold"
                               }`}
                             >
                               Rank #{rank}
@@ -517,24 +531,24 @@ export default function HeatMapView({
                       >
                         {overallPct !== null ? (
                           <div className="flex flex-col items-center justify-center">
-                            <span className={`text-xs font-mono font-bold ${
+                            <span className={`text-xs font-mono font-black ${
                               overallPct >= 70
-                                ? "text-emerald-400"
+                                ? theme === "light" ? "text-emerald-900" : "text-emerald-300"
                                 : overallPct >= 40
-                                ? "text-amber-400"
-                                : "text-rose-400"
+                                ? theme === "light" ? "text-amber-950" : "text-amber-300"
+                                : theme === "light" ? "text-rose-900" : "text-rose-300"
                             }`}>
                               {overallPct}%
                             </span>
                             <span
-                              className={`text-[9px] font-mono px-1.5 py-0.2 rounded-sm mt-0.5 font-bold ${
+                              className={`text-[9px] font-mono px-2 py-0.5 rounded-sm mt-0.5 font-black uppercase tracking-wider ${
                                 rank === 1
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+                                  ? "bg-amber-500 text-zinc-950 border border-amber-600 shadow-sm"
                                   : rank === 2
-                                  ? "bg-slate-300/20 text-slate-200 border border-slate-300/40"
+                                  ? "bg-slate-800 text-white border border-slate-900 shadow-sm"
                                   : rank === 3
-                                  ? "bg-amber-700/25 text-amber-500 border border-amber-600/40"
-                                  : "text-text-muted"
+                                  ? "bg-amber-900 text-amber-100 border border-amber-950 shadow-sm"
+                                  : "text-text-muted font-bold"
                               }`}
                             >
                               Rank #{rank}
@@ -600,7 +614,7 @@ export default function HeatMapView({
                               className="p-0 border-0"
                             >
                               {skillEval ? (
-                                <TileContent skillEval={skillEval} t={t} />
+                                <TileContent skillEval={skillEval} t={t} theme={theme} />
                               ) : (
                                 <div className="h-14 w-full flex items-center justify-center">
                                   <span className="text-[10px] font-mono text-text-muted/50 select-none">
@@ -632,7 +646,7 @@ export default function HeatMapView({
                               className="p-0 border-0"
                             >
                               {skillEval ? (
-                                <TileContent skillEval={skillEval} t={t} />
+                                <TileContent skillEval={skillEval} t={t} theme={theme} />
                               ) : (
                                 <div className="h-14 w-full flex items-center justify-center">
                                   <span className="text-[10px] font-mono text-text-muted/50 select-none">
@@ -680,25 +694,33 @@ export default function HeatMapView({
 // Define status color classes and rgb values for dark-mode heatmaps.
 export interface StatusTheme {
   rgb: string;
-  textClass: string;
-  subtextClass: string;
+  lightTextClass: string;
+  lightSubtextClass: string;
+  darkTextClass: string;
+  darkSubtextClass: string;
 }
 
 const STATUS_THEMES: Record<string, StatusTheme> = {
   mastered: {
     rgb: "16, 185, 129",
-    textClass: "text-emerald-300",
-    subtextClass: "text-emerald-400/90",
+    lightTextClass: "text-emerald-900",
+    lightSubtextClass: "text-emerald-950",
+    darkTextClass: "text-emerald-200",
+    darkSubtextClass: "text-emerald-300",
   },
   gap: {
     rgb: "234, 179, 8",
-    textClass: "text-amber-300",
-    subtextClass: "text-amber-400/90",
+    lightTextClass: "text-amber-950",
+    lightSubtextClass: "text-amber-950",
+    darkTextClass: "text-amber-200",
+    darkSubtextClass: "text-amber-300",
   },
   critical_deficit: {
     rgb: "244, 63, 94",
-    textClass: "text-rose-300",
-    subtextClass: "text-rose-400/90",
+    lightTextClass: "text-rose-900",
+    lightSubtextClass: "text-rose-950",
+    darkTextClass: "text-rose-200",
+    darkSubtextClass: "text-rose-300",
   },
 };
 
@@ -720,6 +742,7 @@ function CanvasHeatmapOverlay({
   colWidth?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -738,13 +761,23 @@ function CanvasHeatmapOverlay({
       // 0.0 - 0.39: Critical Deficit (Rose/Coral)
       // 0.40 - 0.69: Gap (Amber/Gold)
       // 0.70 - 1.00: Mastered (Emerald)
-      heat.gradient({
-        0.15: "rgba(244, 63, 94, 0.4)",
-        0.35: "rgba(244, 63, 94, 0.8)",
-        0.50: "rgba(234, 179, 8, 0.8)",
-        0.70: "rgba(16, 185, 129, 0.8)",
-        1.00: "rgba(52, 211, 153, 0.95)",
-      });
+      heat.gradient(
+        theme === "light"
+          ? {
+              0.15: "rgba(190, 24, 93, 0.6)",
+              0.35: "rgba(190, 24, 93, 0.92)",
+              0.50: "rgba(180, 83, 9, 0.92)",
+              0.70: "rgba(4, 120, 87, 0.92)",
+              1.00: "rgba(5, 150, 105, 1)",
+            }
+          : {
+              0.15: "rgba(244, 63, 94, 0.4)",
+              0.35: "rgba(244, 63, 94, 0.8)",
+              0.50: "rgba(234, 179, 8, 0.8)",
+              0.70: "rgba(16, 185, 129, 0.8)",
+              1.00: "rgba(52, 211, 153, 0.95)",
+            }
+      );
 
       // Point coordinates: [x, y, value]
       const actualColWidth = colWidth || 130;
@@ -772,12 +805,12 @@ function CanvasHeatmapOverlay({
     } catch (err) {
       console.warn("[simpleheat] Render failed:", err);
     }
-  }, [members, competencies, candidateMap, width, height]);
+  }, [members, competencies, candidateMap, width, height, theme]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute top-0 left-0 pointer-events-none z-0 opacity-80"
+      className={`absolute top-0 left-0 pointer-events-none z-0 ${theme === "light" ? "opacity-100" : "opacity-80"}`}
       style={{ width: `${width}px`, height: `${height}px` }}
     />
   );
@@ -788,14 +821,18 @@ function CanvasHeatmapOverlay({
 function TileContent({
   skillEval,
   t,
+  theme,
 }: {
   skillEval: SkillEvaluationItem;
   t: (key: string) => string;
+  theme: Theme;
 }) {
   const scorePercent = Math.round((skillEval.score || 0) * 100);
   const status = skillEval.status;
 
   const currentTheme = STATUS_THEMES[status] || STATUS_THEMES.gap;
+  const textClass = theme === "light" ? currentTheme.lightTextClass : currentTheme.darkTextClass;
+  const subtextClass = theme === "light" ? currentTheme.lightSubtextClass : currentTheme.darkSubtextClass;
 
   const statusLabel =
     status === "mastered"
@@ -810,10 +847,10 @@ function TileContent({
       title={`${skillEval.skillName}: ${scorePercent}% (${statusLabel})`}
     >
       {/* Score and Status Label */}
-      <span className={`text-xs font-mono font-bold ${currentTheme.textClass} drop-shadow-md leading-tight`}>
+      <span className={`text-xs font-mono font-bold ${textClass} drop-shadow-md leading-tight`}>
         {scorePercent}%
       </span>
-      <span className={`text-[9px] font-mono font-medium ${currentTheme.subtextClass} tracking-tight leading-tight mt-0.5 drop-shadow-sm`}>
+      <span className={`text-[9px] font-mono font-medium ${subtextClass} tracking-tight leading-tight mt-0.5 drop-shadow-sm`}>
         {statusLabel}
       </span>
     </div>

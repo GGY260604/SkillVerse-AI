@@ -36,26 +36,26 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
     return (
       <div
         onClick={() => onSelect?.(plan)}
-        className="rounded-xl p-4 sm:p-5 transition-all duration-200 cursor-pointer group border bg-bg-secondary/40 border-zinc-800/80 hover:bg-bg-secondary/70 hover:border-zinc-700/90 shadow-sm"
+        className="rounded-xl p-4 sm:p-5 transition-all duration-300 cursor-pointer border bg-bg-card border-border-subtle hover:bg-bg-card-hover hover:shadow-lg shadow-sm"
       >
         {/* Archived Plan Header */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-zinc-800/70 mb-3.5">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border-subtle mb-3.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800/90 text-zinc-400 border border-zinc-700/50">
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-bg-secondary text-text-muted border border-border-subtle">
+              <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
               {tHistory("badge")}
             </span>
-            <span className="text-[11px] font-mono text-zinc-500">
-              ID: <span className="text-zinc-400">{plan.id}</span>
+            <span className="text-[11px] font-mono text-text-muted">
+              ID: <span className="text-text-secondary">{plan.id}</span>
             </span>
             {plan.roleCategory && (
-              <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
+              <span className="text-[11px] font-mono text-text-muted hidden sm:inline">
                 • {plan.roleCategory === "Target Horizon Role" ? tCurrent("role_category_default") : plan.roleCategory}
               </span>
             )}
           </div>
 
-          <span className="text-[11px] font-mono text-zinc-500 shrink-0">
+          <span className="text-[11px] font-mono text-text-muted shrink-0">
             {displayDate}
           </span>
         </div>
@@ -63,15 +63,15 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
         {/* Plan Summary */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3.5">
           <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-bold text-zinc-300 group-hover:text-zinc-100 transition-colors truncate">
+            <h3 className="text-base sm:text-lg font-bold text-text-secondary truncate">
               {displayRoleTitle}
             </h3>
             {displayDescription && (
-              <p className="text-xs text-zinc-400 line-clamp-1 mt-1 leading-relaxed">
+              <p className="text-xs text-text-muted line-clamp-1 mt-1 leading-relaxed">
                 {displayDescription}
               </p>
             )}
-            <div className="flex items-center gap-3 mt-2 text-[11px] font-mono text-zinc-500 flex-wrap">
+            <div className="flex items-center gap-3 mt-2 text-[11px] font-mono text-text-muted flex-wrap">
               <span>
                 {tCurrent("duration_summary", {
                   weeks: plan.roadmapWeeks?.replace(/\D/g, "") || "10",
@@ -83,7 +83,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
                   {plan.sdgs.map((sdg) => (
                     <span
                       key={sdg}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
+                      className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-bg-secondary text-text-muted border border-border-subtle"
                     >
                       {sdg}
                     </span>
@@ -94,14 +94,14 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           </div>
 
           {/* Match Score */}
-          <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-zinc-800/60 pt-2 sm:pt-0">
+          <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-border-subtle pt-2 sm:pt-0">
             <div className="flex items-baseline gap-1">
-              <span className="text-[10px] font-mono uppercase text-zinc-500">{tCurrent("match_score")}:</span>
-              <span className="text-sm font-bold font-mono text-zinc-300">{plan.matchScore.toFixed(1)}%</span>
+              <span className="text-[10px] font-mono uppercase text-text-muted">{tCurrent("match_score")}:</span>
+              <span className="text-sm font-bold font-mono text-text-secondary">{plan.matchScore.toFixed(1)}%</span>
             </div>
-            <div className="w-24 bg-zinc-800 rounded-full h-1 overflow-hidden mt-1 hidden sm:block">
+            <div className="w-24 bg-bg-secondary rounded-full h-1 overflow-hidden mt-1 hidden sm:block">
               <div
-                className="h-full bg-zinc-500"
+                className="h-full bg-text-muted"
                 style={{ width: `${plan.matchScore}%` }}
               />
             </div>
@@ -109,22 +109,22 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
         </div>
 
         {/* Progress and Details */}
-        <div className="pt-3 border-t border-zinc-800/70 flex items-center justify-between gap-3 text-xs font-mono">
+        <div className="pt-3 border-t border-border-subtle flex items-center justify-between gap-3 text-xs font-mono">
           <div className="flex items-center gap-2.5">
-            <span className="text-[11px] text-zinc-500">
-              <strong className="text-zinc-300 font-semibold">{completedCount} / {totalPhases}</strong>
+            <span className="text-[11px] text-text-muted">
+              <strong className="text-text-secondary font-semibold">{completedCount} / {totalPhases}</strong>
             </span>
-            <div className="w-20 sm:w-24 bg-zinc-800 rounded-full h-1 overflow-hidden">
+            <div className="w-20 sm:w-24 bg-bg-secondary rounded-full h-1 overflow-hidden">
               <div
-                className="h-full bg-zinc-500 transition-all duration-300"
+                className="h-full bg-text-muted transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
 
-          <span className="text-zinc-400 group-hover:text-zinc-200 transition-colors inline-flex items-center gap-1 font-semibold">
+          <span className="text-text-muted inline-flex items-center gap-1 font-semibold">
             <span>{tHistory("view_details")}</span>
-            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+            <span>→</span>
           </span>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
               {plan.sdgs.map((sdg) => (
                 <span
                   key={sdg}
-                  className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-accent/15 text-accent border border-accent/30 shadow-xs"
                 >
                   {sdg}
                 </span>
