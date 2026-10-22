@@ -3,7 +3,7 @@ import { fetchWithFastApiFallback } from "@/app/api/_lib/fastapi/client";
 import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/testing/quiz";
 
 // --- Route Handler ---
-// Endpoint: POST /api/analysis/phase/quiz.
+// Endpoint: POST /api/analysis/roadmaps/phase/quiz.
 // Purpose: Return mock quiz data or generate a quiz through the FastAPI backend.
 export async function POST(req: NextRequest) {
   try {

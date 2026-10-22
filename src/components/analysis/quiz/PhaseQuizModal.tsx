@@ -102,7 +102,7 @@ export default function PhaseQuizModal({
 
     async function fetchQuiz() {
       try {
-        const res = await fetch("/api/analysis/phase/quiz", {
+        const res = await fetch("/api/analysis/roadmaps/phase/quiz", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
