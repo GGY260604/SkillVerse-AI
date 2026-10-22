@@ -464,7 +464,6 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
                       </div>
                     </div>
                   </div>
-                </div>
 
                   {/* Right Side Action Button: Trash Can aligned with User Info */}
                   {!isHeatMapSelectionMode && (
