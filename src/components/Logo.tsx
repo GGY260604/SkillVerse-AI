@@ -1,30 +1,20 @@
 import Link from "next/link";
 
-// Logo Component Properties
+// --- Logo Component Properties ---
 export interface LogoProps {
-  // Toggle text visibility beside icon.
   showText?: boolean;
-  // Custom brand text or label.
   text?: string;
-  // Toggle Beta badge indicator.
   showBeta?: boolean;
-  // Responsive sizing preset.
   size?: "sm" | "md" | "lg";
-  // Explicit icon dimension override.
   iconSize?: number;
-  // Optional navigation destination link.
   href?: string;
-  // Custom outer container styling.
   className?: string;
-  // Custom typography styling.
   textClassName?: string;
-  // Custom icon image styling.
   imageClassName?: string;
-  // Optional click handler callback.
   onClick?: () => void;
 }
 
-// Reusable Brand Logo Component
+// --- Reusable Brand Logo Component ---
 // Renders the official SkillVerse mark with customizable text, beta pill, and sizing.
 export default function Logo({
   showText = true,
@@ -83,6 +73,7 @@ export default function Logo({
     );
   }
 
+  // --- UI ---
   return (
     <div onClick={onClick} className={containerClasses}>
       {content}

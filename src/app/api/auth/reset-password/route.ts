@@ -3,10 +3,14 @@ import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// Password Reset Confirmation
-// Validate 6-digit recovery OTP and securely update account password.
+// --- Route Handler ---
+// Endpoint: POST /api/auth/reset-password
+// Purpose: Validate 6-digit recovery OTP, securely update account password, and establish user session.
+// Target Service: Supabase Auth & Supabase Auth Admin
 export async function POST(request: NextRequest) {
   try {
+    // 1. Request Body Parsing and Format Validation
+    // Validate email, OTP token format, and password length requirements.
     const body = await request.json();
     const { email, token, newPassword } = body;
 
@@ -27,7 +31,6 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.trim().toLowerCase();
     const cleanToken = token.toString().trim();
 
-    // Enforce strict 6-digit numeric validation.
     if (!/^\d{6}$/.test(cleanToken)) {
       return NextResponse.json(
         { error: "Recovery code must be exactly 6 digits.", errorCode: "invalid_otp" },
@@ -35,7 +38,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify recovery OTP code with Supabase auth service.
+    // 2. Recovery OTP Verification
+    // Verify the one-time code against Supabase authentication service.
     const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
       token: cleanToken,
@@ -49,7 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update password using admin client for reliable execution.
+    // 3. Secure Password Update via Admin Client
+    // Apply the new password directly via privileged admin service.
     const admin = createAdminClient();
     const { error: updateError } = await admin.auth.admin.updateUserById(
       otpData.user.id,
@@ -60,7 +65,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    // Sign in with new credentials to establish active session tokens.
+    // 4. Session Establishment and Cookie Attachment
+    // Sign in with new credentials and attach session cookies to the response.
     const { data: sessionData, error: loginError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: newPassword,
@@ -75,7 +81,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Attach authentication cookies when session login succeeds.
     if (!loginError && sessionData.session) {
       attachAuthCookies(
         response,
@@ -87,6 +92,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: unknown) {
+    // 5. Internal Error Handling
+    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -3,11 +3,12 @@
 import { useTranslations } from "next-intl";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-// Localized Route Loading Shell
+// --- Localized Route Loading Shell ---
 // Render instant high-tech telemetry skeleton and orbital glow while content resolves.
 export default function Loading() {
   const t = useTranslations("status.loading");
 
+  // --- UI ---
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] px-4 sm:px-6 relative overflow-hidden select-none animate-fade-in">
       {/* Background Radial Ambient Glow */}

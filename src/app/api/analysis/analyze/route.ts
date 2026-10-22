@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFastApiConfig } from "@/lib/fastapi/client";
+import {
+  getFastApiConfig,
+  getFastApiTargets,
+  fetchWithFastApiFallback,
+} from "@/lib/fastapi/client";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/prisma";
 
+// --- Route Handler ---
 /**
  * POST /api/analysis/analyze
  * Unified server-side proxy route communicating with FastAPI analyze microservices.
@@ -38,12 +43,8 @@ export async function POST(request: NextRequest) {
     const config = getFastApiConfig();
     const baseUrl = config.baseUrl.replace(/\/+$/, "");
 
-    // 2. Action: Stream role discovery (/api/v1/analyze/stream)
+    // 2. Action: Stream role discovery (/api/v1/analyze/stream) with Multi-Tier Failover
     if (action === "stream") {
-      const streamUrl = baseUrl.endsWith("/api/v1")
-        ? `${baseUrl}/analyze/stream`
-        : `${baseUrl}/api/v1/analyze/stream`;
-
       const forwardPayload = {
         sessionId: body.sessionId,
         userId: authenticatedUserId,
@@ -54,29 +55,45 @@ export async function POST(request: NextRequest) {
         autoSynthesizeRoadmap: false,
       };
 
-      const fastApiResponse = await fetch(streamUrl, {
-        method: "POST",
-        headers: {
-          ...config.headers,
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
-        body: JSON.stringify(forwardPayload),
-      });
+      const targets = getFastApiTargets();
+      let streamResponse: Response | null = null;
+      let lastStreamError: string = "";
 
-      if (!fastApiResponse.ok || !fastApiResponse.body) {
-        const errText = await fastApiResponse.text().catch(() => "");
+      for (const target of targets) {
+        try {
+          const streamUrl = `${target.baseUrl}/api/v1/analyze/stream`;
+          const candidateResponse = await fetch(streamUrl, {
+            method: "POST",
+            headers: {
+              ...target.headers,
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify(forwardPayload),
+          });
+
+          if (candidateResponse.ok && candidateResponse.body) {
+            streamResponse = candidateResponse;
+            break;
+          }
+          lastStreamError = `Tier ${target.tier} returned status ${candidateResponse.status}`;
+        } catch (tierErr: unknown) {
+          lastStreamError = `Tier ${target.tier} error: ${tierErr instanceof Error ? tierErr.message : String(tierErr)}`;
+        }
+      }
+
+      if (!streamResponse || !streamResponse.body) {
         return NextResponse.json(
           {
             success: false,
-            error: `FastAPI stream error (${fastApiResponse.status}): ${errText || "No response body"}`,
+            error: `FastAPI stream error across all endpoints: ${lastStreamError || "No response body"}`,
           },
-          { status: fastApiResponse.status || 502 }
+          { status: 502 }
         );
       }
 
       // Forward SSE streaming response to browser
-      return new Response(fastApiResponse.body, {
+      return new Response(streamResponse.body, {
         headers: {
           "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache, no-transform",
@@ -86,12 +103,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Action: Synthesize roadmap & persist roadmap/phases to database
+    // 3. Action: Synthesize roadmap & persist roadmap/phases to database with Multi-Tier Failover
     if (action === "synthesize") {
-      const synthUrl = baseUrl.endsWith("/api/v1")
-        ? `${baseUrl}/analyze/synthesize-roadmap`
-        : `${baseUrl}/api/v1/analyze/synthesize-roadmap`;
-
       const forwardPayload = {
         assessmentId: body.assessmentId,
         sessionId: body.sessionId,
@@ -104,10 +117,9 @@ export async function POST(request: NextRequest) {
         radarData: body.radarData,
       };
 
-      const fastApiResponse = await fetch(synthUrl, {
+      const fastApiResponse = await fetchWithFastApiFallback("/api/v1/analyze/synthesize-roadmap", {
         method: "POST",
         headers: {
-          ...config.headers,
           "Content-Type": "application/json",
           Accept: "application/json",
         },

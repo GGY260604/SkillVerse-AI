@@ -3,10 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateLocalizedEmail } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/sender";
 
-// User Registration and Verification Email Dispatch
-// Initiate registration and dispatch localized email containing verification code.
+// --- Route Handler ---
+// Endpoint: POST /api/auth/register
+// Purpose: Register new users and dispatch localized email verification codes.
+// Target Service: Supabase Auth Admin & Upstream SMTP Provider
 export async function POST(request: NextRequest) {
   try {
+    // 1. Request Body Parsing and Format Validation
+    // Parse the incoming JSON payload and validate credential requirements.
     const body = await request.json();
     const { email, password, locale } = body;
 
@@ -27,7 +31,8 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.trim().toLowerCase();
     const userLocale = locale || "en";
 
-    // Use admin link generator to create user and bypass built-in email templates.
+    // 2. User Account Creation via Admin Client
+    // Generate signup verification link and token while bypassing built-in email templates.
     const admin = createAdminClient();
     const { data, error } = await admin.auth.admin.generateLink({
       type: "signup",
@@ -46,11 +51,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, errorCode }, { status: 400 });
     }
 
+    // 3. Localized Verification Email Dispatch
+    // Format custom localized template and send the one-time code via transactional email.
     const otp = data.properties?.email_otp;
-
-    // Dispatch localized email in code based on user preferred locale.
     if (otp) {
-      const localizedEmail = generateLocalizedEmail({
+      const localizedEmail = await generateLocalizedEmail({
         actionType: "signup",
         token: otp,
         email: normalizedEmail,
@@ -63,7 +68,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Automatically record new user in user table with email and locale
+    // 4. Database User Synchronization
+    // Record the user profile within the local database instance.
     if (data.user?.id) {
       try {
         const { prisma } = await import("@/lib/prisma");
@@ -84,6 +90,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 5. Successful Response Dispatch
+    // Return registration acknowledgment with user metadata.
     return NextResponse.json({
       success: true,
       message: "6-digit verification code has been dispatched to your email.",
@@ -91,6 +99,8 @@ export async function POST(request: NextRequest) {
       userId: data.user?.id,
     });
   } catch (err: unknown) {
+    // 6. Internal Error Handling
+    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

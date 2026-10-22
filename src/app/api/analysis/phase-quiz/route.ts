@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFastApiConfig } from "@/lib/fastapi/client";
+import { fetchWithFastApiFallback } from "@/lib/fastapi/client";
 import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
 
+// --- Route Handler ---
+// Endpoint: POST /api/analysis/phase-quiz
+// Purpose: Return mock quiz data or generate a quiz through the FastAPI backend.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -17,13 +20,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(mock);
     }
 
-    const fastApiConfig = getFastApiConfig();
-    const endpoint = `${fastApiConfig.baseUrl}/api/v1/quiz/generate`;
-
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetchWithFastApiFallback("/api/v1/quiz/generate", {
         method: "POST",
-        headers: fastApiConfig.headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           phaseIndex: Number(phaseIndex) || 1,
           phaseTitle,

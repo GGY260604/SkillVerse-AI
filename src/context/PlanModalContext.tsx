@@ -3,11 +3,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { ProfileIntakePayload } from "@/lib/fastapi/client";
+import { ProfileIntakePayload } from "@/lib/analysis/types";
 import { PlanData } from "@/components/analysis/planCard/planData";
 
 export type PlanModalType = "pathway_select" | "upload" | "wizard" | "role_select" | "share" | null;
 
+// --- Context Contract ---
 interface PlanModalContextType {
   activeModal: PlanModalType;
   activeProfile: ProfileIntakePayload | null;
@@ -28,6 +29,7 @@ interface PlanModalContextType {
 
 const PlanModalContext = createContext<PlanModalContextType | undefined>(undefined);
 
+// --- Context Provider ---
 export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activeModal, setActiveModal] = useState<PlanModalType>(null);
   const [activeProfile, setActiveProfile] = useState<ProfileIntakePayload | null>(null);

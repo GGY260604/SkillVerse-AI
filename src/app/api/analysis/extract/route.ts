@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFastApiConfig } from "@/lib/fastapi/client";
+import { fetchWithFastApiFallback } from "@/lib/fastapi/client";
 import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
@@ -20,6 +20,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
 const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
 const ALLOWED_MIME_PREFIXES = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/jpg"];
 
+// --- Route Handler ---
 /**
  * POST /api/analysis/extract
  * Accepts resume/CV document upload (PDF or Image, max 10MB), forwards to FastAPI extract.py,
@@ -70,13 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Forward File to FastAPI /api/v1/extract
-    const config = getFastApiConfig();
-    const baseUrl = config.baseUrl.replace(/\/+$/, "");
-    const targetUrl = baseUrl.endsWith("/api/v1")
-      ? `${baseUrl}/extract`
-      : `${baseUrl}/api/v1/extract`;
-
+    // 3. Forward File to FastAPI /api/v1/extract with Multi-Tier Failover
     const forwardFormData = new FormData();
     forwardFormData.append("file", file, file.name);
 
@@ -84,15 +79,9 @@ export async function POST(request: NextRequest) {
     let lastError: any = null;
 
     try {
-      const response = await fetch(targetUrl, {
+      const response = await fetchWithFastApiFallback("/api/v1/extract", {
         method: "POST",
         headers: {
-          ...(config.headers["Authorization"]
-            ? { Authorization: config.headers["Authorization"] }
-            : {}),
-          ...(config.headers["x-api-key"]
-            ? { "x-api-key": config.headers["x-api-key"] }
-            : {}),
           Accept: "application/json",
         },
         body: forwardFormData,
