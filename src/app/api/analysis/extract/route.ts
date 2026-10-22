@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchWithFastApiFallback } from "@/lib/fastapi/client";
+import { fetchWithFastApiFallback } from "@/app/api/_lib/fastapi/client";
 import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
@@ -26,6 +26,12 @@ const ALLOWED_MIME_PREFIXES = ["application/pdf", "image/png", "image/jpeg", "im
  * Accepts resume/CV document upload (PDF or Image, max 10MB), forwards to FastAPI extract.py,
  * and automatically persists/overwrites the extracted profile into the database user table.
  * Preserves existing identity fields (name, email, locale) and non-extracted fields.
+ *
+ * Data flow:
+ * 1. Validate the uploaded file and forward it to the extraction service.
+ * 2. For an authenticated user, normalize and persist only non-empty extracted fields;
+ *    existing identity and fields absent from the extraction remain unchanged.
+ * 3. Return the normalized profile so the assessment wizard can load the saved data.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Validate File Size (Max 10MB)
+    // 1. Validate upload size and supported format before forwarding the document.
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         {
@@ -53,7 +59,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Validate File Type (PDF or Images only)
     const fileName = file.name.toLowerCase();
     const fileType = (file.type || "").toLowerCase();
     const hasValidExt = ALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext));
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Forward File to FastAPI /api/v1/extract with Multi-Tier Failover
+    // 2. Forward the document to the extraction service with multi-tier failover.
     const forwardFormData = new FormData();
     forwardFormData.append("file", file, file.name);
 
@@ -118,8 +123,8 @@ export async function POST(request: NextRequest) {
 
     const extracted = extractData.extractedProfile;
 
-    // 4. Save into database user table if user is authenticated
-    // Preserves existing name, email, locale, and existing values for non-extracted fields
+    // 3. Persist extracted profile fields for authenticated users without replacing identity
+    // data or database fields that the extractor did not return.
     try {
       const { accessToken } = await getAuthTokensFromCookies();
       if (accessToken) {

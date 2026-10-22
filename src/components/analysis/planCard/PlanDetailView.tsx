@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { PlanData, PlanPhase, CourseItem, LocalizedStringMap, LocalizedListMap } from "./planData";
-import { useUserLevel } from "@/context/UserLevelContext";
+import { useExpGain } from "@/context/auth/ExpGainContext";
 import PhaseQuizModal from "@/components/analysis/quiz/PhaseQuizModal";
 
+// --- Roadmap Detail View ---
+// Display a roadmap's phases, persist current-plan progress, and support read-only shared/history views.
 interface PlanDetailViewProps {
   plan: PlanData;
   onBack?: () => void;
@@ -14,7 +16,8 @@ interface PlanDetailViewProps {
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
-// Helper to pick localized text according to active system locale
+// --- Localization Helpers ---
+// Prefer the active locale, then English, then the first available translation.
 function getLocalized(
   localizedMap: LocalizedStringMap | undefined,
   currentLang: string,
@@ -24,7 +27,6 @@ function getLocalized(
   return localizedMap[currentLang] || localizedMap["en"] || Object.values(localizedMap)[0] || fallbackText;
 }
 
-// Helper to pick localized list according to active system locale
 function getLocalizedList(
   localizedListMap: LocalizedListMap | undefined,
   currentLang: string,
@@ -41,91 +43,6 @@ interface PhaseSdgInfo {
   explanation: string;
 }
 
-function getPhaseSdgDetails(
-  phase: PlanPhase,
-  phaseIndex: number,
-  plan: PlanData,
-  currentLocale: string
-): PhaseSdgInfo {
-  if (phase.sdgExplanationLocalized || phase.sdgExplanation) {
-    const customExp = getLocalized(phase.sdgExplanationLocalized, currentLocale, phase.sdgExplanation || "");
-    if (customExp) {
-      return {
-        goalCode: phase.sdgGoal || (plan.sdgs?.[0] ?? "SDG 8.2"),
-        title: phase.sdgTitle || (currentLocale === "zh" ? "联合国可持续发展目标对齐" : currentLocale === "ms" ? "Penjajaran UN SDG" : "UN SDG Alignment"),
-        explanation: customExp,
-      };
-    }
-  }
-
-  const phaseTitle = getLocalized(phase.titleLocalized, currentLocale, phase.title);
-  const primaryPlanSdg = plan.sdgs?.[0] || "SDG 8.2";
-
-  if (phaseIndex === 1) {
-    if (currentLocale === "ms") {
-      return {
-        goalCode: "SDG 4.4 & 8.2",
-        title: "Kemahiran Teknikal Bermaruah & Literasi Digital Kalis Masa Hadapan",
-        explanation: `Menguasai kemahiran asas dalam "${phaseTitle}" secara langsung memajukan UN SDG 4.4 (Peningkatan Kemahiran Teknikal dan Vokasional) serta SDG 8.2. Langkah ini menukar tugas rutin yang terdedah kepada risiko automasi kepada literasi teknologi berdaya tahan, memperkukuh asas peralihan kerjaya bermaruah.`,
-      };
-    }
-    if (currentLocale === "zh") {
-      return {
-        goalCode: "SDG 4.4 & 8.2",
-        title: "优质体面就业技能与数字化素养跃升",
-        explanation: `深入掌握「${phaseTitle}」阶段的核心技术基础，直接契合联合国 SDG 4.4（大幅增加具备优质体面就业技术技能的劳动者）及 SDG 8.2。将易受自动化淘汰的传统机械流程重塑为前沿数字化认知底座，构筑长期职业发展的护城河。`,
-      };
-    }
-    return {
-      goalCode: "SDG 4.4 & 8.2",
-      title: "Technical & Vocational Skills for Decent Work",
-      explanation: `Acquiring the foundational competencies in "${phaseTitle}" directly advances UN SDG 4.4 (Technical & Vocational Skills for Decent Employment) and SDG 8.2. It transforms vulnerable, manual routines into resilient digital literacy, equipping you with non-automatable analytical fundamentals.`,
-    };
-  }
-
-  if (phaseIndex === 2) {
-    if (currentLocale === "ms") {
-      return {
-        goalCode: "SDG 9.4 & 8.2",
-        title: "Pemodenan Infrastruktur Digital & Inovasi Industri Bersih",
-        explanation: `Mengaplikasikan alatan praktikal dan automasi dalam "${phaseTitle}" memenuhi UN SDG 9.4 (Penaiktarafan Infrastruktur Perindustrian Mampan) dan SDG 8.2. Melalui pelaksanaan saluran data digital dan platform moden, anda menghapuskan ketidakcekapan manual serta mempercepat inovasi organisasi.`,
-      };
-    }
-    if (currentLocale === "zh") {
-      return {
-        goalCode: "SDG 9.4 & 8.2",
-        title: "可持续工业技术改造与现代化数字化基础设施",
-        explanation: `在「${phaseTitle}」阶段实操生产级工具链与自动化流水线，深度推进联合国 SDG 9.4（工业基础设施升级与技术改造）与 SDG 8.2。通过部署高效云端与数据平台，淘汰低效手工内耗，全面推动企业数字化转型与可持续工业创新。`,
-      };
-    }
-    return {
-      goalCode: "SDG 9.4 & 8.2",
-      title: "Modern Infrastructure Upgrade & Sustainable Digital Innovation",
-      explanation: `Executing hands-on toolchains and automation in "${phaseTitle}" fulfills UN SDG 9.4 (Infrastructure Retrofitting & Clean Industry) and SDG 8.2. Deploying scalable digital pipelines eliminates manual friction, increases organizational efficiency, and powers sustainable technological transformation.`,
-    };
-  }
-
-  if (currentLocale === "ms") {
-    return {
-      goalCode: primaryPlanSdg || "SDG 8.2",
-      title: "Produktiviti Ekonomi Nilai Tinggi & Standard Tempat Kerja Mampan",
-      explanation: `Menyempurnakan projek capstone industri dan pensijilan dalam "${phaseTitle}" secara langsung memenuhi UN SDG 8.2 (Peningkatan Produktiviti Ekonomi melalui Teknologi Termaju). Anda beralih kepada pencipta nilai strategik yang mematuhi standard tempat kerja global dan mampan.`,
-    };
-  }
-  if (currentLocale === "zh") {
-    return {
-      goalCode: primaryPlanSdg || "SDG 8.2",
-      title: "高新技术驱动的高附加值经济生产力与体面就业",
-      explanation: `完成「${phaseTitle}」的端到端实战项目与综合认证，直接践行联合国 SDG 8.2（通过高新技术升级实现高水平经济生产力与体面就业）。验证高附加值实战工程水准，彻底迈入高薪且具备抗周期韧性的核心战略岗位。`,
-    };
-  }
-  return {
-    goalCode: primaryPlanSdg || "SDG 8.2",
-    title: "High-Value Economic Productivity & Resilient Employment",
-    explanation: `Delivering the verified industry capstone in "${phaseTitle}" directly satisfies UN SDG 8.2 (Economic Productivity via Technological Upgrading). It certifies your capability to operate as a high-value contributor, driving sustainable business impact and resilient career longevity.`,
-  };
-}
-
 export default function PlanDetailView({
   plan,
   isSharedView = false,
@@ -137,9 +54,54 @@ export default function PlanDetailView({
   const locale = useLocale();
 
   const isCurrent = plan.isCurrent;
-  const { addExp } = useUserLevel();
+  const { addExp } = useExpGain();
+  const getPhaseSdgDetails = (
+    phase: PlanPhase,
+    phaseIndex: number
+  ): PhaseSdgInfo => {
+    if (phase.sdgExplanationLocalized || phase.sdgExplanation) {
+      const explanation = getLocalized(
+        phase.sdgExplanationLocalized,
+        locale,
+        phase.sdgExplanation || ""
+      );
+      if (explanation) {
+        return {
+          goalCode: phase.sdgGoal || plan.sdgs?.[0] || "SDG 8.2",
+          title: phase.sdgTitle || tCurrent("sdg_alignment_title"),
+          explanation,
+        };
+      }
+    }
 
-  // Phase completion state
+    const phaseTitle = getLocalized(phase.titleLocalized, locale, phase.title);
+    const titleKey =
+      phaseIndex === 1
+        ? "sdg_phase_1_title"
+        : phaseIndex === 2
+          ? "sdg_phase_2_title"
+          : "sdg_phase_3_title";
+    const explanationKey =
+      phaseIndex === 1
+        ? "sdg_phase_1_description"
+        : phaseIndex === 2
+          ? "sdg_phase_2_description"
+          : "sdg_phase_3_description";
+
+    return {
+      goalCode:
+        phaseIndex === 1
+          ? "SDG 4.4 & 8.2"
+          : phaseIndex === 2
+            ? "SDG 9.4 & 8.2"
+            : plan.sdgs?.[0] || "SDG 8.2",
+      title: tCurrent(titleKey),
+      explanation: tCurrent(explanationKey, { phase: phaseTitle }),
+    };
+  };
+
+  // --- Phase State ---
+  // Keep the visible phase state synchronized with the selected roadmap prop.
   const [phases, setPhases] = useState<PlanPhase[]>(plan.phases || []);
   const [updatingPhaseId, setUpdatingPhaseId] = useState<string | null>(null);
 
@@ -164,7 +126,8 @@ export default function PlanDetailView({
     setPhases(plan.phases || []);
   }
 
-  // Handle quiz passed with 10/10 perfect mastery
+  // --- Quiz Completion ---
+  // On a perfect score, update the UI, persist completion for the active roadmap, and award EXP.
   const handleQuizPassed = async (phaseId: string, expReward: number, phaseTitle: string) => {
     setPhases((prevPhases) =>
       prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: true } : p))
@@ -189,51 +152,6 @@ export default function PlanDetailView({
 
     // Award EXP and trigger level progression animation
     addExp(expReward, phaseTitle);
-  };
-
-  // Toggle phase isCompleted status with optimistic UI update and database persistence
-  const handleTogglePhase = async (phaseId: string) => {
-    if (!isCurrent || (isSharedView && !canEdit)) return;
-
-    const targetPhase = phases.find((p) => p.id === phaseId);
-    if (!targetPhase) return;
-
-    const nextCompleted = !targetPhase.isCompleted;
-
-    // Optimistic UI state update
-    setPhases((prevPhases) =>
-      prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: nextCompleted } : p))
-    );
-    setUpdatingPhaseId(phaseId);
-    onPhaseToggle?.(phaseId, nextCompleted);
-
-    try {
-      const response = await fetch("/api/analysis/roadmaps/phase", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phaseId,
-          isCompleted: nextCompleted,
-        }),
-      });
-
-      if (!response.ok) {
-        // Revert on API failure
-        setPhases((prevPhases) =>
-          prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: !nextCompleted } : p))
-        );
-        onPhaseToggle?.(phaseId, !nextCompleted);
-      }
-    } catch (error) {
-      console.error("Failed to update phase completion status:", error);
-      // Revert on exception
-      setPhases((prevPhases) =>
-        prevPhases.map((p) => (p.id === phaseId ? { ...p, isCompleted: !nextCompleted } : p))
-      );
-      onPhaseToggle?.(phaseId, !nextCompleted);
-    } finally {
-      setUpdatingPhaseId(null);
-    }
   };
 
   // Metrics calculation
@@ -278,7 +196,7 @@ export default function PlanDetailView({
         {/* Top Header Row: Roadmap ID on Left, Generation Date on Right */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-subtle mb-5">
           <span className="text-xs font-mono font-medium text-text-muted">
-            Roadmap ID: <span className="text-text-secondary font-mono">{plan.id}</span>
+            {tCurrent("roadmap_id")}: <span className="text-text-secondary font-mono">{plan.id}</span>
           </span>
 
           <span className="text-xs font-mono text-text-muted">
@@ -350,7 +268,7 @@ export default function PlanDetailView({
         <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-text-secondary">
-              Progress: <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
+              {tCurrent("progress")}: <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
             </span>
             <div className="w-36 sm:w-48 bg-border-subtle rounded-full h-1.5 overflow-hidden">
               <div
@@ -368,7 +286,7 @@ export default function PlanDetailView({
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
-              Matched Strengths
+              {tCurrent("matched_strengths")}
             </h3>
             <span className="text-xs font-mono text-emerald-400 font-semibold">
               {plan.matchedStrengths.length}
@@ -388,7 +306,7 @@ export default function PlanDetailView({
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
-              Skills to Acquire
+              {tCurrent("skills_gap")}
             </h3>
             <span className="text-xs font-mono text-amber-400 font-semibold">
               {plan.skillsGap.length}
@@ -408,7 +326,7 @@ export default function PlanDetailView({
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
-              Automation Alerts
+              {tCurrent("at_risk_skills")}
             </h3>
             <span className="text-xs font-mono text-rose-400 font-semibold">
               {plan.atRiskSkills.length}
@@ -464,13 +382,16 @@ export default function PlanDetailView({
                           : "bg-accent/15 text-accent"
                       }`}
                     >
-                      Phase {phaseIndex}
+                      {tCurrent("phase_label", { phase: phaseIndex })}
                     </span>
                     <h4 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight">
                       {phaseTitleLocalized}
                     </h4>
                     <span className="text-xs font-mono text-text-muted">
-                      ({phase.durationWeeks || 3} Weeks • {phase.estimatedHours || 15} Hours)
+                      {tCurrent("phase_duration", {
+                        weeks: phase.durationWeeks || 3,
+                        hours: phase.estimatedHours || 15,
+                      })}
                     </span>
                   </div>
 
@@ -530,7 +451,7 @@ export default function PlanDetailView({
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
-                        Learning Objectives
+                        {tCurrent("learning_objectives")}
                       </h5>
                     </div>
                     <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
@@ -548,7 +469,7 @@ export default function PlanDetailView({
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
-                        Recommended Courses
+                        {tCurrent("recommended_courses")}
                       </h5>
                     </div>
 
@@ -567,8 +488,11 @@ export default function PlanDetailView({
                                     {courseTitle}
                                   </h6>
                                   <span className="text-[11px] font-mono text-text-muted">
-                                    Platform: <span className="text-text-secondary">{course.platform}</span>
-                                    {course.durationHours && ` • ${course.durationHours} Hours`}
+                                    {tCurrent("platform")}: <span className="text-text-secondary">{course.platform}</span>
+                                    {course.durationHours &&
+                                      ` • ${tCurrent("course_duration", {
+                                        hours: course.durationHours,
+                                      })}`}
                                   </span>
                                 </div>
 
@@ -578,9 +502,9 @@ export default function PlanDetailView({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-medium text-accent hover:underline shrink-0"
-                                    title="Open verified course"
+                                    title={tCurrent("open_verified_course")}
                                   >
-                                    <span>Learn ↗</span>
+                                    <span>{tCurrent("learn")} ↗</span>
                                   </a>
                                 )}
                               </div>
@@ -590,12 +514,12 @@ export default function PlanDetailView({
                                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                   {course.isFree && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                      Free / Audit Available
+                                      {tCurrent("free_audit_available")}
                                     </span>
                                   )}
                                   {course.isHrdCorpClaimable && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                      HRD Corp Claimable
+                                      {tCurrent("hrd_corp_claimable")}
                                     </span>
                                   )}
                                 </div>
@@ -606,7 +530,7 @@ export default function PlanDetailView({
                       </div>
                     ) : (
                       <p className="text-xs text-text-muted italic">
-                        Self-directed experiential learning projects.
+                        {tCurrent("self_directed_learning")}
                       </p>
                     )}
                   </div>
@@ -616,7 +540,7 @@ export default function PlanDetailView({
                 {(() => {
                   const phaseKey = phase.id || `phase-${idx}`;
                   const isSdgExpanded = Boolean(expandedSdgPhases[phaseKey]);
-                  const sdgInfo = getPhaseSdgDetails(phase, phaseIndex, plan, locale);
+                  const sdgInfo = getPhaseSdgDetails(phase, phaseIndex);
 
                   return (
                     <div className="pt-4 border-t border-border-subtle/60">
@@ -661,7 +585,7 @@ export default function PlanDetailView({
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-500/15">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                UN SDG TARGET
+                                {tCurrent("sdg_target_label")}
                               </span>
                               <h6 className="text-xs sm:text-sm font-bold text-text-primary">
                                 {sdgInfo.title}

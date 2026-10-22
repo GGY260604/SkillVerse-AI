@@ -9,10 +9,13 @@ import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
 import ProfileModal from "@/components/auth/ProfileModal";
 import PlanModals from "@/components/analysis/options/PlanModals";
-import ExpGainModal from "@/components/level/ExpGainModal";
-import { AuthProvider } from "@/context/AuthContext";
-import { PlanModalProvider } from "@/context/PlanModalContext";
-import { UserLevelProvider } from "@/context/UserLevelContext";
+import SharedPlansModal from "@/components/analysis/SharedPlansModal";
+import ExpGainModal from "@/components/auth/ExpGainModal";
+import { AuthProvider } from "@/context/auth/AuthContext";
+import { ProfileModalProvider } from "@/context/auth/ProfileModalContext";
+import { ExpGainProvider } from "@/context/auth/ExpGainContext";
+import { PlanModalProvider } from "@/context/analysis/PlanModalContext";
+import { SharedModalProvider } from "@/context/analysis/SharedModalContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
@@ -73,30 +76,37 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages}>
           <Suspense fallback={<div className="min-h-screen bg-bg-primary" />}>
             <AuthProvider>
-              <UserLevelProvider>
-                <PlanModalProvider>
-                  {/* Global Header Navigation */}
-                  <Header />
+              <ProfileModalProvider>
+                <ExpGainProvider>
+                  <PlanModalProvider>
+                    <SharedModalProvider>
+                      {/* Global Header Navigation */}
+                      <Header />
 
-                  {/* Main Content Area */}
-                  <main className="flex-1 flex flex-col">{children}</main>
+                      {/* Main Content Area */}
+                      <main className="flex-1 flex flex-col">{children}</main>
 
-                  {/* Global Footer */}
-                  <Footer />
+                      {/* Global Footer */}
+                      <Footer />
 
-                  {/* Global Auth Overlay Modal */}
-                  <AuthModal />
+                      {/* Global Auth Overlay Modal */}
+                      <AuthModal />
 
-                  {/* Global Profile Overlay Modal */}
-                  <ProfileModal />
+                      {/* Global Profile Overlay Modal */}
+                      <ProfileModal />
 
-                  {/* Global Plan & Option Overlay Modals */}
-                  <PlanModals />
+                      {/* Global Plan & Option Overlay Modals */}
+                      <PlanModals />
 
-                  {/* Global EXP & Level Up Celebration Modal */}
-                  <ExpGainModal />
-                </PlanModalProvider>
-              </UserLevelProvider>
+                      {/* Global Shared Plans Overlay Modal */}
+                      <SharedPlansModal />
+
+                      {/* Global EXP & Level Up Celebration Modal */}
+                      <ExpGainModal />
+                    </SharedModalProvider>
+                  </PlanModalProvider>
+                </ExpGainProvider>
+              </ProfileModalProvider>
             </AuthProvider>
           </Suspense>
         </NextIntlClientProvider>

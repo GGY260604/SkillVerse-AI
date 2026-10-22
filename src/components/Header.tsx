@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { useUserLevel } from "@/context/UserLevelContext";
+import { useAuth } from "@/context/auth/AuthContext";
+import { useProfileModal } from "@/context/auth/ProfileModalContext";
+import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
 
 // --- Supported Languages Configuration ---
@@ -19,15 +20,16 @@ const LOCALES = [
 // --- Header Navigation Component ---
 // Provide global branding, localized navigation links, language selection, and responsive mobile sidebar.
 export default function Header() {
-  const t = useTranslations("other.nav");
+  const t = useTranslations("layout.nav");
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const { user, isLoggedIn, isLoading, openAuthModal, openProfileModal, logout } = useAuth();
-  const { level, currentLevelExp } = useUserLevel();
+  const { user, isLoggedIn, isLoading, openAuthModal, logout } = useAuth();
+  const { openProfileModal } = useProfileModal();
+  const { level, currentLevelExp } = useExpGain();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -141,10 +143,10 @@ export default function Header() {
 
                   {/* Level Badge floating on top right upon the profile icon */}
                   <span
-                    className="absolute -top-1.5 -right-2 px-1.5 py-0.5 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
+                    className="absolute -bottom-1 -right-1 w-4 h-4 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none flex items-center justify-center"
                     title={`Level ${level} (${currentLevelExp}/100 EXP)`}
                   >
-                    Lv.{level}
+                    {level}
                   </span>
                 </div>
 
@@ -195,10 +197,10 @@ export default function Header() {
 
                 {/* Level Badge floating on top right upon the mobile profile icon */}
                 <span
-                  className="absolute -top-1.5 -right-2 px-1.2 py-0.2 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
+                  className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none select-none flex items-center justify-center"
                   title={`Level ${level} (${currentLevelExp}/100 EXP)`}
                 >
-                  Lv.{level}
+                  {level}
                 </span>
               </div>
             ) : (
@@ -349,15 +351,12 @@ export default function Header() {
                   <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shadow-[0_0_10px_var(--accent-glow)]">
                     {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
                   </div>
-                  <span className="absolute -top-1.5 -right-2 px-1.2 py-0.2 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none">
-                    Lv.{level}
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none flex items-center justify-center">
+                    {level}
                   </span>
                 </div>
                 <div className="flex flex-col text-left min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-text-primary truncate">{user?.name || t("profile")}</span>
-                    <span className="text-[10px] font-mono text-accent font-bold">Lv.{level}</span>
-                  </div>
+                  <span className="text-xs font-bold text-text-primary truncate">{user?.name || t("profile")}</span>
                   <span className="text-[10px] text-text-muted font-mono truncate">{user?.email}</span>
                 </div>
               </button>

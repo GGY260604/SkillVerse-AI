@@ -1,21 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { useTranslations } from "next-intl";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { FileFormatIcon } from "@/lib/fileIcons";
+import { extractProfileDocument } from "@/lib/analysis/client";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
 const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
 
-// Upload Option Modal Component (Option 1)
-// Ingests CV document (PDF / Images, max 10MB), invokes extract.py,
-// shows animated multi-step loading telemetry, and passes result to Option 2.
+// --- Resume Upload Option ---
+// Validate a CV, extract profile data, persist non-empty fields, then continue to the wizard.
 export default function UploadOptionModal() {
   const t = useTranslations("home.plan");
-  const locale = useLocale();
+  const extractionStageTexts = [
+    t("extract_stage_1"),
+    t("extract_stage_2"),
+    t("extract_stage_3"),
+    t("extract_stage_4"),
+  ];
   const { activeModal, openPathwaySelect, openWizardOption, closeModals } = usePlanModal();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -51,58 +56,13 @@ export default function UploadOptionModal() {
     }
   }, [isOpen]);
 
-  // Localized text for the 4 extraction loading stages
-  const getStageText = (step: number) => {
-    if (locale === "zh") {
-      switch (step) {
-        case 1:
-          return "上传中...";
-        case 2:
-          return "解析文件中...";
-        case 3:
-          return "正在上传数据库...";
-        case 4:
-          return "正在预填写表格...";
-        default:
-          return "处理中...";
-      }
-    }
-    if (locale === "ms") {
-      switch (step) {
-        case 1:
-          return "Memuat naik dokumen...";
-        case 2:
-          return "Menganalisis fail...";
-        case 3:
-          return "Sedang memuat naik ke pangkalan data...";
-        case 4:
-          return "Sedang pra-isi borang...";
-        default:
-          return "Sedang memproses...";
-      }
-    }
-    switch (step) {
-      case 1:
-        return "Uploading document...";
-      case 2:
-        return "Parsing document...";
-      case 3:
-        return "Updating database...";
-      case 4:
-        return "Prefilling form...";
-      default:
-        return "Processing...";
-    }
-  };
-
-  // Validate file type and size constraint (Max 10MB, PDF/Images only).
+  // --- File Intake ---
+  // 1. Validate size and format before accepting a file from the picker or drop zone.
   const validateAndSetFile = (file: File) => {
     setErrorMessage(null);
 
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMessage(
-        `File exceeds maximum allowed size of 10 MB (${(file.size / (1024 * 1024)).toFixed(1)} MB).`
-      );
+      setErrorMessage(t("file_too_large", { size: (file.size / (1024 * 1024)).toFixed(1) }));
       return;
     }
 
@@ -112,16 +72,14 @@ export default function UploadOptionModal() {
     const hasValidMime = type.startsWith("image/") || type === "application/pdf";
 
     if (!hasValidExt && !hasValidMime) {
-      setErrorMessage(
-        "Unsupported format. Only PDF and image files (PNG, JPG, WEBP) up to 10 MB are allowed."
-      );
+      setErrorMessage(t("unsupported_file_format"));
       return;
     }
 
     setSelectedFile(file);
   };
 
-  // Handle drag and drop file ingestion events.
+  // Support both drag-and-drop and file-picker intake through the same validation.
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -145,61 +103,44 @@ export default function UploadOptionModal() {
     }
   };
 
-  // Send document to extraction pipeline and pass parsed profile to Option 2.
+  // --- Extraction Workflow ---
+  // 2. POST the file to /api/analysis/extract; the API calls FastAPI and saves returned
+  //    non-empty profile fields for the signed-in user.
+  // 3. On success, open the wizard, which reloads the saved profile from /api/profile.
+  //    The wizard submit then saves edits and starts role matching.
   const handleStartAnalysis = async () => {
     if (!selectedFile) return;
 
     setIsAnalyzing(true);
     setErrorMessage(null);
-    setAnalysisStep(1); // Stage 1: 上传中...
+    setAnalysisStep(1);
 
-    // Once request is dispatched, switch to Stage 2: 解析文件中...
     const step2Timer = setTimeout(() => {
       setAnalysisStep(2);
     }, 600);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      const data = await extractProfileDocument(selectedFile);
 
-      const res = await fetch("/api/analysis/extract", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            (locale === "zh"
-              ? "简历提取失败，请重试。"
-              : "Failed to extract profile from document.")
-        );
+      if (!data.success) {
+        throw new Error(data.error || t("extraction_failed"));
       }
 
       clearTimeout(step2Timer);
 
-      // Stage 3: 正在上传数据库...
       setAnalysisStep(3);
       await new Promise((r) => setTimeout(r, 700));
 
-      // Stage 4: 正在预填写表格...
       setAnalysisStep(4);
       await new Promise((r) => setTimeout(r, 700));
 
       setIsAnalyzing(false);
       // Seamlessly transition to Option 2 (Wizard) which fetches fresh profile directly from database
       openWizardOption();
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(step2Timer);
       setIsAnalyzing(false);
-      setErrorMessage(
-        err.message ||
-          (locale === "zh"
-            ? "处理文件时发生意外错误。"
-            : "An unexpected error occurred during extraction.")
-      );
+      setErrorMessage(err instanceof Error ? err.message : t("unexpected_extraction_error"));
     }
   };
 
@@ -337,7 +278,7 @@ export default function UploadOptionModal() {
           /* Extraction Loading Telemetry (Replaces upload widget during processing) */
           <div className="min-h-60 sm:min-h-70 rounded-xl border border-border-subtle bg-bg-secondary/40 flex flex-col items-center justify-center p-6 sm:p-8 text-center animate-fade-in mb-2">
             <LoadingSpinner
-              title={getStageText(analysisStep)}
+              title={extractionStageTexts[analysisStep - 1] ?? t("analyzing_state")}
               titleClassName="text-xs sm:text-sm font-mono tracking-wide mb-3"
               showProgressBar={true}
               progressPercent={

@@ -1,6 +1,6 @@
 // --- Email Template Engine ---
 // Purpose: Generate dark-themed authentication emails mirroring AuthModal visual styling.
-// Target Locale Files: messages/{locale}.json under other.auth.email
+// Target Locale Files: messages/{locale}.json under auth.email
 
 // --- Schema ---
 export type SupportedLocale = "en" | "zh" | "ms";
@@ -59,10 +59,10 @@ export function normalizeLocale(rawLocale?: string): SupportedLocale {
 export async function loadEmailCatalog(locale: SupportedLocale): Promise<EmailCatalog> {
   try {
     const messages = await import(`../../../messages/${locale}.json`);
-    return messages.other.auth.email as EmailCatalog;
+    return messages.auth.email as EmailCatalog;
   } catch {
     const fallbackMessages = await import("../../../messages/en.json");
-    return fallbackMessages.other.auth.email as EmailCatalog;
+    return fallbackMessages.auth.email as EmailCatalog;
   }
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useLocale } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { useLocale, useTranslations } from "next-intl";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
@@ -14,42 +14,18 @@ import {
   synthesizeSelectedRoadmap,
   convertAssessmentToPlanData,
 } from "@/lib/analysis/client";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
+import {
+  MOCK_ROLE_SELECTOR_ANALYSIS_RESULT,
+  USE_ROLE_SELECTOR_MODAL_MOCK_DATA,
+} from "@/constants/testing/roleSelector";
 
-/**
- * Generates an ultra-concise, single-sentence justification for why this role was matched.
- * Free of emojis, boxes, or decorative borders.
- */
-function getRoleReason(role: MatchedRole, locale: string): string {
-  if (role.matchedStrengths && role.matchedStrengths.length > 0) {
-    const skillsList = role.matchedStrengths.slice(0, 3);
-    if (locale === "zh") {
-      return `基于您掌握的 ${skillsList.join("、")} 等基础，具备高度技能迁移与适应潜力。`;
-    }
-    if (locale === "ms") {
-      return `Berdasarkan penguasaan anda dalam ${skillsList.join(", ")}, mempunyai kebolehsesuaian tinggi.`;
-    }
-    return `High transition potential based on your foundation in ${skillsList.join(", ")}.`;
-  }
-
-  if (locale === "zh") {
-    return "高度契合您的职业发展方向与行业转型高增长需求。";
-  }
-  if (locale === "ms") {
-    return "Sejajar dengan objektif transformasi kerjaya dan permintaan industri yang pesat membangun.";
-  }
-  return "Closely aligns with your career transition goals and high-growth industry demands.";
-}
-
-// --- Role Selector Modal ---
-// Match prospective roles and synthesize a personalized learning roadmap.
 type MacroScenarioType = "moderate" | "accelerated_ai" | "green_economy";
 
 interface ScenarioConfig {
   id: MacroScenarioType;
-  icon: string;
-  label: Record<string, string>;
-  description: Record<string, string>;
+  labelKey: string;
+  descriptionKey: string;
   multiplierBadge: string;
   badgeStyle: string;
 }
@@ -57,57 +33,32 @@ interface ScenarioConfig {
 const SCENARIO_OPTIONS: ScenarioConfig[] = [
   {
     id: "moderate",
-    icon: "🌐",
-    label: {
-      en: "Baseline",
-      ms: "Garis Dasar",
-      zh: "稳健基准",
-    },
-    description: {
-      en: "Standard economic growth trajectory (1.0x)",
-      ms: "Trajektori pertumbuhan ekonomi standard (1.0x)",
-      zh: "标准平稳经济增长预测轨迹 (1.0x)",
-    },
+    labelKey: "scenario_baseline",
+    descriptionKey: "scenario_baseline_desc",
     multiplierBadge: "1.0x",
     badgeStyle: "bg-border-subtle/60 text-text-muted",
   },
   {
     id: "accelerated_ai",
-    icon: "⚡",
-    label: {
-      en: "AI Surge",
-      ms: "Lonjakan AI",
-      zh: "AI 颠覆浪潮",
-    },
-    description: {
-      en: "Rapid AI & autonomous systems adoption (+15% Tech affinity)",
-      ms: "Penggunaan pesat AI & automasi (+15% afiniti teknologi)",
-      zh: "大模型与自动化智能体深度渗透 (+15% 技术亲和度)",
-    },
+    labelKey: "scenario_ai_surge",
+    descriptionKey: "scenario_ai_surge_desc",
     multiplierBadge: "+15% AI",
     badgeStyle: "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30",
   },
   {
     id: "green_economy",
-    icon: "🌿",
-    label: {
-      en: "Green / ESG",
-      ms: "Hijau / ESG",
-      zh: "绿色与 ESG",
-    },
-    description: {
-      en: "Net-zero transition & sustainability mandates (+15% ESG affinity)",
-      ms: "Peralihan sifar bersih & mandat kelestarian (+15% afiniti ESG)",
-      zh: "双碳绿色经济转型与可持续合规 (+15% ESG 亲和度)",
-    },
+    labelKey: "scenario_green_esg",
+    descriptionKey: "scenario_green_esg_desc",
     multiplierBadge: "+15% ESG",
     badgeStyle: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
   },
 ];
 
+// --- Role Selector Modal ---
+// Stream role matches, let the user choose a scenario and role, then persist a tailored roadmap.
 export default function RoleSelectorModal() {
-  // --- Context and Locale ---
   const locale = useLocale();
+  const t = useTranslations("analysis.roles");
   const { user } = useAuth();
   const { activeModal, activeProfile, openWizardOption, closeModals, saveActivePlan, targetUserId } =
     usePlanModal();
@@ -117,28 +68,61 @@ export default function RoleSelectorModal() {
   // 1. isMatching: Stage 1 stream running (progress 15% -> 50%)
   // 2. !isMatching && !isSynthesizing: Role selection view (progress paused at 50%)
   // 3. isSynthesizing: Stage 2 synthesis & DB persistence (progress 50% -> 100%)
-  const [isMatching, setIsMatching] = useState<boolean>(true);
+  const [isMatching, setIsMatching] = useState<boolean>(
+    !USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+  );
   const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
-  const [progressPercent, setProgressPercent] = useState<number>(15);
+  const [progressPercent, setProgressPercent] = useState<number>(
+    USE_ROLE_SELECTOR_MODAL_MOCK_DATA ? 50 : 15
+  );
 
   const [loadingTitle, setLoadingTitle] = useState<string>("");
   const [loadingSubtitle, setLoadingSubtitle] = useState<string>("");
 
-  const [topRoles, setTopRoles] = useState<MatchedRole[]>([]);
-  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [topRoles, setTopRoles] = useState<MatchedRole[]>(
+    USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+      ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles
+      : []
+  );
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(
+    USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+      ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles[0]?.roleId ?? null
+      : null
+  );
   const [selectedScenario, setSelectedScenario] = useState<MacroScenarioType>("moderate");
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeResponsePayload | null>(null);
+  const [analysisResult, setAnalysisResult] =
+    useState<AnalyzeResponsePayload | null>(
+      USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+        ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT
+        : null
+    );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
-  const isOpen = activeModal === "role_select";
+  const isOpen =
+    USE_ROLE_SELECTOR_MODAL_MOCK_DATA || activeModal === "role_select";
+  const isMatchingView = !USE_ROLE_SELECTOR_MODAL_MOCK_DATA && isMatching;
+  const isSynthesizingView = !USE_ROLE_SELECTOR_MODAL_MOCK_DATA && isSynthesizing;
+  const rolesToDisplay = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+    ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles
+    : topRoles;
+  const roleIdToDisplay =
+    selectedRoleId ??
+    (USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+      ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT.topRoles[0]?.roleId ?? null
+      : null);
+  const activeScenario =
+    SCENARIO_OPTIONS.find((scenario) => scenario.id === selectedScenario) ?? SCENARIO_OPTIONS[0];
 
-  // --- Matching Effect ---
-  // Stage 1: Trigger /api/analysis/analyze stream matching upon modal open
+  // --- Role Matching ---
+  // 1. On open, POST the saved profile to /api/analysis/analyze with action=stream.
+  // 2. Stream progress and matching scenarios into the modal; stop at 50% until a role is chosen.
   useEffect(() => {
+    if (USE_ROLE_SELECTOR_MODAL_MOCK_DATA) return;
     if (!isOpen || !activeProfile) return;
 
     let isCancelled = false;
+    const requestController = new AbortController();
     setErrorMessage(null);
     setTopRoles([]);
     setSelectedRoleId(null);
@@ -147,20 +131,8 @@ export default function RoleSelectorModal() {
     setIsSynthesizing(false);
     setProgressPercent(15);
 
-    setLoadingTitle(
-      locale === "zh"
-        ? "正在评估高增长匹配岗位..."
-        : locale === "ms"
-        ? "Menilai Peranan Sesuai..."
-        : "Evaluating Matching Future Roles..."
-    );
-    setLoadingSubtitle(
-      locale === "zh"
-        ? "正在通过高维向量相似度与技能重合度检索契合岗位..."
-        : locale === "ms"
-        ? "Menganalisis padanan vektor dan kecekapan kemahiran..."
-        : "Analyzing vector similarities and skill overlaps against ESCO taxonomy..."
-    );
+    setLoadingTitle(t("matching_title"));
+    setLoadingSubtitle(t("matching_description"));
 
     const runRoleMatching = async () => {
       try {
@@ -171,80 +143,36 @@ export default function RoleSelectorModal() {
           autoSynthesizeRoadmap: false,
         };
 
-        const result = await analyzeWorkforceProfileStream(payload, (evt) => {
-          if (isCancelled) return;
-          if (evt.error) {
-            setErrorMessage(evt.error);
-          }
+        const result = await analyzeWorkforceProfileStream(
+          payload,
+          (evt) => {
+            if (isCancelled) return;
 
-          // Map stream phases (1 to 4) smoothly across 15% -> 50%
-          if (evt.percent) {
-            const mappedPercent = Math.min(50, Math.max(15, Math.round(evt.percent * 0.5)));
-            setProgressPercent(mappedPercent);
-          }
+            // Map stream phases (1 to 4) smoothly across 15% -> 50%
+            if (evt.percent) {
+              const mappedPercent = Math.min(
+                50,
+                Math.max(15, Math.round(evt.percent * 0.5))
+              );
+              setProgressPercent(mappedPercent);
+            }
 
-          if (evt.phase === 1) {
-            setLoadingTitle(
-              locale === "zh"
-                ? "正在审计技能自动化风险..."
-                : locale === "ms"
-                ? "Mengaudit Risiko Automasi..."
-                : "Auditing Automation Risk..."
-            );
-            setLoadingSubtitle(
-              locale === "zh"
-                ? "对比实时行业趋势信号分析核心技能面临的替代压力..."
-                : locale === "ms"
-                ? "Menilai tekanan penggantian terhadap isyarat trend pasaran..."
-                : "Auditing competencies against live workforce trend signals..."
-            );
-          } else if (evt.phase === 2) {
-            setLoadingTitle(
-              locale === "zh"
-                ? "正在生成语义特征向量..."
-                : locale === "ms"
-                ? "Menjana Vektor Profil..."
-                : "Generating Semantic Profile Vector..."
-            );
-            setLoadingSubtitle(
-              locale === "zh"
-                ? "构建 1024 维密集特征向量表征您的职业经历与能力..."
-                : locale === "ms"
-                ? "Membina vektor semantik profil 1024 dimensi..."
-                : "Generating 1024-dimensional semantic profile vector..."
-            );
-          } else if (evt.phase === 3) {
-            setLoadingTitle(
-              locale === "zh"
-                ? "正在检索职业分类库..."
-                : locale === "ms"
-                ? "Mencari Taksonomi Pekerjaan..."
-                : "Searching Occupational Taxonomy..."
-            );
-            setLoadingSubtitle(
-              locale === "zh"
-                ? "在标准职业库中比对软技能与专业技能重叠度..."
-                : locale === "ms"
-                ? "Menilai pertindihan kemahiran dalam taksonomi standard..."
-                : "Querying vector index & calculating soft skill overlaps..."
-            );
-          } else if (evt.phase === 4 || evt.phase === 5) {
-            setLoadingTitle(
-              locale === "zh"
-                ? "正在校准联合国 SDG 目标匹配..."
-                : locale === "ms"
-                ? "Menentukur Penjajaran SDG..."
-                : "Calibrating UN SDG Alignment..."
-            );
-            setLoadingSubtitle(
-              locale === "zh"
-                ? "校准可持续发展目标亲和度与能力雷达指标..."
-                : locale === "ms"
-                ? "Menentukur matlamat kelestarian dan radar kompetensi..."
-                : "Calibrating radar axes & UN SDG impact goals..."
-            );
-          }
-        });
+            if (evt.phase === 1) {
+              setLoadingTitle(t("matching_phase_1_title"));
+              setLoadingSubtitle(t("matching_phase_1_description"));
+            } else if (evt.phase === 2) {
+              setLoadingTitle(t("matching_phase_2_title"));
+              setLoadingSubtitle(t("matching_phase_2_description"));
+            } else if (evt.phase === 3) {
+              setLoadingTitle(t("matching_phase_3_title"));
+              setLoadingSubtitle(t("matching_phase_3_description"));
+            } else if (evt.phase === 4 || evt.phase === 5) {
+              setLoadingTitle(t("matching_phase_4_title"));
+              setLoadingSubtitle(t("matching_phase_4_description"));
+            }
+          },
+          requestController.signal
+        );
 
         if (!isCancelled && result && result.topRoles && result.topRoles.length > 0) {
           const scenarioKey = "moderate";
@@ -257,12 +185,18 @@ export default function RoleSelectorModal() {
           setProgressPercent(50);
           setIsMatching(false);
         } else if (!isCancelled && (!result || !result.topRoles || result.topRoles.length === 0)) {
-          throw new Error("No matching prospective roles could be identified.");
+          throw new Error(t("no_matching_roles"));
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!isCancelled) {
           setIsMatching(false);
-          setErrorMessage(err.message || "Failed to discover matching roles.");
+          setErrorMessage(
+            err instanceof Error && err.message === "MATCHING_TIMEOUT"
+              ? t("matching_timeout")
+              : err instanceof Error
+                ? err.message
+                : t("matching_failed")
+          );
         }
       }
     };
@@ -271,21 +205,28 @@ export default function RoleSelectorModal() {
 
     return () => {
       isCancelled = true;
+      requestController.abort();
     };
-  }, [isOpen, activeProfile, locale]);
+  }, [isOpen, activeProfile, locale, t]);
 
-  // --- Role Selection Handler ---
-  // Handles user switching between simulation scenarios
+  // Switch scenarios using the already returned result; no new matching request is needed.
   const handleScenarioChange = (newScenario: MacroScenarioType) => {
     setSelectedScenario(newScenario);
-    const candidateRoles = analysisResult?.scenarioRoles?.[newScenario] || analysisResult?.topRoles || topRoles;
+    const result = USE_ROLE_SELECTOR_MODAL_MOCK_DATA
+      ? MOCK_ROLE_SELECTOR_ANALYSIS_RESULT
+      : analysisResult;
+    const candidateRoles =
+      result?.scenarioRoles?.[newScenario] || result?.topRoles || topRoles;
     setTopRoles(candidateRoles);
-    if (!candidateRoles.some((r) => r.roleId === selectedRoleId)) {
+    if (!candidateRoles.some((r) => r.roleId === roleIdToDisplay)) {
       setSelectedRoleId(candidateRoles[0]?.roleId || null);
     }
   };
 
-  // Stage 2: User explicitly confirms role selection and synthesizes roadmap
+  // --- Roadmap Synthesis ---
+  // 3. POST the chosen role and scenario with action=synthesize. The API generates phases,
+  //    archives the previous current roadmap, and commits the new current roadmap atomically.
+  // 4. Cache the returned plan locally, dispatch roadmap-refresh, then close the modal.
   const handleConfirmRole = async () => {
     if (!activeProfile || !selectedRoleId || isSynthesizing) return;
 
@@ -298,20 +239,8 @@ export default function RoleSelectorModal() {
 
       // Do NOT reset progress bar - continue from 50% up to 100%!
       setProgressPercent(60);
-      setLoadingTitle(
-        locale === "zh"
-          ? "正在生成技能转型路线图..."
-          : locale === "ms"
-          ? "Menjana Pelan Kemahiran..."
-          : "Synthesizing Reskilling Roadmap..."
-      );
-      setLoadingSubtitle(
-        locale === "zh"
-          ? `针对目标岗位「${chosenRole.titleLocalized || chosenRole.title}」规划三阶段学习路径与受认可课程...`
-          : locale === "ms"
-          ? `Merangka kurikulum 3 fasa untuk '${chosenRole.titleLocalized || chosenRole.title}'...`
-          : `Formulating 3-phase curriculum for '${chosenRole.titleLocalized || chosenRole.title}'...`
-      );
+      setLoadingTitle(t("synthesis_title"));
+      setLoadingSubtitle(t("synthesis_description", { role: chosenRole.titleLocalized || chosenRole.title }));
 
       const synthesizeReq = {
         userId: targetUserId || user?.id,
@@ -334,32 +263,14 @@ export default function RoleSelectorModal() {
 
       // Synthesis completed, progress advances to 90%
       setProgressPercent(90);
-      setLoadingTitle(
-        locale === "zh"
-          ? "正在存入数据库..."
-          : locale === "ms"
-          ? "Menyimpan ke Pangkalan Data..."
-          : "Saving Assessment to Database..."
-      );
-      setLoadingSubtitle(
-        locale === "zh"
-          ? "路线图生成完成，正在将评估记录与个人学习规划同步存入数据库..."
-          : locale === "ms"
-          ? "Menyegerakkan rekod penilaian dan pelan pembelajaran ke pangkalan data..."
-          : "Synchronizing assessment record and milestones to database..."
-      );
+      setLoadingTitle(t("saving_title"));
+      setLoadingSubtitle(t("saving_description"));
 
       // Brief delay to let the user see the database persistence feedback
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       setProgressPercent(100);
-      setLoadingTitle(
-        locale === "zh"
-          ? "规划生成完毕！"
-          : locale === "ms"
-          ? "Pelan Siap Dijana!"
-          : "Roadmap Complete!"
-      );
+      setLoadingTitle(t("complete_title"));
 
       const planData = convertAssessmentToPlanData(resp, chosenRole);
       saveActivePlan(planData);
@@ -375,9 +286,11 @@ export default function RoleSelectorModal() {
         setIsSynthesizing(false);
         closeModals();
       }, 500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsSynthesizing(false);
-      setErrorMessage(err.message || "Roadmap synthesis failed. Please try again.");
+      setErrorMessage(
+        err instanceof Error ? err.message : t("synthesis_failed")
+      );
     }
   };
 
@@ -390,7 +303,7 @@ export default function RoleSelectorModal() {
       aria-modal="true"
       className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isMatching && !isSynthesizing) {
+        if (e.target === e.currentTarget && !isMatchingView && !isSynthesizingView) {
           closeModals();
         }
       }}
@@ -406,10 +319,10 @@ export default function RoleSelectorModal() {
             <button
               type="button"
               onClick={openWizardOption}
-              disabled={isMatching || isSynthesizing}
+              disabled={isMatchingView || isSynthesizingView}
               className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
-              aria-label="Back"
-              title="Back"
+              aria-label={t("back")}
+              title={t("back")}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -422,9 +335,9 @@ export default function RoleSelectorModal() {
           <button
             type="button"
             onClick={closeModals}
-            disabled={isMatching || isSynthesizing}
+            disabled={isMatchingView || isSynthesizingView}
             className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
-            aria-label="Close"
+            aria-label={t("close")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -433,7 +346,7 @@ export default function RoleSelectorModal() {
         </div>
 
         {/* Dynamic Body: Loading State VS Role Selection List */}
-        {isMatching || isSynthesizing ? (
+        {isMatchingView || isSynthesizingView ? (
           /* Loading Animation (Replaces modal body with persistent progress bar) */
           <div className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
             <LoadingSpinner
@@ -451,18 +364,10 @@ export default function RoleSelectorModal() {
             {/* Header Title & Subtitle */}
             <div className="mb-5 shrink-0">
               <h3 className="text-lg font-bold text-text-primary tracking-tight mb-1">
-                {locale === "zh"
-                  ? "推荐未来匹配岗位"
-                  : locale === "ms"
-                  ? "Peranan Masa Depan Disyorkan"
-                  : "Recommended Future-Ready Roles"}
+                {t("recommended_title")}
               </h3>
               <p className="text-xs text-text-secondary leading-relaxed">
-                {locale === "zh"
-                  ? "根据您的技能基准与发展意向计算出的最佳职业方向，请选择一个开启路线图："
-                  : locale === "ms"
-                  ? "Berdasarkan garis dasar kemahiran dan aspirasi kerjaya anda, pilih satu untuk menjana pelan:"
-                  : "Select your preferred prospective horizon to generate your personalized reskilling roadmap:"}
+                {t("recommended_description")}
               </p>
             </div>
 
@@ -471,15 +376,7 @@ export default function RoleSelectorModal() {
               <div className="flex items-center justify-between mb-1.5 px-0.5">
                 <span className="text-[11px] font-mono font-medium text-text-muted flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                  {locale === "zh"
-                    ? "未来宏观模拟情景"
-                    : locale === "ms"
-                    ? "Mod Simulasi Makro Masa Depan"
-                    : "Future Labor Market Scenario"}
-                </span>
-                <span className="text-[10px] font-mono text-text-muted hidden sm:inline-block">
-                  {SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.description[locale] ||
-                    SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.description.en}
+                  {t("scenario_title")}
                 </span>
               </div>
 
@@ -497,8 +394,7 @@ export default function RoleSelectorModal() {
                           : "border-transparent text-text-muted hover:text-text-primary hover:bg-bg-elevated/40"
                       }`}
                     >
-                      <span className="text-sm shrink-0">{scen.icon}</span>
-                      <span className="truncate">{scen.label[locale] || scen.label.en}</span>
+                      <span className="truncate">{t(scen.labelKey)}</span>
                       <span
                         className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 hidden md:inline-block ${scen.badgeStyle}`}
                       >
@@ -508,6 +404,9 @@ export default function RoleSelectorModal() {
                   );
                 })}
               </div>
+              <p className="mt-2 px-1 text-[10px] font-mono leading-relaxed text-text-muted">
+                {t(activeScenario.descriptionKey)}
+              </p>
             </div>
 
             {/* Error Message: Plain red text, no background, no border */}
@@ -519,10 +418,15 @@ export default function RoleSelectorModal() {
 
             {/* Scrollable Roles List */}
             <div className="flex-1 overflow-y-auto pr-1.5 space-y-3">
-              {topRoles.map((role, idx) => {
-                const isSelected = selectedRoleId === role.roleId;
+              {rolesToDisplay.map((role, idx) => {
+                const isSelected = roleIdToDisplay === role.roleId;
                 const matchPct = Math.round(role.matchScore * 100);
-                const reason = getRoleReason(role, locale);
+                const strengths = role.matchedStrengths?.slice(0, 3) ?? [];
+                const reason = strengths.length
+                  ? t("reason_with_strengths", {
+                      skills: strengths.join(t("strength_separator")),
+                    })
+                  : t("reason_general");
 
                 return (
                   <div
@@ -543,7 +447,7 @@ export default function RoleSelectorModal() {
                         {idx + 1}. {role.titleLocalized || role.title}
                       </span>
                       <span className="text-xs font-mono font-bold text-accent shrink-0">
-                        {matchPct}% Match
+                        {t("match_score", { percent: matchPct })}
                       </span>
                     </div>
 
@@ -573,27 +477,15 @@ export default function RoleSelectorModal() {
             </div>
 
             {/* Bottom Action Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-border-subtle mt-4 shrink-0">
-              <span className="text-[11px] font-mono text-text-muted">
-                {locale === "zh"
-                  ? `已选定 1 个岗位（${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.zh || "稳健基准"}模式）`
-                  : locale === "ms"
-                  ? `1 peranan dipilih (${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.ms || "Garis Dasar"})`
-                  : `1 role selected (${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.en || "Baseline"})`}
-              </span>
-
+            <div className="flex items-center justify-end pt-4 border-t border-border-subtle mt-4 shrink-0">
               <button
                 type="button"
                 onClick={handleConfirmRole}
-                disabled={!selectedRoleId}
+                disabled={!selectedRoleId || !activeProfile}
                 className="px-6 py-2.5 text-xs font-semibold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_20px_var(--accent-glow)] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>
-                  {locale === "zh"
-                    ? "确认选择并生成路线图"
-                    : locale === "ms"
-                    ? "Sahkan & Jana Pelan"
-                    : "Confirm & Generate Roadmap"}
+                  {t("confirm_generate")}
                 </span>
                 <span>→</span>
               </button>

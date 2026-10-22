@@ -1,12 +1,18 @@
 "use client";
 
+// --- Available State Actions ---
+// openPathwaySelect(options) / openUploadOption(options) / openWizardOption(data, options).
+// openRoleSelect(profile, options): open a plan workflow modal.
+// closeModals(): close the active plan modal and clear its transient options.
+// saveActivePlan(plan) / clearActivePlan(): update or clear the active plan.
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
 import { ProfileIntakePayload } from "@/lib/analysis/types";
 import { PlanData } from "@/components/analysis/planCard/planData";
 
-export type PlanModalType = "pathway_select" | "upload" | "wizard" | "role_select" | "share" | null;
+export type PlanModalType = "pathway_select" | "upload" | "wizard" | "role_select" | null;
 
 // --- Context Contract ---
 interface PlanModalContextType {
@@ -14,14 +20,12 @@ interface PlanModalContextType {
   activeProfile: ProfileIntakePayload | null;
   activePlan: PlanData | null;
   wizardPrefillData: any | null;
-  shareRoadmapData: { id?: string; title?: string } | null;
   targetUserId: string | null;
   targetUserName: string | null;
   openPathwaySelect: (options?: { targetUserId?: string; targetUserName?: string }) => void;
   openUploadOption: (options?: { targetUserId?: string; targetUserName?: string }) => void;
   openWizardOption: (prefillData?: any, options?: { targetUserId?: string; targetUserName?: string }) => void;
   openRoleSelect: (profile: ProfileIntakePayload, options?: { targetUserId?: string }) => void;
-  openShareModal: (roadmapId?: string, roadmapTitle?: string) => void;
   closeModals: () => void;
   saveActivePlan: (plan: PlanData) => void;
   clearActivePlan: () => void;
@@ -35,21 +39,20 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activeProfile, setActiveProfile] = useState<ProfileIntakePayload | null>(null);
   const [activePlan, setActivePlan] = useState<PlanData | null>(null);
   const [wizardPrefillData, setWizardPrefillData] = useState<any | null>(null);
-  const [shareRoadmapData, setShareRoadmapData] = useState<{ id?: string; title?: string } | null>(null);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [targetUserName, setTargetUserName] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { isLoggedIn, openAuthModal } = useAuth();
 
-  // Redirect to analysis page when user triggers a plan creation or option workflow.
+  // --- Navigation ---
   const navigateToAnalysisIfNeeded = useCallback(() => {
     if (pathname !== "/analysis" && pathname !== "/shared") {
       router.push("/analysis");
     }
   }, [pathname, router]);
 
-  // Open pathway selection overlay window.
+  // --- Modal Actions ---
   const openPathwaySelect = useCallback(
     (options?: { targetUserId?: string; targetUserName?: string }) => {
       if (!isLoggedIn) {
@@ -66,7 +69,6 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
   );
 
-  // Directly open upload option overlay window.
   const openUploadOption = useCallback(
     (options?: { targetUserId?: string; targetUserName?: string }) => {
       if (!isLoggedIn) {
@@ -83,7 +85,6 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
   );
 
-  // Directly open guided diagnostic wizard option overlay window with optional prefill data.
   const openWizardOption = useCallback(
     (prefillData?: any, options?: { targetUserId?: string; targetUserName?: string }) => {
       if (!isLoggedIn) {
@@ -103,7 +104,6 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
   );
 
-  // Open role discovery & selection modal with normalized profile data
   const openRoleSelect = useCallback(
     (profile: ProfileIntakePayload, options?: { targetUserId?: string }) => {
       setActiveProfile(profile);
@@ -116,29 +116,14 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     [navigateToAnalysisIfNeeded]
   );
 
-  // Open share roadmap overlay window
-  const openShareModal = useCallback(
-    (roadmapId?: string, roadmapTitle?: string) => {
-      if (!isLoggedIn) {
-        openAuthModal("login");
-        return;
-      }
-      setShareRoadmapData({ id: roadmapId, title: roadmapTitle });
-      setActiveModal("share");
-    },
-    [isLoggedIn, openAuthModal]
-  );
-
-  // Dismiss any currently active option or pathway modal.
   const closeModals = useCallback(() => {
     setActiveModal(null);
     setWizardPrefillData(null);
-    setShareRoadmapData(null);
     setTargetUserId(null);
     setTargetUserName(null);
   }, []);
 
-  // Save active synthesized plan
+  // --- Active Plan Actions ---
   const saveActivePlan = useCallback((plan: PlanData) => {
     setActivePlan(plan);
   }, []);
@@ -147,18 +132,18 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     setActivePlan(null);
   }, []);
 
-  // Dismiss any active plan modal immediately when user logs out or session is unauthenticated.
+  // --- Authentication Cleanup ---
   useEffect(() => {
     if (!isLoggedIn && activeModal !== null) {
       setActiveModal(null);
       setWizardPrefillData(null);
       setActiveProfile(null);
-      setShareRoadmapData(null);
       setTargetUserId(null);
       setTargetUserName(null);
     }
   }, [isLoggedIn, activeModal]);
 
+  // --- Context Value ---
   return (
     <PlanModalContext.Provider
       value={{
@@ -166,14 +151,12 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
         activeProfile,
         activePlan,
         wizardPrefillData,
-        shareRoadmapData,
         targetUserId,
         targetUserName,
         openPathwaySelect,
         openUploadOption,
         openWizardOption,
         openRoleSelect,
-        openShareModal,
         closeModals,
         saveActivePlan,
         clearActivePlan,
@@ -184,6 +167,7 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// --- Context Hook ---
 export function usePlanModal() {
   const context = useContext(PlanModalContext);
   if (!context) {

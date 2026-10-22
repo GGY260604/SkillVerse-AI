@@ -4,7 +4,7 @@
 export interface UserSkillItem {
   id: string;
   name: string;
-  escoUri?: string;
+  escoUri?: string | null;
   proficiency?: "beginner" | "intermediate" | "advanced";
   isAiExtracted?: boolean;
   localized_labels?: Record<string, string>;
@@ -12,17 +12,17 @@ export interface UserSkillItem {
 
 export interface ProfileIntakePayload {
   employmentStatus: string;
-  currentJobTitle?: string;
-  industry?: string;
-  educationLevel?: string;
-  yearsOfExperience?: string;
+  currentJobTitle?: string | null;
+  industry?: string | null;
+  educationLevel?: string | null;
+  yearsOfExperience?: string | null;
   skills: UserSkillItem[];
   toolsAndSoftware?: string[];
-  casualDescription?: string;
+  casualDescription?: string | null;
   languages?: string[];
   careerGoal?: string;
   targetSectors?: string[];
-  targetJobTitle?: string;
+  targetJobTitle?: string | null;
   workArrangement?: string;
   weeklyCommitmentHours?: string;
   learningProviders?: string[];
@@ -31,8 +31,9 @@ export interface ProfileIntakePayload {
 
 export interface ExtractionResponse {
   success: boolean;
-  message: string;
-  extractedProfile: ProfileIntakePayload;
+  message?: string;
+  error?: string;
+  extractedProfile?: ProfileIntakePayload;
   rawTextPreview?: string;
   extractionMethod?: "gemini" | "local" | string;
   usedKey?: string | null;
@@ -120,6 +121,7 @@ export interface AnalyzeResponsePayload {
   activeScenario: "moderate" | "accelerated_ai" | "green_economy";
   radarData: RadarAxisItem[];
   topRoles: MatchedRole[];
+  scenarioRoles?: Record<"moderate" | "accelerated_ai" | "green_economy", MatchedRole[]>;
   selectedRoleRoadmap?: SelectedRoleRoadmap | null;
 }
 
@@ -154,4 +156,5 @@ export interface StreamProgressEvent {
   percent?: number;
   result?: AnalyzeResponsePayload;
   error?: string;
+  errorCode?: string;
 }

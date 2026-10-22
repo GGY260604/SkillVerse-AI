@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import type { PlanData } from "@/components/analysis/planCard/planData";
 
+// --- Schema ---
+
+// Shared roadmap record payload received from backend service.
 export interface SharedRoadmapItem {
-  id: string; // shared_roadmaps record ID
+  id: string;
   roadmapId: string;
   ownerId: string;
   accessLevel: "viewable" | "editable";
@@ -25,36 +28,32 @@ export interface SharedRoadmapItem {
   historyPlans: PlanData[];
 }
 
-// Shared Plans View Component
-// Queries real roadmaps shared with the authenticated user from shared_roadmaps table.
-// Displays results matching the share overlay search-result cards with a deletion trash-can button.
-// Clicking a peer user loads their full analysis panel in place (with edit rights if granted, strictly no share button).
+// --- SharedPlansView Component ---
+// Manage received peer roadmaps, search through shared records, and inspect peer dashboards.
 export default function SharedPlansView() {
+  // --- Multi-Language Setup ---
   const t = useTranslations("shared");
   const tModal = useTranslations("analysis.share_modal");
-  const locale = useLocale();
   const router = useRouter();
+
+  // --- Auth Context ---
   const { isLoggedIn, isLoading: isAuthLoading, openAuthModal } = useAuth();
 
-  // State: List of roadmaps shared with the current user
+  // --- State ---
   const [sharedRoadmaps, setSharedRoadmaps] = useState<SharedRoadmapItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // State: Currently inspected shared roadmap record ID. Null indicates list view.
   const [activeSharedId, setActiveSharedId] = useState<string | null>(null);
-
-  // State: Search filter query
   const [searchQuery, setSearchQuery] = useState<string>("");
-
-  // State: Targeted item pending deletion confirmation
   const [itemToDelete, setItemToDelete] = useState<SharedRoadmapItem | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-
-  // State: UID copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Redirect unauthenticated user to home and trigger login modal
+  // --- Helper Functions ---
+
+  // 1. Authentication Guard
+  // Verify user authentication status before initiating shared directory retrieval.
+  // Prompt sign-in modal and redirect to home if unauthenticated.
   useEffect(() => {
     if (!isAuthLoading && !isLoggedIn) {
       openAuthModal("login");
@@ -62,7 +61,8 @@ export default function SharedPlansView() {
     }
   }, [isAuthLoading, isLoggedIn, openAuthModal, router]);
 
-  // Fetch real roadmaps shared with the user from shared_roadmaps table
+  // 2. Telemetry Ingestion from Shared Service
+  // Query shared roadmaps endpoint to fetch all active peer roadmaps.
   const fetchSharedRoadmaps = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -85,14 +85,15 @@ export default function SharedPlansView() {
     }
   }, []);
 
+  // Fetch active shared records upon initial authenticated render.
   useEffect(() => {
     if (isLoggedIn) {
       fetchSharedRoadmaps();
     }
   }, [isLoggedIn, fetchSharedRoadmaps]);
 
-  // Filter roadmaps by search query within users who have shared roadmaps with you.
-  // Defaults to displaying all shared roadmaps when query is empty.
+  // 3. Search and Filter Computation
+  // Filter shared roadmaps by owner name, email, user ID, role, and industry category.
   const filteredRoadmaps = useMemo(() => {
     if (!searchQuery.trim()) return sharedRoadmaps;
 
@@ -113,13 +114,15 @@ export default function SharedPlansView() {
     });
   }, [sharedRoadmaps, searchQuery]);
 
-  // Active peer plan when drilling down
+  // 4. Active Shared Item Resolution
+  // Retrieve selected roadmap object for displaying peer dashboard view.
   const activeItem = useMemo(() => {
     if (!activeSharedId) return null;
     return sharedRoadmaps.find((s) => s.id === activeSharedId) || null;
   }, [sharedRoadmaps, activeSharedId]);
 
-  // 1-Click UID Copy Handler
+  // 5. User ID Clipboard Copy
+  // Copy peer user identifier to system clipboard with visual feedback timer.
   const handleCopyUid = (uid: string) => {
     navigator.clipboard.writeText(uid);
     setCopiedId(uid);
@@ -128,7 +131,8 @@ export default function SharedPlansView() {
     }, 2000);
   };
 
-  // Confirm delete shared connection from shared_roadmaps table
+  // 6. Shared Roadmap Revocation
+  // Delete shared roadmap connection and update directory state locally.
   const handleConfirmRemove = async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
@@ -144,7 +148,6 @@ export default function SharedPlansView() {
         return;
       }
 
-      // Remove from local state
       setSharedRoadmaps((prev) => prev.filter((item) => item.id !== itemToDelete.id));
       if (activeSharedId === itemToDelete.id) {
         setActiveSharedId(null);
@@ -157,17 +160,13 @@ export default function SharedPlansView() {
     }
   };
 
-
-  // Prevent flash before auth validation
+  // Guard against flash render while authenticating.
   if (isAuthLoading || !isLoggedIn) {
     return null;
   }
 
-  // =========================================================================
-  // Mode 1: Inspected Peer Dashboard Mode
-  // Mounts the standardized ExistPlanState populated with the peer's roadmap.
-  // Respects edit permission (canEdit) and strictly omits any share button.
-  // =========================================================================
+  // --- Peer Dashboard View ---
+  // Render the selected peer roadmap in read-only analysis dashboard format.
   if (activeItem) {
     const displayName = activeItem.owner.name || activeItem.owner.email.split("@")[0] || "Peer";
 
@@ -192,13 +191,10 @@ export default function SharedPlansView() {
     );
   }
 
-  // =========================================================================
-  // Mode 2: Shared Plans Directory List Mode
-  // Displays roadmaps shared with current user matching the share overlay card style.
-  // =========================================================================
+  // --- UI ---
   return (
     <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
-      {/* Page Header Bar */}
+      {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
@@ -212,7 +208,6 @@ export default function SharedPlansView() {
 
       {/* Search Bar Row */}
       <div className="flex items-center gap-2.5 mb-6 shrink-0">
-        {/* Search Input Box */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -241,7 +236,6 @@ export default function SharedPlansView() {
           )}
         </form>
 
-        {/* Search Action Button (Square + Magnifying Glass) */}
         <button
           type="button"
           onClick={() => {}}
@@ -285,29 +279,19 @@ export default function SharedPlansView() {
         </div>
       )}
 
-      {/* Loading Skeleton */}
+      {/* Loading State Spinner */}
       {isLoading && (
-        <div className="space-y-3.5">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-border-subtle bg-bg-card/50 p-4 sm:p-5 flex items-center justify-between gap-4 animate-pulse"
-            >
-              <div className="flex items-center gap-3.5 flex-1">
-                <div className="w-11 h-11 rounded-full bg-bg-secondary shrink-0" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-3.5 w-36 bg-bg-secondary rounded" />
-                  <div className="h-3 w-56 bg-bg-secondary/60 rounded" />
-                  <div className="h-2.5 w-44 bg-bg-secondary/40 rounded" />
-                </div>
-              </div>
-              <div className="w-10 h-10 bg-bg-secondary rounded-xl shrink-0" />
-            </div>
-          ))}
+        <div className="flex min-h-72 items-center justify-center py-16">
+          <LoadingSpinner
+            title={t("loading_title")}
+            subtitle={t("loading_desc")}
+            size="md"
+            showProgressBar={false}
+          />
         </div>
       )}
 
-      {/* Main List: User Cards Styled Like Share Modal Search Results */}
+      {/* Main List: Shared Peer Roadmaps */}
       {!isLoading && filteredRoadmaps.length > 0 && (
         <div className="space-y-3.5">
           {filteredRoadmaps.map((item) => {
@@ -320,9 +304,8 @@ export default function SharedPlansView() {
                 onClick={() => setActiveSharedId(item.id)}
                 className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-card/70 hover:bg-bg-card p-4 sm:p-5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
               >
-                {/* Left Identity Card (Styled like Profile identity card & Share Modal result) */}
+                {/* Left Identity Card */}
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  {/* Avatar Circle with Linear Gradient */}
                   <div className="w-11 h-11 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm shrink-0 group-hover:scale-105 transition-transform">
                     {initial}
                   </div>
@@ -335,7 +318,6 @@ export default function SharedPlansView() {
                       <span className="text-xs font-mono text-text-muted truncate">
                         • {item.owner.email}
                       </span>
-                      {/* Access Level Badge: Always View Only */}
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-blue-500/15 text-blue-400 border-blue-500/40">
                         View Only
                       </span>
@@ -395,7 +377,7 @@ export default function SharedPlansView() {
                   </div>
                 </div>
 
-                {/* Right Side: Trash Can Icon Button */}
+                {/* Right Side Action Button */}
                 <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                   <button
                     type="button"
@@ -423,13 +405,11 @@ export default function SharedPlansView() {
         </div>
       )}
 
-      {/* Simple Centered Gray Text When No Results (No dashed box, no icons, matching SharedPlansModal) */}
+      {/* Empty State Display */}
       {!isLoading && filteredRoadmaps.length === 0 && (
         <div className="flex-1 flex items-center justify-center py-20 text-center animate-fade-in">
           <p className="text-xs sm:text-sm text-text-muted font-mono max-w-md mx-auto leading-relaxed">
-            {searchQuery.trim()
-              ? "No shared roadmaps found matching your search."
-              : "You currently have no career roadmaps shared by other members, or all have been removed."}
+            {searchQuery.trim() ? t("empty_title") : t("empty_desc")}
           </p>
         </div>
       )}

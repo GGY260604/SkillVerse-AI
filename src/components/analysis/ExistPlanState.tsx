@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import PlanCard from "./planCard/PlanCard";
 import PlanDetailView from "./planCard/PlanDetailView";
 import { CURRENT_PLAN, HISTORY_PLANS, type PlanData, type PlanPhase } from "./planCard/planData";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { useSharedModal } from "@/context/analysis/SharedModalContext";
 
 export interface SharedUserInfo {
   id: string;
@@ -27,10 +28,8 @@ export interface ExistPlanStateProps {
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
-// Exist Plan State Component
-// Rendered when an active career roadmap exists. Displays full dashboard, current prominent plan,
-// historical iterations archive with expand/collapse, and full plan detail view.
-// Supports custom current/history plan injection for shared peer views and future API hydration.
+// --- Existing Roadmap Dashboard ---
+// Show the current roadmap, archived history, and detail view; the same view supports shared plans.
 export default function ExistPlanState({
   currentPlan = CURRENT_PLAN,
   historyPlans = HISTORY_PLANS,
@@ -42,13 +41,15 @@ export default function ExistPlanState({
 }: ExistPlanStateProps = {}) {
   const t = useTranslations("analysis.header");
   const tHistory = useTranslations("analysis.history");
-  const { openPathwaySelect, openShareModal } = usePlanModal();
+  const { openPathwaySelect } = usePlanModal();
+  const { openSharedPlansModal } = useSharedModal();
 
-  // Internal state tracking for plans so UI immediately reflects phase completion updates
+  // --- Dashboard State ---
+  // Mirror server-provided current/history records so phase progress updates render immediately.
   const [activeCurrentPlan, setActiveCurrentPlan] = useState<PlanData>(currentPlan);
   const [activeHistoryPlans, setActiveHistoryPlans] = useState<PlanData[]>(historyPlans);
 
-  // Sync internal state when props change
+  // Keep the dashboard in sync when the page refreshes roadmap data from the API.
   useEffect(() => {
     setActiveCurrentPlan(currentPlan);
   }, [currentPlan]);
@@ -57,13 +58,14 @@ export default function ExistPlanState({
     setActiveHistoryPlans(historyPlans);
   }, [historyPlans]);
 
-  // State for navigating between Overview and Individual Plan Details.
+  // Track selected-plan navigation and history expansion in this view.
   const [selectedPlan, setSelectedPlan] = useState<PlanData | null>(null);
 
   // State for collapsing / expanding multiple historical cards.
   const [showAllHistory, setShowAllHistory] = useState<boolean>(false);
 
-  // Handle phase completion toggle and update both current plan and selected plan in real-time
+  // --- Phase Progress ---
+  // Update the matching current/history item and selected detail locally, then notify the page.
   const handleInternalPhaseToggle = (phaseId: string, isCompleted: boolean) => {
     const updatePhasesList = (phases?: PlanPhase[]) => {
       if (!phases) return [];
@@ -133,8 +135,8 @@ export default function ExistPlanState({
               type="button"
               onClick={onBackToSharedList}
               className="p-2.5 sm:p-3 rounded-xl border border-border-subtle bg-bg-card hover:bg-bg-card-hover text-text-secondary hover:text-accent hover:border-accent transition-all duration-200 cursor-pointer shadow-sm shrink-0 flex items-center justify-center group"
-              aria-label="Back to shared plans list"
-              title="Back to shared plans list"
+              aria-label={t("back_to_shared_list")}
+              title={t("back_to_shared_list")}
             >
               <svg
                 className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
@@ -154,11 +156,17 @@ export default function ExistPlanState({
 
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
-              {isSharedView && sharedUser ? `${sharedUser.name}'s Roadmap` : t("title")}
+              {isSharedView && sharedUser
+                ? t("shared_title", { name: sharedUser.name })
+                : t("title")}
             </h1>
             <p className="text-xs sm:text-sm text-text-secondary mt-1">
               {isSharedView && sharedUser
-                ? `Shared by ${sharedUser.name} • ${sharedUser.role}${sharedUser.department ? ` (${sharedUser.department})` : ""}`
+                ? t("shared_subtitle", {
+                    name: sharedUser.name,
+                    role: sharedUser.role,
+                    department: sharedUser.department ? ` (${sharedUser.department})` : "",
+                  })
                 : t("subtitle")}
             </p>
           </div>
@@ -173,7 +181,7 @@ export default function ExistPlanState({
               <button
                 type="button"
                 onClick={() =>
-                  openShareModal(
+                  openSharedPlansModal(
                     selectedPlan?.id || activeCurrentPlan.id,
                     selectedPlan?.targetRole || activeCurrentPlan.targetRole
                   )
@@ -227,7 +235,7 @@ export default function ExistPlanState({
                 type="button"
                 disabled
                 className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-muted bg-bg-card/50 border border-border-subtle rounded-xl shadow-sm opacity-60 cursor-not-allowed select-none"
-                title="Viewable Only"
+                title={t("viewable_only")}
               >
                 {/* Lock SVG Icon */}
                 <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +246,7 @@ export default function ExistPlanState({
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                <span>Viewable Only</span>
+                <span>{t("viewable_only")}</span>
               </button>
             )}
           </div>
@@ -284,7 +292,7 @@ export default function ExistPlanState({
                   {t("history_plan")}
                 </h2>
                 <span className="text-xs font-mono text-text-muted">
-                  {activeHistoryPlans.length} Preserved
+                  {activeHistoryPlans.length} {t("preserved")}
                 </span>
               </div>
 
@@ -326,4 +334,3 @@ export default function ExistPlanState({
     </div>
   );
 }
-

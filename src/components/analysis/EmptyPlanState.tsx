@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
 
-// Empty Plan State Component
-// Rendered when no career roadmap exists for the current user session.
+// --- Empty Roadmap State ---
+// Offer the authenticated user a path to start a new assessment when no roadmap exists.
 export default function EmptyPlanState() {
   const t = useTranslations("analysis.empty");
   const { openPathwaySelect } = usePlanModal();

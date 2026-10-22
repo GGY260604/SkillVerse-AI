@@ -6,7 +6,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 // --- Localized Route Loading Shell ---
 // Render instant high-tech telemetry skeleton and orbital glow while content resolves.
 export default function Loading() {
-  const t = useTranslations("status.loading");
+  const t = useTranslations("other.status.loading");
 
   // --- UI ---
   return (

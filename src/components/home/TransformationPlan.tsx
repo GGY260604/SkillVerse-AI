@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
-import { useAuth } from "@/context/AuthContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { useAuth } from "@/context/auth/AuthContext";
 
 // --- TransformationPlan Component ---
 // Dual diagnostic selection cards triggering upload and form wizard overlay windows.

@@ -80,7 +80,15 @@
       "btn_add_skill": "Tambah",
       "analyzing_state": "Memproses...",
       "generating_state": "Menjana...",
-      "btn_submit": "Hantar"
+      "btn_submit": "Hantar",
+      "file_too_large": "Saiz fail melebihi had 10 MB ({size} MB).",
+      "unsupported_file_format": "Format tidak disokong. Gunakan PDF atau imej (PNG, JPG, WEBP) sehingga 10 MB.",
+      "extraction_failed": "Gagal mengekstrak profil daripada dokumen ini. Sila cuba lagi.",
+      "unexpected_extraction_error": "Ralat tidak dijangka berlaku semasa pengekstrakan.",
+      "extract_stage_1": "Memuat naik dokumen...",
+      "extract_stage_2": "Menghuraikan dokumen...",
+      "extract_stage_3": "Mengemas kini pangkalan data...",
+      "extract_stage_4": "Mengisi borang..."
     }
   },
   "analysis": {
@@ -92,6 +100,11 @@
       "edit_plan": "Sunting Pelan",
       "share_plan": "Kongsi Pelan",
       "back_to_overview": "← Kembali ke Gambaran Keseluruhan",
+      "back_to_shared_list": "Kembali ke senarai pelan dikongsi",
+      "viewable_only": "Boleh dilihat sahaja",
+      "shared_title": "Pelan Hala Tuju {name}",
+      "shared_subtitle": "Dikongsi oleh {name} • {role}{department}",
+      "preserved": "Disimpan",
       "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
     },
     "empty": {
@@ -99,9 +112,129 @@
       "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",
       "btn_add_plan": "+ Tambah Pelan Baharu"
     },
+    "roles": {
+      "back": "Kembali",
+      "close": "Tutup",
+      "matching_title": "Menilai peranan masa hadapan yang sesuai...",
+      "matching_description": "Membandingkan kemahiran dan pengalaman anda dengan profil pekerjaan.",
+      "matching_phase_1_title": "Menilai pendedahan kepada automasi...",
+      "matching_phase_1_description": "Menilai kompetensi anda berdasarkan trend tenaga kerja semasa.",
+      "matching_phase_2_title": "Membina profil kemahiran anda...",
+      "matching_phase_2_description": "Mewakili pengalaman dan kompetensi anda untuk padanan peranan.",
+      "matching_phase_3_title": "Mencari pekerjaan yang sesuai...",
+      "matching_phase_3_description": "Membandingkan kemahiran anda dengan keperluan pekerjaan.",
+      "matching_phase_4_title": "Menyemak penjajaran kemampanan...",
+      "matching_phase_4_description": "Menilai penjajaran SDG dan petunjuk kompetensi.",
+      "no_matching_roles": "Tiada peranan yang sepadan dapat dikenal pasti.",
+      "matching_failed": "Tidak dapat mencari peranan yang sepadan.",
+      "matching_timeout": "Padanan peranan mengambil masa terlalu lama. Sila cuba lagi.",
+      "synthesis_title": "Menjana pelan peningkatan kemahiran...",
+      "synthesis_description": "Menyediakan laluan pembelajaran tiga fasa untuk {role}.",
+      "saving_title": "Menyimpan pelan hala tuju...",
+      "saving_description": "Menyegerakkan penilaian dan pencapaian pembelajaran anda.",
+      "complete_title": "Pelan hala tuju anda telah sedia.",
+      "synthesis_failed": "Penjanaan pelan hala tuju gagal. Sila cuba lagi.",
+      "recommended_title": "Peranan masa hadapan yang disyorkan",
+      "recommended_description": "Pilih peranan yang paling sesuai dengan kemahiran dan matlamat anda untuk menjana pelan peribadi.",
+      "scenario_title": "Senario pasaran buruh masa hadapan",
+      "scenario_baseline": "Garis dasar",
+      "scenario_baseline_desc": "Trajektori pertumbuhan ekonomi standard (1.0x)",
+      "scenario_ai_surge": "Lonjakan AI",
+      "scenario_ai_surge_desc": "Penggunaan AI dan sistem autonomi yang lebih pantas (+15% afiniti teknologi)",
+      "scenario_green_esg": "Hijau / ESG",
+      "scenario_green_esg_desc": "Peralihan sifar bersih dan keutamaan kemampanan (+15% afiniti ESG)",
+      "reason_with_strengths": "Kemahiran anda dalam {skills} memberikan potensi peralihan kerjaya yang baik.",
+      "reason_general": "Peranan ini sepadan dengan matlamat kerjaya dan permintaan industri yang berkembang.",
+      "strength_separator": ", ",
+      "match_score": "Padanan {percent}%",
+      "selected_roles": "{count} peranan dipilih ({scenario})",
+      "confirm_generate": "Sahkan dan jana pelan hala tuju"
+    },
+    "wizard": {
+      "incomplete_step": "Langkah {step} belum lengkap. Sila lengkapkan semua medan yang diperlukan (*).",
+      "profile_load_failed": "Gagal memuatkan profil tersimpan. Anda masih boleh melengkapkan borang secara manual.",
+      "profile_update_failed": "Gagal mengemas kini profil anda.",
+      "unexpected_profile_error": "Ralat tidak dijangka berlaku semasa menyimpan profil anda.",
+      "loading_profile_title": "Memuatkan data profil...",
+      "loading_profile_description": "Menyegerakkan kemahiran dan pilihan kerjaya daripada profil anda...",
+      "step_1_title": "1. Garis Dasar Profesional",
+      "step_1_description": "Nyatakan status pekerjaan, industri dan pengalaman semasa anda.",
+      "step_2_title": "2. Kemahiran & Rantaian Alat",
+      "step_2_description": "Masukkan kompetensi teras, alatan teknikal, rutin harian dan bahasa anda.",
+      "step_3_title": "3. Aspirasi & Matlamat Kerjaya",
+      "step_3_description": "Pilih objektif transformasi, jawatan sasaran dan sektor pertumbuhan pilihan anda.",
+      "step_4_title": "4. Logistik Pembelajaran",
+      "step_4_description": "Tetapkan komitmen masa belajar mingguan dan penyedia latihan pilihan.",
+      "profile_name": "Profil: {name}",
+      "employment_status": "Status Pekerjaan",
+      "current_job_title": "Jawatan Pekerjaan Semasa / Terkini",
+      "current_job_title_placeholder": "cth. Jurutera Perisian, Kerani Kewangan, Penganalisis Data",
+      "industry_domain": "Domain Industri",
+      "select_industry": "Pilih Domain Industri...",
+      "years_experience": "Tahun Pengalaman",
+      "select_experience": "Pilih Tahap Pengalaman...",
+      "highest_qualification": "Kelayakan Tertinggi",
+      "select_qualification": "Pilih Tahap Kelayakan...",
+      "skills_and_competencies": "Kemahiran & Kecekapan",
+      "items_added": "{count} ditambah",
+      "skill_placeholder": "Taip kemahiran (cth. Python, SQL, Seni Bina Awan) dan tekan Enter",
+      "add_skill": "Tambah kemahiran",
+      "proficiency_beginner": "Asas",
+      "proficiency_intermediate": "Sederhana",
+      "proficiency_advanced": "Lanjutan",
+      "remove_skill": "Keluarkan kemahiran",
+      "tools_and_software": "Alatan, Perisian & Tindanan",
+      "tool_placeholder": "cth. Git, Docker, Excel, Figma, SAP",
+      "add_tool": "Tambah alatan",
+      "remove_tool": "Keluarkan alatan",
+      "languages_spoken_written": "Bahasa Ditutur / Ditulis",
+      "language_placeholder": "cth. English, Bahasa Melayu, Mandarin, Tamil",
+      "add_language": "Tambah bahasa",
+      "remove_language": "Keluarkan bahasa",
+      "daily_work_description": "Tanggungjawab & Rutin Kerja Harian",
+      "optional": "Pilihan",
+      "daily_work_placeholder": "Terangkan tugasan harian anda (cth. menyediakan laporan, menganalisis data pelanggan, menjawab panggilan sokongan)...",
+      "transformation_objective": "Objektif Transformasi",
+      "target_job_title": "Jawatan Sasaran Prospektif",
+      "target_job_placeholder": "cth. Arkitek Sistem AI, Juruaudit Data ESG, Ketua DevOps Awan",
+      "target_growth_sectors": "Sektor Pertumbuhan Sasaran",
+      "items_selected": "{count} dipilih",
+      "work_arrangement": "Keutamaan Susunan Kerja",
+      "weekly_learning_commitment": "Komitmen Masa Pengajian Mingguan",
+      "preferred_learning_providers": "Penyedia Kursus & Sumber Pilihan",
+      "saving_profile": "Menyimpan profil...",
+      "profile_saved": "✓ Profil Disimpan"
+    },
+    "quiz": {
+      "generate_failed": "Gagal menjana kuiz. Sila cuba lagi.",
+      "unexpected_error": "Ralat tidak dijangka berlaku semasa menjana kuiz.",
+      "phase_exam": "Peperiksaan Penguasaan Fasa {phase}",
+      "exp_bounty": "Ganjaran +{exp} EXP",
+      "strict_mastery_gate": "(Semua 10 jawapan mesti betul)",
+      "target_role": "Peranan sasaran",
+      "close_quiz": "Tutup kuiz",
+      "evaluating_title": "Menilai kompetensi kemahiran...",
+      "evaluating_description": "Menyediakan 10 soalan berdasarkan objektif pembelajaran anda dan menilai tahap kesukarannya.",
+      "close_try_later": "Tutup & Cuba Kemudian",
+      "verified_mastery_title": "Kemahiran Dikuasai! Markah Sempurna: 10/10",
+      "mastery_not_passed_title": "Penguasaan Belum Disahkan (Perlu 10/10)",
+      "verified_mastery_description": "Pencapaian dikuasai. Memberikan {exp} EXP...",
+      "mastery_not_passed_description": "Anda mendapat {score} daripada 10. Jawab semua soalan dengan betul untuk mengesahkan kemahiran ini.",
+      "retry_assessment": "Cuba penilaian semula",
+      "question_review": "Semakan Soalan & Penjelasan",
+      "rationale": "Rasional",
+      "go_to_question": "Pergi ke soalan {question}",
+      "answered_count": "{answered} / {total} dijawab",
+      "question_progress": "Soalan {current} daripada {total}",
+      "previous": "← Sebelumnya",
+      "next_question": "Soalan Seterusnya →",
+      "submit_verify": "Hantar & Sahkan Penguasaan"
+    },
     "share_modal": {
       "title": "Kongsi Pelan Hala Tuju",
       "subtitle": "Cari rakan melalui UID atau Emel untuk memberikan kebenaran melihat atau mengedit pelan hala tuju ini.",
+      "loading_title": "Memuatkan rakan usaha sama...",
+      "loading_description": "Menyegerakkan pengguna yang dikongsi dan akses pelan hala tuju mereka.",
       "search_placeholder": "Cari melalui ID Pengguna (UID) atau Emel...",
       "filter_label": "Tapis",
       "filter_none": "Mod Carian",
@@ -115,6 +248,21 @@
       "empty_no_results": "Tiada pengguna ditemui yang sepadan dengan carian atau penapis anda.",
       "updating": "Mengemas kini akses...",
       "updated_success": "Kebenaran berjaya dikemas kini.",
+      "error_load": "Gagal memuatkan rakan usaha sama.",
+      "error_save": "Gagal mengemas kini kebenaran.",
+      "network_error_load": "Ralat rangkaian berlaku semasa mendapatkan pengguna.",
+      "network_error_save": "Ralat rangkaian berlaku semasa menyimpan kebenaran.",
+      "clear_search": "Kosongkan carian",
+      "search": "Cari",
+      "no_users_found": "Tiada pengguna ditemui untuk carian ini.",
+      "no_shared_members": "Tiada ahli berkongsi pelan hala tuju ini buat masa ini.",
+      "shared": "Dikongsi",
+      "uid": "UID:",
+      "copy_uid": "Salin UID",
+      "copied": "Disalin",
+      "user": "Pengguna",
+      "share_roadmap": "Kongsi pelan hala tuju",
+      "shared_revoke": "Dikongsi (klik untuk menarik balik)",
       "btn_close": "Tutup"
     },
     "current": {
@@ -138,7 +286,28 @@
       "answer_quiz": "Jawab Kuiz",
       "skill_mastered": "Kemahiran Dikuasai",
       "retake_quiz": "Ulang Kuiz",
-      "quiz_passing_req": "Syarat Lulus: 10/10 soalan betul untuk mengesahkan penguasaan."
+      "quiz_passing_req": "Syarat Lulus: 10/10 soalan betul untuk mengesahkan penguasaan.",
+      "sdg_alignment_title": "Penjajaran UN SDG",
+      "sdg_phase_1_title": "Kemahiran Teknikal Bermaruah & Literasi Digital Kalis Masa Hadapan",
+      "sdg_phase_1_description": "Menguasai kemahiran asas dalam \"{phase}\" secara langsung memajukan UN SDG 4.4 (Peningkatan Kemahiran Teknikal dan Vokasional) serta SDG 8.2. Langkah ini menukar tugas rutin yang terdedah kepada risiko automasi kepada literasi teknologi berdaya tahan, memperkukuh asas peralihan kerjaya bermaruah.",
+      "sdg_phase_2_title": "Pemodenan Infrastruktur Digital & Inovasi Industri Bersih",
+      "sdg_phase_2_description": "Mengaplikasikan alatan praktikal dan automasi dalam \"{phase}\" memenuhi UN SDG 9.4 (Penaiktarafan Infrastruktur Perindustrian Mampan) dan SDG 8.2. Melalui pelaksanaan saluran data digital dan platform moden, anda menghapuskan ketidakcekapan manual serta mempercepat inovasi organisasi.",
+      "sdg_phase_3_title": "Produktiviti Ekonomi Nilai Tinggi & Standard Tempat Kerja Mampan",
+      "sdg_phase_3_description": "Menyempurnakan projek capstone industri dan pensijilan dalam \"{phase}\" secara langsung memenuhi UN SDG 8.2 (Peningkatan Produktiviti Ekonomi melalui Teknologi Termaju). Anda beralih kepada pencipta nilai strategik yang mematuhi standard tempat kerja global dan mampan.",
+      "learning_objectives": "Objektif Pembelajaran",
+      "recommended_courses": "Kursus Disyorkan",
+      "platform": "Platform",
+      "course_duration": "{hours} jam",
+      "open_verified_course": "Buka kursus yang disahkan",
+      "learn": "Belajar",
+      "free_audit_available": "Percuma / Audit Tersedia",
+      "hrd_corp_claimable": "Boleh Dituntut melalui HRD Corp",
+      "self_directed_learning": "Projek pembelajaran berasaskan pengalaman kendiri.",
+      "sdg_target_label": "SASARAN UN SDG",
+      "roadmap_id": "ID Pelan Hala Tuju",
+      "progress": "Kemajuan",
+      "phase_label": "Fasa {phase}",
+      "phase_duration": "({weeks} minggu • {hours} jam)"
     },
     "history": {
       "badge": "DITINGGALKAN • DIARKIBKAN",
@@ -180,134 +349,110 @@
     "shared_on": "Dikongsi pada",
     "empty_title": "Tiada Pelan Dikongsi Tersedia",
     "empty_desc": "Anda kini tidak mempunyai sebarang pelan kerjaya yang dikongsi oleh pengguna lain, atau semua telah dikeluarkan.",
+    "loading_title": "Memuatkan Pelan Dikongsi",
+    "loading_desc": "Mendapatkan semula pelan kerjaya rakan sebaya dan status penyegerakan...",
     "btn_reset_demo": "Pulihkan Data Pengguna Demo",
     "back_to_shared": "← Kembali ke Senarai Dikongsi"
   },
-  "status": {
-    "loading": {
-      "title": "Memuatkan Data Kecerdasan",
-      "subtitle": "Menyelaras isyarat pasaran buruh dan laluan kemahiran..."
+  "auth": {
+    "login": {
+      "title": "Selamat Kembali",
+      "description": "Log masuk ke akaun SkillVerse anda dengan emel dan kata laluan",
+      "button": "Log Masuk",
+      "signing_in": "Sedang Log Masuk...",
+      "remember_me": "Ingat Saya",
+      "forgot_password_link": "Lupa kata laluan?",
+      "no_account": "Belum mempunyai akaun?",
+      "register_link": "Daftar di sini"
     },
-    "not_found": {
-      "code": "404",
-      "badge": "PAGE NOT FOUND // 0x404",
-      "title": "Tersasar dalam Alam Kemahiran",
-      "description": "Halaman yang anda cari tidak wujud atau telah dipindahkan. Kembali ke laman utama untuk meneroka pelan transformasi AI dan isyarat pasaran buruh.",
-      "btn_home": "Kembali ke Laman Utama",
-      "btn_back": "Kembali"
+    "register": {
+      "title": "Daftar Akaun",
+      "description": "Sertai SkillVerse dan mulakan transformasi tenaga kerja AI anda",
+      "button": "Daftar & Hantar Kod",
+      "have_account": "Sudah mempunyai akaun?"
     },
-    "error": {
-      "code": "500",
-      "badge": "SYSTEM ERROR // 0x500",
-      "title": "Berlaku Masalah Tidak Dijangka",
-      "description": "Ralat berlaku semasa memproses permintaan anda. Anda boleh cuba muat semula halaman atau kembali ke laman utama.",
-      "btn_retry": "Cuba Lagi",
-      "btn_home": "Kembali ke Laman Utama"
-    }
-  },
-  "other": {
-    "nav": {
-      "home": "Laman Utama",
-      "analysis": "Analisis",
-      "shared": "Dikongsi",
-      "login": "Log Masuk",
-      "signup": "Daftar",
-      "profile": "Profil",
-      "logout": "Log Keluar"
+    "forgot_password": {
+      "title": "Tetapkan Semula Kata Laluan",
+      "description": "Masukkan emel anda untuk menerima kod pengesahan 6 digit",
+      "button": "Hantar Kod 6 Digit"
     },
-    "footer": {
-      "copyright": "SkillVerse AI",
-      "hackathon": "Dibina untuk SDC Hackathon 2026",
-      "author": "Dipersembahkan oleh \"I Love You 3000\"",
-      "tagline": "Semua kandungan yang disediakan di laman web ini adalah untuk rujukan sahaja; keputusan muktamad terletak sepenuhnya pada anda.",
-      "github": "Repositori GitHub"
+    "verify_registration": {
+      "title": "Pengesahan Emel",
+      "description": "Masukkan kod pengesahan 6 digit yang dihantar ke emel anda"
     },
-    "auth": {
+    "reset_password": {
+      "title": "Kata Laluan Baharu",
+      "description": "Masukkan kod pemulihan 6 digit dan tetapkan kata laluan baharu anda",
+      "button": "Kemas Kini & Log Masuk",
+      "new_password_label": "Kata Laluan Baharu"
+    },
+    "common": {
       "login_required": "Log Masuk Diperlukan",
-      "login_required_desc": "Sila log masuk untuk mengakses halaman ini.",
+      "login_required_description": "Sila log masuk untuk mengakses halaman ini.",
       "go_home": "Ke Laman Utama",
       "login_to_continue": "Log Masuk untuk Meneruskan",
-      "signin_title": "Selamat Kembali",
-      "signin_desc": "Log masuk ke akaun SkillVerse anda dengan emel dan kata laluan",
-      "register_title": "Daftar Akaun",
-      "register_desc": "Sertai SkillVerse dan mulakan transformasi tenaga kerja AI anda",
-      "forgot_title": "Tetapkan Semula Kata Laluan",
-      "forgot_desc": "Masukkan emel anda untuk menerima kod pengesahan 6 digit",
-      "verify_register_title": "Pengesahan Emel",
-      "verify_register_desc": "Masukkan kod pengesahan 6 digit yang dihantar ke emel anda",
-      "verify_forgot_title": "Kata Laluan Baharu",
-      "verify_forgot_desc": "Masukkan kod pemulihan 6 digit dan tetapkan kata laluan baharu anda",
       "email_label": "Alamat Emel",
       "email_placeholder": "nama@contoh.com",
       "password_label": "Kata Laluan",
       "password_placeholder": "••••••••",
       "confirm_password_label": "Sahkan Kata Laluan",
-      "new_password_label": "Kata Laluan Baharu",
-      "otp_label": "Kod Pengesahan 6 Digit",
-      "otp_placeholder": "123456",
-      "btn_signin": "Log Masuk",
-      "btn_register": "Daftar & Hantar Kod",
-      "btn_verify": "Sahkan & Selesai",
-      "btn_send_code": "Hantar Kod 6 Digit",
-      "btn_reset_password": "Kemas Kini & Log Masuk",
-      "forgot_link": "Lupa kata laluan?",
-      "remember_me": "Ingat Saya",
-      "have_account": "Sudah mempunyai akaun?",
-      "no_account": "Belum mempunyai akaun?",
-      "register_link": "Daftar di sini",
+      "verification_code_label": "Kod Pengesahan 6 Digit",
+      "verification_code_placeholder": "123456",
+      "code_sent": "Kod 6 digit telah dihantar ke",
+      "processing": "Sedang Memproses...",
+      "verify_button": "Sahkan & Selesai",
       "signin_link": "Log masuk di sini",
       "resend_code": "Hantar Semula Kod",
       "resend_countdown": "Hantar semula dalam {seconds}s",
-      "code_sent": "Kod 6 digit telah dihantar ke",
-      "signing_in": "Sedang Log Masuk...",
-      "processing": "Sedang Memproses...",
-      "err_invalid_credentials": "Emel atau kata laluan tidak sah. Sila semak kelayakan anda.",
-      "err_email_not_confirmed": "Emel belum disahkan lagi. Sila semak peti masuk anda untuk kod.",
-      "err_user_already_exists": "Akaun dengan emel ini sudah wujud.",
-      "err_password_mismatch": "Kata laluan tidak sepadan.",
-      "err_password_too_short": "Kata laluan mestilah sekurang-kurangnya 6 aksara.",
-      "err_invalid_otp": "Kod pengesahan 6 digit tidak sah atau telah tamat tempoh.",
-      "err_network": "Ralat rangkaian berlaku. Sila semak sambungan anda dan cuba lagi.",
-      "err_default": "Ralat tidak dijangka berlaku. Sila cuba lagi.",
-      "err_email_required": "Sila masukkan alamat emel anda.",
-      "email": {
-        "common": {
-          "badge": "SkillVerse Auth",
-          "btn_return": "Kembali ke SkillVerse AI",
-          "footer_rights": "© 2026 SkillVerse AI. Hak Cipta Terpelihara."
-        },
-        "signup": {
-          "title": "Pengesahan Emel",
-          "description": "Terima kasih kerana mendaftar dengan SkillVerse AI. Masukkan kod pengesahan 6 digit di bawah untuk mengesahkan akaun anda.",
-          "otp_label": "Kod Pengesahan 6 Digit",
-          "security_notice": "Jika anda tidak membuat permintaan ini, sila abaikan emel ini. Keselamatan akaun anda tetap terjamin.",
-          "expiry_notice": "Kod pengesahan ini sah selama 10 minit. Jangan kongsi kod ini dengan sesiapa.",
-          "subject": "SkillVerse AI - Kod Pengesahan Anda: {token}"
-        },
-        "recovery": {
-          "title": "Tetapkan Semula Kata Laluan",
-          "description": "Kami telah menerima permintaan untuk menetapkan semula kata laluan anda. Masukkan kod pemulihan 6 digit di bawah.",
-          "otp_label": "Kod Pengesahan 6 Digit",
-          "security_notice": "Jika anda tidak meminta penetapan semula kata laluan, sila abaikan emel ini dengan selamat.",
-          "expiry_notice": "Demi keselamatan, kod ini akan tamat tempoh dalam masa 10 minit.",
-          "subject": "SkillVerse AI - Kod Tetapkan Semula Kata Laluan: {token}"
-        },
-        "magiclink": {
-          "title": "Log Masuk Pantas",
-          "description": "Anda sedang log masuk ke SkillVerse AI tanpa kata laluan. Sila masukkan kod 6 digit di bawah.",
-          "otp_label": "Kod Pengesahan 6 Digit",
-          "security_notice": "Jika bukan anda yang memulakannya, sila abaikan emel ini.",
-          "expiry_notice": "Kod ini akan tamat tempoh dalam masa 10 minit.",
-          "subject": "SkillVerse AI - Kod Log Masuk Sekali: {token}"
-        },
-        "email_change": {
-          "title": "Tukar Emel",
-          "description": "Anda telah meminta untuk menukar emel akaun SkillVerse AI anda. Masukkan kod pengesahan 6 digit di bawah.",
-          "otp_label": "Kod Pengesahan 6 Digit",
-          "security_notice": "Jika anda tidak memohon pertukaran emel, sila abaikan emel ini.",
-          "expiry_notice": "Kod pengesahan ini akan tamat tempoh dalam masa 10 minit.",
-          "subject": "SkillVerse AI - Sahkan Pertukaran Emel: {token}"
-        }
+      "errors": {
+        "invalid_credentials": "Emel atau kata laluan tidak sah. Sila semak kelayakan anda.",
+        "email_not_confirmed": "Emel belum disahkan lagi. Sila semak peti masuk anda untuk kod.",
+        "user_already_exists": "Akaun dengan emel ini sudah wujud.",
+        "password_mismatch": "Kata laluan tidak sepadan.",
+        "password_too_short": "Kata laluan mestilah sekurang-kurangnya 6 aksara.",
+        "invalid_verification_code": "Kod pengesahan 6 digit tidak sah atau telah tamat tempoh.",
+        "network": "Ralat rangkaian berlaku. Sila semak sambungan anda dan cuba lagi.",
+        "unexpected": "Ralat tidak dijangka berlaku. Sila cuba lagi.",
+        "email_required": "Sila masukkan alamat emel anda."
+      }
+    },
+    "email": {
+      "common": {
+        "badge": "SkillVerse Auth",
+        "btn_return": "Kembali ke SkillVerse AI",
+        "footer_rights": "© 2026 SkillVerse AI. Hak Cipta Terpelihara."
+      },
+      "signup": {
+        "title": "Pengesahan Emel",
+        "description": "Terima kasih kerana mendaftar dengan SkillVerse AI. Masukkan kod pengesahan 6 digit di bawah untuk mengesahkan akaun anda.",
+        "otp_label": "Kod Pengesahan 6 Digit",
+        "security_notice": "Jika anda tidak membuat permintaan ini, sila abaikan emel ini. Keselamatan akaun anda tetap terjamin.",
+        "expiry_notice": "Kod pengesahan ini sah selama 10 minit. Jangan kongsi kod ini dengan sesiapa.",
+        "subject": "SkillVerse AI - Kod Pengesahan Anda: {token}"
+      },
+      "recovery": {
+        "title": "Tetapkan Semula Kata Laluan",
+        "description": "Kami telah menerima permintaan untuk menetapkan semula kata laluan anda. Masukkan kod pemulihan 6 digit di bawah.",
+        "otp_label": "Kod Pengesahan 6 Digit",
+        "security_notice": "Jika anda tidak meminta penetapan semula kata laluan, sila abaikan emel ini dengan selamat.",
+        "expiry_notice": "Demi keselamatan, kod ini akan tamat tempoh dalam masa 10 minit.",
+        "subject": "SkillVerse AI - Kod Tetapkan Semula Kata Laluan: {token}"
+      },
+      "magiclink": {
+        "title": "Log Masuk Pantas",
+        "description": "Anda sedang log masuk ke SkillVerse AI tanpa kata laluan. Sila masukkan kod 6 digit di bawah.",
+        "otp_label": "Kod Pengesahan 6 Digit",
+        "security_notice": "Jika bukan anda yang memulakannya, sila abaikan emel ini.",
+        "expiry_notice": "Kod ini akan tamat tempoh dalam masa 10 minit.",
+        "subject": "SkillVerse AI - Kod Log Masuk Sekali: {token}"
+      },
+      "email_change": {
+        "title": "Tukar Emel",
+        "description": "Anda telah meminta untuk menukar emel akaun SkillVerse AI anda. Masukkan kod pengesahan 6 digit di bawah.",
+        "otp_label": "Kod Pengesahan 6 Digit",
+        "security_notice": "Jika anda tidak memohon pertukaran emel, sila abaikan emel ini.",
+        "expiry_notice": "Kod pengesahan ini akan tamat tempoh dalam masa 10 minit.",
+        "subject": "SkillVerse AI - Sahkan Pertukaran Emel: {token}"
       }
     },
     "profile": {
@@ -322,12 +467,48 @@
       "btn_save": "Simpan Perubahan",
       "btn_saving": "Menyimpan...",
       "save_success": "Profil berjaya dikemas kini!",
+      "save_error": "Gagal mengemas kini. Sila cuba lagi.",
       "member_badge": "Ahli SkillVerse",
       "btn_close": "Tutup",
       "level_label": "Tahap {level}",
       "exp_progress_title": "Kemajuan Kompetensi & EXP",
       "total_exp": "Jumlah EXP",
       "exp_to_next": "{remaining} EXP ke Tahap {nextLevel}"
+    },
+    "exp_gain": {
+      "level_up": "Naik tahap",
+      "mastery_verified": "Penguasaan kemahiran disahkan",
+      "experience_acquired": "Pengalaman diperoleh",
+      "advancing": "Sedang meningkat",
+      "new_rank": "Tahap baharu",
+      "next_level": "Tahap seterusnya (Lv.{level})",
+      "exp_remaining": "{remaining} EXP lagi untuk mencapai Lv.{level}",
+      "continue_roadmap": "Teruskan pelan hala tuju",
+      "claim_level": "Tuntut tahap baharu & teruskan"
+    }
+  },
+  "other": {
+    "status": {
+      "loading": {
+        "title": "Memuatkan Data Kecerdasan",
+        "subtitle": "Menyelaras isyarat pasaran buruh dan laluan kemahiran..."
+      },
+      "not_found": {
+        "code": "404",
+        "badge": "PAGE NOT FOUND // 0x404",
+        "title": "Tersasar dalam Alam Kemahiran",
+        "description": "Halaman yang anda cari tidak wujud atau telah dipindahkan. Kembali ke laman utama untuk meneroka pelan transformasi AI dan isyarat pasaran buruh.",
+        "btn_home": "Kembali ke Laman Utama",
+        "btn_back": "Kembali"
+      },
+      "error": {
+        "code": "500",
+        "badge": "SYSTEM ERROR // 0x500",
+        "title": "Berlaku Masalah Tidak Dijangka",
+        "description": "Ralat berlaku semasa memproses permintaan anda. Anda boleh cuba muat semula halaman atau kembali ke laman utama.",
+        "btn_retry": "Cuba Lagi",
+        "btn_home": "Kembali ke Laman Utama"
+      }
     },
     "helper": {
       "date": {
@@ -345,6 +526,24 @@
         "month_11": "Nov",
         "month_12": "Dis"
       }
+    }
+  },
+  "layout": {
+    "nav": {
+      "home": "Laman Utama",
+      "analysis": "Analisis",
+      "shared": "Dikongsi",
+      "login": "Log Masuk",
+      "signup": "Daftar",
+      "profile": "Profil",
+      "logout": "Log Keluar"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "Dibina untuk SDC Hackathon 2026",
+      "author": "Dipersembahkan oleh \"I Love You 3000\"",
+      "tagline": "Semua kandungan yang disediakan di laman web ini adalah untuk rujukan sahaja; keputusan muktamad terletak sepenuhnya pada anda.",
+      "github": "Repositori GitHub"
     }
   }
 }

@@ -1,14 +1,13 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
 import PathwaySelectModal from "./PathwaySelectModal";
 import UploadOptionModal from "./UploadOptionModal";
 import WizardOptionModal from "./WizardOptionModal";
 import RoleSelectorModal from "./RoleSelectorModal";
-import SharedPlansModal from "../SharedPlansModal";
 
-// Plan Modals Orchestrator Component
-// Mount and manage lifecycle of all option and pathway overlay windows.
+// --- Assessment Modal Orchestrator ---
+// Mount the pathway, resume upload, profile wizard, and role-selection overlays for signed-in users.
 export default function PlanModals() {
   const { isLoggedIn } = useAuth();
 
@@ -30,9 +29,6 @@ export default function PlanModals() {
 
       {/* Top 5 Role Discovery & Reskilling Selection Overlay */}
       <RoleSelectorModal />
-
-      {/* Collaboration: Shared Plans Modal Overlay */}
-      <SharedPlansModal />
     </>
   );
 }

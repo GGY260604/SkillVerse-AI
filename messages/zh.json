@@ -80,7 +80,15 @@
       "btn_add_skill": "添加",
       "analyzing_state": "处理中...",
       "generating_state": "生成中...",
-      "btn_submit": "提交"
+      "btn_submit": "提交",
+      "file_too_large": "文件超过 10 MB 限制（{size} MB）。",
+      "unsupported_file_format": "不支持此格式。请使用不超过 10 MB 的 PDF 或图片（PNG、JPG、WEBP）。",
+      "extraction_failed": "无法从此文件提取个人档案，请重试。",
+      "unexpected_extraction_error": "提取过程中发生意外错误。",
+      "extract_stage_1": "正在上传文件...",
+      "extract_stage_2": "正在解析文件...",
+      "extract_stage_3": "正在更新数据库...",
+      "extract_stage_4": "正在预填写表格..."
     }
   },
   "analysis": {
@@ -92,6 +100,11 @@
       "edit_plan": "编辑规划",
       "share_plan": "分享规划",
       "back_to_overview": "← 返回规划总览",
+      "back_to_shared_list": "返回共享规划列表",
+      "viewable_only": "仅可查看",
+      "shared_title": "{name} 的路线图",
+      "shared_subtitle": "由 {name} 共享 • {role}{department}",
+      "preserved": "已保留",
       "coming_soon": "分析功能正在开发中。"
     },
     "empty": {
@@ -99,9 +112,129 @@
       "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",
       "btn_add_plan": "+ 添加新的规划"
     },
+    "roles": {
+      "back": "返回",
+      "close": "关闭",
+      "matching_title": "正在评估适合您的未来岗位...",
+      "matching_description": "正在根据您的技能与经验匹配职业要求。",
+      "matching_phase_1_title": "正在评估技能自动化风险...",
+      "matching_phase_1_description": "正在结合当前劳动力市场趋势评估您的技能。",
+      "matching_phase_2_title": "正在构建技能档案...",
+      "matching_phase_2_description": "正在整理您的经验与能力以匹配合适岗位。",
+      "matching_phase_3_title": "正在检索匹配职业...",
+      "matching_phase_3_description": "正在比对您的技能与岗位要求。",
+      "matching_phase_4_title": "正在评估可持续发展目标...",
+      "matching_phase_4_description": "正在分析 SDG 对齐情况与能力指标。",
+      "no_matching_roles": "暂未找到匹配的岗位。",
+      "matching_failed": "无法检索匹配岗位。",
+      "matching_timeout": "岗位匹配耗时过长，请重试。",
+      "synthesis_title": "正在生成技能提升路线图...",
+      "synthesis_description": "正在为「{role}」规划三阶段学习路径。",
+      "saving_title": "正在保存路线图...",
+      "saving_description": "正在同步您的评估结果与学习阶段。",
+      "complete_title": "路线图已准备就绪。",
+      "synthesis_failed": "路线图生成失败，请重试。",
+      "recommended_title": "推荐的未来发展岗位",
+      "recommended_description": "请选择最符合您技能与目标的岗位，生成专属发展路线图。",
+      "scenario_title": "未来劳动力市场情景",
+      "scenario_baseline": "稳健基准",
+      "scenario_baseline_desc": "标准经济增长轨迹（1.0x）",
+      "scenario_ai_surge": "AI 浪潮",
+      "scenario_ai_surge_desc": "AI 与自主系统加速普及（技术亲和度 +15%）",
+      "scenario_green_esg": "绿色 / ESG",
+      "scenario_green_esg_desc": "净零转型与可持续发展要求（ESG 亲和度 +15%）",
+      "reason_with_strengths": "基于您在 {skills} 等方面的技能，具备良好的转型潜力。",
+      "reason_general": "该岗位与您的职业目标及行业增长需求高度契合。",
+      "strength_separator": "、",
+      "match_score": "匹配度 {percent}%",
+      "selected_roles": "已选择 {count} 个岗位（{scenario}）",
+      "confirm_generate": "确认并生成路线图"
+    },
+    "wizard": {
+      "incomplete_step": "第 {step} 部分尚未填写完整，请完成所有必填项（*）。",
+      "profile_load_failed": "无法加载已保存的个人档案，您仍可手动填写表单。",
+      "profile_update_failed": "无法更新个人档案。",
+      "unexpected_profile_error": "保存个人档案时发生意外错误。",
+      "loading_profile_title": "正在读取档案数据...",
+      "loading_profile_description": "正在同步个人技能与职业偏好...",
+      "step_1_title": "1. 职业基础档案",
+      "step_1_description": "填写您目前的职业状态、行业和经验背景。",
+      "step_2_title": "2. 技能与技术工具栈",
+      "step_2_description": "填写您的核心能力、技术工具、日常职责与语言掌握。",
+      "step_3_title": "3. 转型目标与职业抱负",
+      "step_3_description": "选择转型目标、期望岗位与偏好的增长领域。",
+      "step_4_title": "4. 学习与培训规划",
+      "step_4_description": "设定每周学习时间与偏好的培训提供方。",
+      "profile_name": "个人档案：{name}",
+      "employment_status": "职业状态",
+      "current_job_title": "当前 / 最近从事的岗位名称",
+      "current_job_title_placeholder": "例如：软件工程师、财务文员、数据分析师",
+      "industry_domain": "所属行业领域",
+      "select_industry": "选择行业领域...",
+      "years_experience": "工作经验年限",
+      "select_experience": "选择经验年限...",
+      "highest_qualification": "最高学历资质",
+      "select_qualification": "选择学历层级...",
+      "skills_and_competencies": "专业技能与核心能力",
+      "items_added": "已添加 {count} 项",
+      "skill_placeholder": "输入技能（如 Python、SQL、云架构）并按回车",
+      "add_skill": "添加技能",
+      "proficiency_beginner": "初级",
+      "proficiency_intermediate": "中级",
+      "proficiency_advanced": "精通",
+      "remove_skill": "移除技能",
+      "tools_and_software": "工具、软件与技术栈",
+      "tool_placeholder": "例如 Git、Docker、Excel、Figma、SAP",
+      "add_tool": "添加工具",
+      "remove_tool": "移除工具",
+      "languages_spoken_written": "掌握与交流语言",
+      "language_placeholder": "例如英语、马来语、华语、泰米尔语",
+      "add_language": "添加语言",
+      "remove_language": "移除语言",
+      "daily_work_description": "日常工作职责与业务描述",
+      "optional": "选填",
+      "daily_work_placeholder": "用您自己的话描述日常工作任务（例如：撰写报告、分析客户数据、处理客服工单）...",
+      "transformation_objective": "转型与进阶目标",
+      "target_job_title": "目标期望岗位名称",
+      "target_job_placeholder": "例如：AI 系统架构师、ESG 数据审计师、云 DevOps 主管",
+      "target_growth_sectors": "目标高增长赛道",
+      "items_selected": "已选 {count} 项",
+      "work_arrangement": "工作模式偏好",
+      "weekly_learning_commitment": "每周学习投入时间",
+      "preferred_learning_providers": "偏好的学习与课程提供方",
+      "saving_profile": "正在保存个人档案...",
+      "profile_saved": "✓ 个人档案已保存"
+    },
+    "quiz": {
+      "generate_failed": "测验生成失败，请重试。",
+      "unexpected_error": "生成测验时发生意外错误。",
+      "phase_exam": "第 {phase} 阶段技能测验",
+      "exp_bounty": "+{exp} EXP 奖励",
+      "strict_mastery_gate": "（10 题必须全部答对）",
+      "target_role": "目标岗位",
+      "close_quiz": "关闭测验",
+      "evaluating_title": "正在评估技能能力...",
+      "evaluating_description": "根据您的学习目标生成 10 道针对性题目并评估难度。",
+      "close_try_later": "关闭并稍后再试",
+      "verified_mastery_title": "技能已掌握！满分：10/10",
+      "mastery_not_passed_title": "尚未通过掌握验证（需答对 10/10）",
+      "verified_mastery_description": "已掌握此阶段，正在发放 {exp} EXP...",
+      "mastery_not_passed_description": "您答对了 10 题中的 {score} 题。必须全部答对才能验证此技能。",
+      "retry_assessment": "重新测验",
+      "question_review": "题目回顾与解析",
+      "rationale": "解析",
+      "go_to_question": "前往第 {question} 题",
+      "answered_count": "已答 {answered} / {total} 题",
+      "question_progress": "第 {current} / {total} 题",
+      "previous": "← 上一题",
+      "next_question": "下一题 →",
+      "submit_verify": "提交并验证掌握情况"
+    },
     "share_modal": {
       "title": "共享职业转型路线图",
       "subtitle": "通过用户 ID (UID) 或 Email 检索同伴，并为其授权该路线图的查看或编辑权限。",
+      "loading_title": "正在加载协作者...",
+      "loading_description": "正在同步共享用户及其路线图权限。",
       "search_placeholder": "通过用户 ID (UID) 或 Email 搜索用户...",
       "filter_label": "筛选",
       "filter_none": "搜索模式",
@@ -115,6 +248,21 @@
       "empty_no_results": "未检索到匹配的用户或已授权记录。",
       "updating": "更新权限中...",
       "updated_success": "权限已成功更新。",
+      "error_load": "无法加载协作者。",
+      "error_save": "无法更新权限。",
+      "network_error_load": "获取用户时发生网络错误。",
+      "network_error_save": "保存权限时发生网络错误。",
+      "clear_search": "清除搜索",
+      "search": "搜索",
+      "no_users_found": "没有找到符合搜索条件的用户。",
+      "no_shared_members": "此路线图目前没有共享成员。",
+      "shared": "已共享",
+      "uid": "UID：",
+      "copy_uid": "复制 UID",
+      "copied": "已复制",
+      "user": "用户",
+      "share_roadmap": "共享路线图",
+      "shared_revoke": "已共享（点击撤销）",
       "btn_close": "关闭"
     },
     "current": {
@@ -138,7 +286,28 @@
       "answer_quiz": "作答技能测验",
       "skill_mastered": "技能已掌握",
       "retake_quiz": "重新测试",
-      "quiz_passing_req": "通关要求：必须全部 10 题答对方可认证掌握。"
+      "quiz_passing_req": "通关要求：必须全部 10 题答对方可认证掌握。",
+      "sdg_alignment_title": "联合国可持续发展目标对齐",
+      "sdg_phase_1_title": "优质体面就业技能与数字化素养跃升",
+      "sdg_phase_1_description": "深入掌握「{phase}」阶段的核心技术基础，直接契合联合国 SDG 4.4（大幅增加具备优质体面就业技术技能的劳动者）及 SDG 8.2。将易受自动化淘汰的传统机械流程重塑为前沿数字化认知底座，构筑长期职业发展的护城河。",
+      "sdg_phase_2_title": "可持续工业技术改造与现代化数字化基础设施",
+      "sdg_phase_2_description": "在「{phase}」阶段实操生产级工具链与自动化流水线，深度推进联合国 SDG 9.4（工业基础设施升级与技术改造）与 SDG 8.2。通过部署高效云端与数据平台，淘汰低效手工内耗，全面推动企业数字化转型与可持续工业创新。",
+      "sdg_phase_3_title": "高新技术驱动的高附加值经济生产力与体面就业",
+      "sdg_phase_3_description": "完成「{phase}」的端到端实战项目与综合认证，直接践行联合国 SDG 8.2（通过高新技术升级实现高水平经济生产力与体面就业）。验证高附加值实战工程水准，彻底迈入高薪且具备抗周期韧性的核心战略岗位。",
+      "learning_objectives": "学习目标",
+      "recommended_courses": "推荐课程",
+      "platform": "平台",
+      "course_duration": "{hours} 小时",
+      "open_verified_course": "打开已验证课程",
+      "learn": "学习",
+      "free_audit_available": "可免费学习 / 旁听",
+      "hrd_corp_claimable": "可申请 HRD Corp 补助",
+      "self_directed_learning": "自主实践学习项目。",
+      "sdg_target_label": "联合国可持续发展目标",
+      "roadmap_id": "路线图 ID",
+      "progress": "进度",
+      "phase_label": "第 {phase} 阶段",
+      "phase_duration": "（{weeks} 周 • {hours} 小时）"
     },
     "history": {
       "badge": "已废弃 • 历史归档",
@@ -180,134 +349,110 @@
     "shared_on": "共享时间",
     "empty_title": "暂无共享规划",
     "empty_desc": "目前没有任何用户与您共享规划，或所有共享记录均已被移除。",
+    "loading_title": "正在加载共享规划",
+    "loading_desc": "正在同步并检索同行与团队成员共享的成长路线图...",
     "btn_reset_demo": "恢复演示用户数据",
     "back_to_shared": "← 返回共享规划列表"
   },
-  "status": {
-    "loading": {
-      "title": "正在加载智能数据",
-      "subtitle": "正在同步劳动力市场信号与技能图谱..."
+  "auth": {
+    "login": {
+      "title": "欢迎回来",
+      "description": "使用您的邮箱和密码登录 SkillVerse 平台",
+      "button": "登录",
+      "signing_in": "登录中...",
+      "remember_me": "记住我",
+      "forgot_password_link": "忘记密码？",
+      "no_account": "还没有账号？",
+      "register_link": "前往注册"
     },
-    "not_found": {
-      "code": "404",
-      "badge": "PAGE NOT FOUND // 0x404",
-      "title": "页面迷失在技能星系中",
-      "description": "抱歉，您访问的页面不存在或已被迁移。您可以返回首页探索最新的 AI 转型计划与劳动力洞察。",
-      "btn_home": "返回首页",
-      "btn_back": "返回上一页"
+    "register": {
+      "title": "创建账户",
+      "description": "加入 SkillVerse，开启您的 AI 技能转型之旅",
+      "button": "注册并发送验证码",
+      "have_account": "已有账号？"
     },
-    "error": {
-      "code": "500",
-      "badge": "SYSTEM ERROR // 0x500",
-      "title": "遇到意外错误",
-      "description": "系统在处理您的请求时遭遇了临时故障。您可以尝试重新加载，或返回首页。",
-      "btn_retry": "重新尝试",
-      "btn_home": "返回首页"
-    }
-  },
-  "other": {
-    "nav": {
-      "home": "首页",
-      "analysis": "分析",
-      "shared": "共享",
-      "login": "登录",
-      "signup": "注册",
-      "profile": "个人资料",
-      "logout": "退出登录"
+    "forgot_password": {
+      "title": "找回密码",
+      "description": "输入您的注册邮箱以接收 6 位数验证码",
+      "button": "发送 6 位数验证码"
     },
-    "footer": {
-      "copyright": "SkillVerse AI",
-      "hackathon": "为 SDC Hackathon 2026 打造",
-      "author": "由 \"I Love You 3000\" 呈现",
-      "tagline": "本网站提供的所有内容仅供参考；最终决定权完全在您手中。",
-      "github": "GitHub 仓库"
+    "verify_registration": {
+      "title": "邮箱验证",
+      "description": "请输入已发送至您邮箱的 6 位数验证码"
     },
-    "auth": {
+    "reset_password": {
+      "title": "设置新密码",
+      "description": "输入 6 位数恢复验证码并设置您的全新密码",
+      "button": "更新密码并登录",
+      "new_password_label": "新密码"
+    },
+    "common": {
       "login_required": "需要登录",
-      "login_required_desc": "请登录以访问此页面。",
+      "login_required_description": "请登录以访问此页面。",
       "go_home": "返回首页",
       "login_to_continue": "登录以继续",
-      "signin_title": "欢迎回来",
-      "signin_desc": "使用您的邮箱和密码登录 SkillVerse 平台",
-      "register_title": "创建账户",
-      "register_desc": "加入 SkillVerse，开启您的 AI 技能转型之旅",
-      "forgot_title": "找回密码",
-      "forgot_desc": "输入您的注册邮箱以接收 6 位数验证码",
-      "verify_register_title": "邮箱验证",
-      "verify_register_desc": "请输入已发送至您邮箱的 6 位数验证码",
-      "verify_forgot_title": "设置新密码",
-      "verify_forgot_desc": "输入 6 位数恢复验证码并设置您的全新密码",
       "email_label": "电子邮箱",
       "email_placeholder": "name@example.com",
       "password_label": "密码",
       "password_placeholder": "••••••••",
       "confirm_password_label": "确认密码",
-      "new_password_label": "新密码",
-      "otp_label": "6 位数验证码",
-      "otp_placeholder": "123456",
-      "btn_signin": "登录",
-      "btn_register": "注册并发送验证码",
-      "btn_verify": "验证并完成",
-      "btn_send_code": "发送 6 位数验证码",
-      "btn_reset_password": "更新密码并登录",
-      "forgot_link": "忘记密码？",
-      "remember_me": "记住我",
-      "have_account": "已有账号？",
-      "no_account": "还没有账号？",
-      "register_link": "前往注册",
+      "verification_code_label": "6 位数验证码",
+      "verification_code_placeholder": "123456",
+      "code_sent": "6 位数验证码已发送至",
+      "processing": "处理中...",
+      "verify_button": "验证并完成",
       "signin_link": "前往登录",
       "resend_code": "重新发送",
       "resend_countdown": "{seconds} 秒后重新发送",
-      "code_sent": "6 位数验证码已发送至",
-      "signing_in": "登录中...",
-      "processing": "处理中...",
-      "err_invalid_credentials": "电子邮箱或密码错误，请检查您的输入。",
-      "err_email_not_confirmed": "该邮箱尚未完成验证，请查收邮箱中的验证码。",
-      "err_user_already_exists": "该电子邮箱已被注册，请直接登录。",
-      "err_password_mismatch": "两次输入的密码不一致。",
-      "err_password_too_short": "密码长度必须至少为 6 位字符。",
-      "err_invalid_otp": "6 位数验证码无效或已过期，请重试。",
-      "err_network": "网络连接异常，请检查网络后重试。",
-      "err_default": "发生意外错误，请稍后重试。",
-      "err_email_required": "请输入电子邮箱地址。",
-      "email": {
-        "common": {
-          "badge": "SkillVerse Auth",
-          "btn_return": "返回 SkillVerse AI",
-          "footer_rights": "© 2026 SkillVerse AI. 保留所有权利。"
-        },
-        "signup": {
-          "title": "邮箱验证",
-          "description": "感谢注册 SkillVerse AI 平台。请输入下方 6 位数验证码完成账号认证。",
-          "otp_label": "6 位数验证码",
-          "security_notice": "若非本人操作，请忽略此邮件，您的账号安全不会受到影响。",
-          "expiry_notice": "验证码有效期为 10 分钟，请勿泄露给他人。",
-          "subject": "【SkillVerse AI】您的注册验证码：{token}"
-        },
-        "recovery": {
-          "title": "设置新密码",
-          "description": "我们收到了为您的账号重置密码的申请。请输入下方 6 位数恢复验证码以继续操作。",
-          "otp_label": "6 位数验证码",
-          "security_notice": "如果您未曾申请重置密码，请立即检查账号安全或忽略此邮件。",
-          "expiry_notice": "出于安全保护，验证码将在 10 分钟后失效。",
-          "subject": "【SkillVerse AI】密码重置验证码：{token}"
-        },
-        "magiclink": {
-          "title": "快捷登录",
-          "description": "您正在使用一次性验证码登录 SkillVerse AI。请输入下方 6 位数代码。",
-          "otp_label": "6 位数验证码",
-          "security_notice": "如非本人操作，请勿将验证码透露给任何人。",
-          "expiry_notice": "验证码将在 10 分钟后过期。",
-          "subject": "【SkillVerse AI】快捷登录验证码：{token}"
-        },
-        "email_change": {
-          "title": "更换邮箱",
-          "description": "您正在请求将 SkillVerse AI 账号绑定到此邮箱。请输入以下 6 位数验证码确认更换。",
-          "otp_label": "6 位数验证码",
-          "security_notice": "如果您并未申请更换邮箱，请立即联系管理员或忽略此邮件。",
-          "expiry_notice": "验证码将在 10 分钟后失效。",
-          "subject": "【SkillVerse AI】更换邮箱验证码：{token}"
-        }
+      "errors": {
+        "invalid_credentials": "电子邮箱或密码错误，请检查您的输入。",
+        "email_not_confirmed": "该邮箱尚未完成验证，请查收邮箱中的验证码。",
+        "user_already_exists": "该电子邮箱已被注册，请直接登录。",
+        "password_mismatch": "两次输入的密码不一致。",
+        "password_too_short": "密码长度必须至少为 6 位字符。",
+        "invalid_verification_code": "6 位数验证码无效或已过期，请重试。",
+        "network": "网络连接异常，请检查网络后重试。",
+        "unexpected": "发生意外错误，请稍后重试。",
+        "email_required": "请输入电子邮箱地址。"
+      }
+    },
+    "email": {
+      "common": {
+        "badge": "SkillVerse Auth",
+        "btn_return": "返回 SkillVerse AI",
+        "footer_rights": "© 2026 SkillVerse AI. 保留所有权利。"
+      },
+      "signup": {
+        "title": "邮箱验证",
+        "description": "感谢注册 SkillVerse AI 平台。请输入下方 6 位数验证码完成账号认证。",
+        "otp_label": "6 位数验证码",
+        "security_notice": "若非本人操作，请忽略此邮件，您的账号安全不会受到影响。",
+        "expiry_notice": "验证码有效期为 10 分钟，请勿泄露给他人。",
+        "subject": "【SkillVerse AI】您的注册验证码：{token}"
+      },
+      "recovery": {
+        "title": "设置新密码",
+        "description": "我们收到了为您的账号重置密码的申请。请输入下方 6 位数恢复验证码以继续操作。",
+        "otp_label": "6 位数验证码",
+        "security_notice": "如果您未曾申请重置密码，请立即检查账号安全或忽略此邮件。",
+        "expiry_notice": "出于安全保护，验证码将在 10 分钟后失效。",
+        "subject": "【SkillVerse AI】密码重置验证码：{token}"
+      },
+      "magiclink": {
+        "title": "快捷登录",
+        "description": "您正在使用一次性验证码登录 SkillVerse AI。请输入下方 6 位数代码。",
+        "otp_label": "6 位数验证码",
+        "security_notice": "如非本人操作，请勿将验证码透露给任何人。",
+        "expiry_notice": "验证码将在 10 分钟后过期。",
+        "subject": "【SkillVerse AI】快捷登录验证码：{token}"
+      },
+      "email_change": {
+        "title": "更换邮箱",
+        "description": "您正在请求将 SkillVerse AI 账号绑定到此邮箱。请输入以下 6 位数验证码确认更换。",
+        "otp_label": "6 位数验证码",
+        "security_notice": "如果您并未申请更换邮箱，请立即联系管理员或忽略此邮件。",
+        "expiry_notice": "验证码将在 10 分钟后失效。",
+        "subject": "【SkillVerse AI】更换邮箱验证码：{token}"
       }
     },
     "profile": {
@@ -330,6 +475,41 @@
       "total_exp": "累计总经验",
       "exp_to_next": "距升至 Lv.{nextLevel} 还需 {remaining} EXP"
     },
+    "exp_gain": {
+      "level_up": "等级提升",
+      "mastery_verified": "技能掌握已确认",
+      "experience_acquired": "获得经验",
+      "advancing": "升级中",
+      "new_rank": "新等级",
+      "next_level": "下一级（Lv.{level}）",
+      "exp_remaining": "距离 Lv.{level} 还需 {remaining} EXP",
+      "continue_roadmap": "继续职业规划",
+      "claim_level": "领取新等级并继续"
+    }
+  },
+  "other": {
+    "status": {
+      "loading": {
+        "title": "正在加载智能数据",
+        "subtitle": "正在同步劳动力市场信号与技能图谱..."
+      },
+      "not_found": {
+        "code": "404",
+        "badge": "PAGE NOT FOUND // 0x404",
+        "title": "页面迷失在技能星系中",
+        "description": "抱歉，您访问的页面不存在或已被迁移。您可以返回首页探索最新的 AI 转型计划与劳动力洞察。",
+        "btn_home": "返回首页",
+        "btn_back": "返回上一页"
+      },
+      "error": {
+        "code": "500",
+        "badge": "SYSTEM ERROR // 0x500",
+        "title": "遇到意外错误",
+        "description": "系统在处理您的请求时遭遇了临时故障。您可以尝试重新加载，或返回首页。",
+        "btn_retry": "重新尝试",
+        "btn_home": "返回首页"
+      }
+    },
     "helper": {
       "date": {
         "format": "{year}年{month}月{day}日",
@@ -346,6 +526,24 @@
         "month_11": "11",
         "month_12": "12"
       }
+    }
+  },
+  "layout": {
+    "nav": {
+      "home": "首页",
+      "analysis": "分析",
+      "shared": "共享",
+      "login": "登录",
+      "signup": "注册",
+      "profile": "个人资料",
+      "logout": "退出登录"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "为 SDC Hackathon 2026 打造",
+      "author": "由 \"I Love You 3000\" 呈现",
+      "tagline": "本网站提供的所有内容仅供参考；最终决定权完全在您手中。",
+      "github": "GitHub 仓库"
     }
   }
 }

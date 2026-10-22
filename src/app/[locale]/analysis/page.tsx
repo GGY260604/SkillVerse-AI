@@ -4,16 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useLocale } from "next-intl";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
 import EmptyPlanState from "@/components/analysis/EmptyPlanState";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import { PlanData } from "@/components/analysis/planCard/planData";
 
-// Career Analysis Dashboard Page
-// Dynamically reads the user's current roadmap and archived iterations from database.
-// Displays EmptyPlanState if no roadmaps exist, or ExistPlanState if roadmaps are found.
+// --- Career Analysis Dashboard ---
+// Read the authenticated user's current and archived roadmaps and render the matching dashboard state.
 export default function AnalysisPage() {
   const locale = useLocale();
   const searchParams = useSearchParams();
@@ -25,7 +24,8 @@ export default function AnalysisPage() {
   const [currentPlan, setCurrentPlan] = useState<PlanData | null>(null);
   const [historyPlans, setHistoryPlans] = useState<PlanData[]>([]);
 
-  // Redirect unauthenticated user to home and trigger login modal.
+  // --- Authentication & Roadmap Loading ---
+  // 1. Gate this page behind the auth context; redirect signed-out visitors to login.
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
       openAuthModal("login");
@@ -33,7 +33,7 @@ export default function AnalysisPage() {
     }
   }, [isLoading, isLoggedIn, openAuthModal, router]);
 
-  // Fetch real roadmap data from database via Next.js API
+  // 2. Fetch uncached roadmap data through the route handler, which queries Prisma on the server.
   const fetchRoadmaps = useCallback(async () => {
     try {
       setIsLoadingRoadmaps(true);
@@ -52,7 +52,7 @@ export default function AnalysisPage() {
     }
   }, []);
 
-  // Initial load when user is logged in
+  // Load roadmaps after authentication and whenever a synthesis flow requests a refresh.
   useEffect(() => {
     if (isLoggedIn) {
       fetchRoadmaps();
@@ -60,7 +60,7 @@ export default function AnalysisPage() {
   }, [isLoggedIn, fetchRoadmaps]);
 
 
-  // Listen for roadmap-refresh event from role selector or other synthesis flows
+  // 3. RoleSelectorModal dispatches this event only after the API confirms synthesis/persistence.
   useEffect(() => {
     const handleRefresh = () => {
       fetchRoadmaps();
@@ -71,7 +71,7 @@ export default function AnalysisPage() {
     };
   }, [fetchRoadmaps]);
 
-  // URL query override for quick testing (?plan=true or ?plan=false)
+  // Keep the explicit plan query override for manual empty/existing-state testing.
   const planQuery = searchParams.get("plan");
 
   // Prevent flashing content while validating authentication or if unauthenticated.

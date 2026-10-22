@@ -7,6 +7,12 @@ import { prisma } from "@/lib/prisma";
  * GET /api/analysis/roadmaps/share
  * Searches users by ID/Email and retrieves existing collaboration permissions.
  * Supports filtering by granted access level (viewable, editable, all).
+ *
+ * Data flow:
+ * 1. Authenticate the owner and resolve the requested roadmap (or their current roadmap).
+ * 2. For the shared filter, load existing grants and their user profiles; for search, load
+ *    matching users and join any existing grant for the resolved roadmap.
+ * 3. Return identity, level, and access level for each collaborator card.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -59,8 +65,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Case 1: Filter is active ("all", "viewable", "editable")
-    // Retrieve users directly from shared_roadmaps who have existing permissions
+    // 1. For the default/shared filters, read granted users and their access level.
     if (filter === "all" || filter === "viewable" || filter === "editable") {
       const whereClause: any = {
         ownerId: currentUserId,
@@ -83,7 +88,7 @@ export async function GET(request: NextRequest) {
       const targetUsers = targetIds.length > 0
         ? await prisma.user.findMany({
             where: { id: { in: targetIds } },
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, level: true },
           })
         : [];
 
@@ -97,6 +102,7 @@ export async function GET(request: NextRequest) {
             id: user.id,
             name: user.name,
             email: user.email,
+            level: user.level,
             accessLevel: s.accessLevel,
           };
         });
@@ -108,8 +114,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Case 2: Search Query is provided
-    // Search users by UID or Email (excluding the current user)
+    // 2. For a search, find up to 20 other users by UID, email, or name, then attach
+    //    the current roadmap's existing permission (or no_access).
     if (searchQuery) {
       const isSearchUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchQuery);
 
@@ -132,11 +138,10 @@ export async function GET(request: NextRequest) {
 
       const matchingUsers = await prisma.user.findMany({
         where: userWhere,
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, level: true },
         take: 20,
       });
 
-      // Match against existing permissions in shared_roadmaps
       const targetUserIds = matchingUsers.map((u) => u.id);
       const existingShares: any[] = await (prisma.sharedRoadmap as any).findMany({
         where: {
@@ -152,6 +157,7 @@ export async function GET(request: NextRequest) {
         id: u.id,
         name: u.name,
         email: u.email,
+        level: u.level,
         accessLevel: shareMap.get(u.id) || "no_access",
       }));
 
@@ -162,8 +168,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Case 3: No search query and no filter selected
-    // Return empty list as specified ("没搜索之前是不会list任何用户的 搜索后才会出现")
+    // 3. An empty, unfiltered query intentionally returns no user records.
     return NextResponse.json({
       success: true,
       users: [],
@@ -180,6 +185,9 @@ export async function GET(request: NextRequest) {
  * POST /api/analysis/roadmaps/share
  * Updates a collaborator's access level for a specific roadmap.
  * Setting accessLevel='no_access' removes the record from shared_roadmaps.
+ *
+ * The owner and roadmap are revalidated server-side. Revoking deletes the grant;
+ * granting view/edit access inserts or updates the unique collaborator record.
  */
 export async function POST(request: NextRequest) {
   try {

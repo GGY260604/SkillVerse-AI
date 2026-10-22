@@ -80,7 +80,15 @@
       "btn_add_skill": "Add",
       "analyzing_state": "Processing...",
       "generating_state": "Generating...",
-      "btn_submit": "Submit"
+      "btn_submit": "Submit",
+      "file_too_large": "File exceeds the 10 MB limit ({size} MB).",
+      "unsupported_file_format": "Unsupported format. Use a PDF or image file (PNG, JPG, WEBP) up to 10 MB.",
+      "extraction_failed": "Failed to extract a profile from this document. Please try again.",
+      "unexpected_extraction_error": "An unexpected error occurred during extraction.",
+      "extract_stage_1": "Uploading document...",
+      "extract_stage_2": "Parsing document...",
+      "extract_stage_3": "Updating database...",
+      "extract_stage_4": "Prefilling form..."
     }
   },
   "analysis": {
@@ -92,6 +100,11 @@
       "edit_plan": "Edit Plan",
       "share_plan": "Share Plan",
       "back_to_overview": "← Back to Plans Overview",
+      "back_to_shared_list": "Back to shared plans list",
+      "viewable_only": "Viewable only",
+      "shared_title": "{name}'s Roadmap",
+      "shared_subtitle": "Shared by {name} • {role}{department}",
+      "preserved": "Preserved",
       "coming_soon": "Analysis features are under development."
     },
     "empty": {
@@ -99,9 +112,129 @@
       "desc": "You haven't generated an AI transformation roadmap yet. Start your diagnostic to unlock personalized reskilling pathways.",
       "btn_add_plan": "+ Add New Plan"
     },
+    "roles": {
+      "back": "Back",
+      "close": "Close",
+      "matching_title": "Evaluating future-ready roles...",
+      "matching_description": "Comparing your skills and experience against occupational profiles.",
+      "matching_phase_1_title": "Assessing automation exposure...",
+      "matching_phase_1_description": "Evaluating your competencies against current workforce trends.",
+      "matching_phase_2_title": "Building your skills profile...",
+      "matching_phase_2_description": "Representing your experience and competencies for role matching.",
+      "matching_phase_3_title": "Finding suitable occupations...",
+      "matching_phase_3_description": "Comparing your skills with occupational requirements.",
+      "matching_phase_4_title": "Checking sustainability alignment...",
+      "matching_phase_4_description": "Evaluating SDG alignment and competency indicators.",
+      "no_matching_roles": "No matching roles could be identified.",
+      "matching_failed": "Unable to find matching roles.",
+      "matching_timeout": "Role matching took too long. Please try again.",
+      "synthesis_title": "Preparing your reskilling roadmap...",
+      "synthesis_description": "Building a three-phase learning path for {role}.",
+      "saving_title": "Saving your roadmap...",
+      "saving_description": "Synchronizing your assessment and learning milestones.",
+      "complete_title": "Your roadmap is ready.",
+      "synthesis_failed": "Roadmap generation failed. Please try again.",
+      "recommended_title": "Recommended future-ready roles",
+      "recommended_description": "Choose a role that best matches your skills and goals to create a personalized roadmap.",
+      "scenario_title": "Future labor market scenario",
+      "scenario_baseline": "Baseline",
+      "scenario_baseline_desc": "Standard economic growth trajectory (1.0x)",
+      "scenario_ai_surge": "AI surge",
+      "scenario_ai_surge_desc": "Faster adoption of AI and autonomous systems (+15% technology affinity)",
+      "scenario_green_esg": "Green / ESG",
+      "scenario_green_esg_desc": "Net-zero transition and sustainability priorities (+15% ESG affinity)",
+      "reason_with_strengths": "Strong transition potential based on your skills in {skills}.",
+      "reason_general": "A strong match for your career goals and growing industry demand.",
+      "strength_separator": ", ",
+      "match_score": "{percent}% match",
+      "selected_roles": "{count, plural, one {# role selected} other {# roles selected}} ({scenario})",
+      "confirm_generate": "Confirm and generate roadmap"
+    },
+    "wizard": {
+      "incomplete_step": "Step {step} is incomplete. Complete all required fields (*).",
+      "profile_load_failed": "Unable to load the saved profile. You can still complete the form manually.",
+      "profile_update_failed": "Failed to update your profile.",
+      "unexpected_profile_error": "An unexpected error occurred while saving your profile.",
+      "loading_profile_title": "Loading profile data...",
+      "loading_profile_description": "Syncing your skills and career preferences from your profile...",
+      "step_1_title": "1. Professional Baseline",
+      "step_1_description": "Define your current occupational standing, industry, and experience.",
+      "step_2_title": "2. Skills & Technical Toolchain",
+      "step_2_description": "Enter your core competencies, technical tools, daily routines, and languages.",
+      "step_3_title": "3. Future Horizons & Career Goals",
+      "step_3_description": "Select your transformation objective, target role, and preferred growth sectors.",
+      "step_4_title": "4. Learning Logistics",
+      "step_4_description": "Set your weekly study commitment and preferred training providers.",
+      "profile_name": "Profile: {name}",
+      "employment_status": "Employment Status",
+      "current_job_title": "Current / Most Recent Occupational Title",
+      "current_job_title_placeholder": "e.g. Software Engineer, Financial Clerk, Data Analyst",
+      "industry_domain": "Industry Domain",
+      "select_industry": "Select Industry Domain...",
+      "years_experience": "Years of Experience",
+      "select_experience": "Select Experience Level...",
+      "highest_qualification": "Highest Qualification",
+      "select_qualification": "Select Qualification Level...",
+      "skills_and_competencies": "Skills & Competencies",
+      "items_added": "{count} added",
+      "skill_placeholder": "Type a skill (e.g. Python, SQL, Cloud Architecture) and press Enter",
+      "add_skill": "Add skill",
+      "proficiency_beginner": "Beginner",
+      "proficiency_intermediate": "Intermediate",
+      "proficiency_advanced": "Advanced",
+      "remove_skill": "Remove skill",
+      "tools_and_software": "Tools, Software & Stack",
+      "tool_placeholder": "e.g. Git, Docker, Excel, Figma, SAP",
+      "add_tool": "Add tool",
+      "remove_tool": "Remove tool",
+      "languages_spoken_written": "Languages Spoken / Written",
+      "language_placeholder": "e.g. English, Bahasa Melayu, Mandarin, Tamil",
+      "add_language": "Add language",
+      "remove_language": "Remove language",
+      "daily_work_description": "Daily Work Responsibilities & Routines",
+      "optional": "Optional",
+      "daily_work_placeholder": "Describe your day-to-day tasks (e.g. drafting reports, analyzing customer data, answering support calls)...",
+      "transformation_objective": "Transformation Objective",
+      "target_job_title": "Target Prospective Role Title",
+      "target_job_placeholder": "e.g. AI Systems Architect, ESG Data Auditor, Cloud DevOps Lead",
+      "target_growth_sectors": "Target Growth Sectors",
+      "items_selected": "{count} selected",
+      "work_arrangement": "Work Arrangement Preference",
+      "weekly_learning_commitment": "Weekly Learning Time Commitment",
+      "preferred_learning_providers": "Preferred Course & Resource Types",
+      "saving_profile": "Saving profile...",
+      "profile_saved": "✓ Profile Saved"
+    },
+    "quiz": {
+      "generate_failed": "Failed to generate the quiz. Please try again.",
+      "unexpected_error": "An unexpected error occurred while generating the quiz.",
+      "phase_exam": "Phase {phase} Mastery Exam",
+      "exp_bounty": "+{exp} EXP reward",
+      "strict_mastery_gate": "(All 10 answers must be correct)",
+      "target_role": "Target role",
+      "close_quiz": "Close quiz",
+      "evaluating_title": "Evaluating skill competencies...",
+      "evaluating_description": "Creating 10 targeted questions from your learning objectives and assessing their difficulty.",
+      "close_try_later": "Close & Try Later",
+      "verified_mastery_title": "Skill Mastered! Perfect Score: 10/10",
+      "mastery_not_passed_title": "Mastery Not Verified (10/10 Required)",
+      "verified_mastery_description": "Milestone mastered. Awarding {exp} EXP...",
+      "mastery_not_passed_description": "You scored {score} out of 10. Answer every question correctly to verify this skill.",
+      "retry_assessment": "Retry assessment",
+      "question_review": "Question Review & Explanations",
+      "rationale": "Rationale",
+      "go_to_question": "Go to question {question}",
+      "answered_count": "{answered} / {total} answered",
+      "question_progress": "Question {current} of {total}",
+      "previous": "← Previous",
+      "next_question": "Next Question →",
+      "submit_verify": "Submit & Verify Mastery"
+    },
     "share_modal": {
       "title": "Share Career Roadmap",
       "subtitle": "Search peers by UID or Email to grant view or edit permissions to this roadmap.",
+      "loading_title": "Loading collaborators...",
+      "loading_description": "Syncing shared users and their roadmap access.",
       "search_placeholder": "Search by User ID (UID) or Email...",
       "filter_label": "Filter",
       "filter_none": "Search Mode",
@@ -115,6 +248,21 @@
       "empty_no_results": "No users found matching your search or filter.",
       "updating": "Updating...",
       "updated_success": "Permission updated successfully.",
+      "error_load": "Failed to load collaborators.",
+      "error_save": "Failed to update permission.",
+      "network_error_load": "A network error occurred while fetching users.",
+      "network_error_save": "A network error occurred while saving permission.",
+      "clear_search": "Clear search",
+      "search": "Search",
+      "no_users_found": "No users found matching your search.",
+      "no_shared_members": "No members currently shared with this roadmap.",
+      "shared": "Shared",
+      "uid": "UID:",
+      "copy_uid": "Copy UID",
+      "copied": "Copied",
+      "user": "User",
+      "share_roadmap": "Share roadmap",
+      "shared_revoke": "Shared (click to revoke)",
       "btn_close": "Close"
     },
     "current": {
@@ -138,7 +286,28 @@
       "answer_quiz": "Answer Quiz",
       "skill_mastered": "Skill Mastered",
       "retake_quiz": "Retake Quiz",
-      "quiz_passing_req": "Passing Requirement: 10/10 questions correct to verify mastery."
+      "quiz_passing_req": "Passing Requirement: 10/10 questions correct to verify mastery.",
+      "sdg_alignment_title": "UN SDG Alignment",
+      "sdg_phase_1_title": "Technical & Vocational Skills for Decent Work",
+      "sdg_phase_1_description": "Acquiring the foundational competencies in \"{phase}\" directly advances UN SDG 4.4 (Technical & Vocational Skills for Decent Employment) and SDG 8.2. It transforms vulnerable, manual routines into resilient digital literacy, equipping you with non-automatable analytical fundamentals.",
+      "sdg_phase_2_title": "Modern Infrastructure Upgrade & Sustainable Digital Innovation",
+      "sdg_phase_2_description": "Executing hands-on toolchains and automation in \"{phase}\" fulfills UN SDG 9.4 (Infrastructure Retrofitting & Clean Industry) and SDG 8.2. Deploying scalable digital pipelines eliminates manual friction, increases organizational efficiency, and powers sustainable technological transformation.",
+      "sdg_phase_3_title": "High-Value Economic Productivity & Resilient Employment",
+      "sdg_phase_3_description": "Delivering the verified industry capstone in \"{phase}\" directly satisfies UN SDG 8.2 (Economic Productivity via Technological Upgrading). It certifies your capability to operate as a high-value contributor, driving sustainable business impact and resilient career longevity.",
+      "learning_objectives": "Learning Objectives",
+      "recommended_courses": "Recommended Courses",
+      "platform": "Platform",
+      "course_duration": "{hours} hours",
+      "open_verified_course": "Open verified course",
+      "learn": "Learn",
+      "free_audit_available": "Free / Audit Available",
+      "hrd_corp_claimable": "HRD Corp Claimable",
+      "self_directed_learning": "Self-directed experiential learning projects.",
+      "sdg_target_label": "UN SDG TARGET",
+      "roadmap_id": "Roadmap ID",
+      "progress": "Progress",
+      "phase_label": "Phase {phase}",
+      "phase_duration": "({weeks} weeks • {hours} hours)"
     },
     "history": {
       "badge": "SUPERSEDED • ARCHIVED",
@@ -180,134 +349,110 @@
     "shared_on": "Shared",
     "empty_title": "No Shared Plans Available",
     "empty_desc": "You currently have no career roadmaps shared by other members, or all have been removed.",
+    "loading_title": "Loading Shared Roadmaps",
+    "loading_desc": "Retrieving peer roadmaps and synchronization status...",
     "btn_reset_demo": "Restore Demo Shared Users",
     "back_to_shared": "← Back to Shared Roadmaps"
   },
-  "status": {
-    "loading": {
-      "title": "Loading Workforce Intelligence",
-      "subtitle": "Synchronizing labor market signals and skill pathways..."
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "description": "Sign in to your SkillVerse account with email and password",
+      "button": "Sign In",
+      "signing_in": "Signing In...",
+      "remember_me": "Remember Me",
+      "forgot_password_link": "Forgot password?",
+      "no_account": "Don't have an account?",
+      "register_link": "Register here"
     },
-    "not_found": {
-      "code": "404",
-      "badge": "PAGE NOT FOUND // 0x404",
-      "title": "Lost in the Skill Universe",
-      "description": "The page you are looking for does not exist or has been relocated. Return to the homepage to explore AI transformation roadmaps and labor market signals.",
-      "btn_home": "Return Home",
-      "btn_back": "Go Back"
+    "register": {
+      "title": "Create Account",
+      "description": "Join SkillVerse and start your AI workforce transformation",
+      "button": "Register & Send Code",
+      "have_account": "Already have an account?"
     },
-    "error": {
-      "code": "500",
-      "badge": "SYSTEM ERROR // 0x500",
-      "title": "Something Went Wrong",
-      "description": "An unexpected error occurred while processing your request. You can try refreshing the page or return to the homepage.",
-      "btn_retry": "Try Again",
-      "btn_home": "Return Home"
-    }
-  },
-  "other": {
-    "nav": {
-      "home": "Home",
-      "analysis": "Analysis",
-      "shared": "Shared",
-      "login": "Login",
-      "signup": "Sign Up",
-      "profile": "Profile",
-      "logout": "Log Out"
+    "forgot_password": {
+      "title": "Reset Password",
+      "description": "Enter your email to receive a 6-digit verification code",
+      "button": "Send 6-Digit Code"
     },
-    "footer": {
-      "copyright": "SkillVerse AI",
-      "hackathon": "Built for SDC Hackathon 2026",
-      "author": "Presented by \"I Love You 3000\"",
-      "tagline": "All content provided on this website is for reference purposes only; the final decision rests entirely with you.",
-      "github": "GitHub Repository"
+    "verify_registration": {
+      "title": "Verify Email",
+      "description": "Enter the 6-digit verification code sent to your email"
     },
-    "auth": {
+    "reset_password": {
+      "title": "New Password",
+      "description": "Enter the 6-digit recovery code and set your new password",
+      "button": "Update Password & Sign In",
+      "new_password_label": "New Password"
+    },
+    "common": {
       "login_required": "Login Required",
-      "login_required_desc": "Please log in to access this page.",
+      "login_required_description": "Please log in to access this page.",
       "go_home": "Go to Home",
       "login_to_continue": "Login to Continue",
-      "signin_title": "Welcome Back",
-      "signin_desc": "Sign in to your SkillVerse account with email and password",
-      "register_title": "Create Account",
-      "register_desc": "Join SkillVerse and start your AI workforce transformation",
-      "forgot_title": "Reset Password",
-      "forgot_desc": "Enter your email to receive a 6-digit verification code",
-      "verify_register_title": "Verify Email",
-      "verify_register_desc": "Enter the 6-digit verification code sent to your email",
-      "verify_forgot_title": "New Password",
-      "verify_forgot_desc": "Enter the 6-digit recovery code and set your new password",
       "email_label": "Email Address",
       "email_placeholder": "name@example.com",
       "password_label": "Password",
       "password_placeholder": "••••••••",
       "confirm_password_label": "Confirm Password",
-      "new_password_label": "New Password",
-      "otp_label": "6-Digit Verification Code",
-      "otp_placeholder": "123456",
-      "btn_signin": "Sign In",
-      "btn_register": "Register & Send Code",
-      "btn_verify": "Verify & Complete",
-      "btn_send_code": "Send 6-Digit Code",
-      "btn_reset_password": "Update Password & Sign In",
-      "forgot_link": "Forgot password?",
-      "remember_me": "Remember Me",
-      "have_account": "Already have an account?",
-      "no_account": "Don't have an account?",
-      "register_link": "Register here",
+      "verification_code_label": "6-Digit Verification Code",
+      "verification_code_placeholder": "123456",
+      "code_sent": "6-digit code has been sent to",
+      "processing": "Processing...",
+      "verify_button": "Verify & Complete",
       "signin_link": "Sign in here",
       "resend_code": "Resend Code",
       "resend_countdown": "Resend in {seconds}s",
-      "code_sent": "6-digit code has been sent to",
-      "signing_in": "Signing In...",
-      "processing": "Processing...",
-      "err_invalid_credentials": "Invalid email or password. Please check your credentials.",
-      "err_email_not_confirmed": "Email not verified yet. Please check your inbox for the code.",
-      "err_user_already_exists": "An account with this email already exists.",
-      "err_password_mismatch": "Passwords do not match.",
-      "err_password_too_short": "Password must be at least 6 characters.",
-      "err_invalid_otp": "Invalid or expired 6-digit verification code.",
-      "err_network": "Network error occurred. Please check your connection and try again.",
-      "err_default": "An unexpected error occurred. Please try again.",
-      "err_email_required": "Please enter your email address.",
-      "email": {
-        "common": {
-          "badge": "SkillVerse Auth",
-          "btn_return": "Return to SkillVerse AI",
-          "footer_rights": "© 2026 SkillVerse AI. All rights reserved."
-        },
-        "signup": {
-          "title": "Verify Email",
-          "description": "Thank you for registering with SkillVerse AI. Enter the 6-digit verification code below to confirm your account.",
-          "otp_label": "6-Digit Verification Code",
-          "security_notice": "If you did not initiate this request, please safely disregard this email. Your account remains secure.",
-          "expiry_notice": "This code expires in 10 minutes. Do not share this code with anyone.",
-          "subject": "SkillVerse AI - Your Verification Code: {token}"
-        },
-        "recovery": {
-          "title": "New Password",
-          "description": "We received a request to reset your SkillVerse AI account password. Enter the 6-digit recovery code below.",
-          "otp_label": "6-Digit Verification Code",
-          "security_notice": "If you did not request a password reset, please ignore this message. Your password will remain unchanged.",
-          "expiry_notice": "For your security, this code will expire in 10 minutes.",
-          "subject": "SkillVerse AI - Password Reset Code: {token}"
-        },
-        "magiclink": {
-          "title": "One-Time Sign In",
-          "description": "You requested a passwordless login to SkillVerse AI. Enter the 6-digit passcode below.",
-          "otp_label": "6-Digit Passcode",
-          "security_notice": "If you did not request this code, no action is needed.",
-          "expiry_notice": "This passcode expires in 10 minutes.",
-          "subject": "SkillVerse AI - One-Time Login Code: {token}"
-        },
-        "email_change": {
-          "title": "Email Change",
-          "description": "You requested to update your SkillVerse AI account email address. Enter the 6-digit code below to confirm this change.",
-          "otp_label": "6-Digit Verification Code",
-          "security_notice": "If you did not request this update, please ignore this email.",
-          "expiry_notice": "This code expires in 10 minutes.",
-          "subject": "SkillVerse AI - Confirm Email Change: {token}"
-        }
+      "errors": {
+        "invalid_credentials": "Invalid email or password. Please check your credentials.",
+        "email_not_confirmed": "Email not verified yet. Please check your inbox for the code.",
+        "user_already_exists": "An account with this email already exists.",
+        "password_mismatch": "Passwords do not match.",
+        "password_too_short": "Password must be at least 6 characters.",
+        "invalid_verification_code": "Invalid or expired 6-digit verification code.",
+        "network": "Network error occurred. Please check your connection and try again.",
+        "unexpected": "An unexpected error occurred. Please try again.",
+        "email_required": "Please enter your email address."
+      }
+    },
+    "email": {
+      "common": {
+        "badge": "SkillVerse Auth",
+        "btn_return": "Return to SkillVerse AI",
+        "footer_rights": "© 2026 SkillVerse AI. All rights reserved."
+      },
+      "signup": {
+        "title": "Verify Email",
+        "description": "Thank you for registering with SkillVerse AI. Enter the 6-digit verification code below to confirm your account.",
+        "otp_label": "6-Digit Verification Code",
+        "security_notice": "If you did not initiate this request, please safely disregard this email. Your account remains secure.",
+        "expiry_notice": "This code expires in 10 minutes. Do not share this code with anyone.",
+        "subject": "SkillVerse AI - Your Verification Code: {token}"
+      },
+      "recovery": {
+        "title": "New Password",
+        "description": "We received a request to reset your SkillVerse AI account password. Enter the 6-digit recovery code below.",
+        "otp_label": "6-Digit Verification Code",
+        "security_notice": "If you did not request a password reset, please ignore this message. Your password will remain unchanged.",
+        "expiry_notice": "For your security, this code will expire in 10 minutes.",
+        "subject": "SkillVerse AI - Password Reset Code: {token}"
+      },
+      "magiclink": {
+        "title": "One-Time Sign In",
+        "description": "You requested a passwordless login to SkillVerse AI. Enter the 6-digit passcode below.",
+        "otp_label": "6-Digit Passcode",
+        "security_notice": "If you did not request this code, no action is needed.",
+        "expiry_notice": "This passcode expires in 10 minutes.",
+        "subject": "SkillVerse AI - One-Time Login Code: {token}"
+      },
+      "email_change": {
+        "title": "Email Change",
+        "description": "You requested to update your SkillVerse AI account email address. Enter the 6-digit code below to confirm this change.",
+        "otp_label": "6-Digit Verification Code",
+        "security_notice": "If you did not request this update, please ignore this email.",
+        "expiry_notice": "This code expires in 10 minutes.",
+        "subject": "SkillVerse AI - Confirm Email Change: {token}"
       }
     },
     "profile": {
@@ -322,12 +467,48 @@
       "btn_save": "Save Changes",
       "btn_saving": "Saving...",
       "save_success": "Profile name updated successfully!",
+      "save_error": "Update failed. Please try again.",
       "member_badge": "SkillVerse Member",
       "btn_close": "Close",
       "level_label": "Level {level}",
       "exp_progress_title": "Competency & EXP Progress",
       "total_exp": "Total EXP",
       "exp_to_next": "{remaining} EXP to Lv.{nextLevel}"
+    },
+    "exp_gain": {
+      "level_up": "Level up",
+      "mastery_verified": "Skill mastery verified",
+      "experience_acquired": "Experience acquired",
+      "advancing": "Advancing",
+      "new_rank": "New rank",
+      "next_level": "Next level (Lv.{level})",
+      "exp_remaining": "{remaining} EXP remaining to reach Lv.{level}",
+      "continue_roadmap": "Continue roadmap",
+      "claim_level": "Claim new level & continue"
+    }
+  },
+  "other": {
+    "status": {
+      "loading": {
+        "title": "Loading Workforce Intelligence",
+        "subtitle": "Synchronizing labor market signals and skill pathways..."
+      },
+      "not_found": {
+        "code": "404",
+        "badge": "PAGE NOT FOUND // 0x404",
+        "title": "Lost in the Skill Universe",
+        "description": "The page you are looking for does not exist or has been relocated. Return to the homepage to explore AI transformation roadmaps and labor market signals.",
+        "btn_home": "Return Home",
+        "btn_back": "Go Back"
+      },
+      "error": {
+        "code": "500",
+        "badge": "SYSTEM ERROR // 0x500",
+        "title": "Something Went Wrong",
+        "description": "An unexpected error occurred while processing your request. You can try refreshing the page or return to the homepage.",
+        "btn_retry": "Try Again",
+        "btn_home": "Return Home"
+      }
     },
     "helper": {
       "date": {
@@ -345,6 +526,24 @@
         "month_11": "Nov",
         "month_12": "Dec"
       }
+    }
+  },
+  "layout": {
+    "nav": {
+      "home": "Home",
+      "analysis": "Analysis",
+      "shared": "Shared",
+      "login": "Login",
+      "signup": "Sign Up",
+      "profile": "Profile",
+      "logout": "Log Out"
+    },
+    "footer": {
+      "copyright": "SkillVerse AI",
+      "hackathon": "Built for SDC Hackathon 2026",
+      "author": "Presented by \"I Love You 3000\"",
+      "tagline": "All content provided on this website is for reference purposes only; the final decision rests entirely with you.",
+      "github": "GitHub Repository"
     }
   }
 }

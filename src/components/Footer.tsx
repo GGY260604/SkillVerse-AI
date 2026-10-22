@@ -7,7 +7,7 @@ import Logo from "@/components/Logo";
 // Render platform brand identity, author attribution, open-source links, and legal notice.
 export default function Footer() {
   // Load localized footer strings for copyright, hackathon, and attribution.
-  const t = useTranslations("other.footer");
+  const t = useTranslations("layout.footer");
 
   // --- UI ---
   return (
