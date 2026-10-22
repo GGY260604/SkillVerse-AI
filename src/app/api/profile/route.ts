@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import { prisma } from "@/lib/prisma";
 import {
   normalizeWorkArrangement,
   normalizeEmploymentStatus,
@@ -16,9 +17,10 @@ import {
 
 /**
  * GET /api/profile
- * Retrieves the current user's profile from the user_profiles table.
+ * Retrieves user profile from the users table.
+ * If ?userId=... is provided, verifies that target user has shared a roadmap with the current user.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { accessToken } = await getAuthTokensFromCookies();
     if (!accessToken) {
@@ -30,14 +32,34 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = userData.user.id;
+    const currentUserId = userData.user.id;
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get("userId");
+
+    let targetUserId = currentUserId;
+    if (requestedUserId && requestedUserId !== currentUserId) {
+      // Verify that requested user shared a roadmap with current logged-in user
+      const sharePermission = await (prisma.sharedRoadmap as any).findFirst({
+        where: {
+          ownerId: requestedUserId,
+          targetUserId: currentUserId,
+        },
+      });
+
+      if (!sharePermission) {
+        return NextResponse.json({ error: "Forbidden: No shared access to this profile" }, { status: 403 });
+      }
+
+      targetUserId = requestedUserId;
+    }
+
     const admin = createAdminClient();
 
     // Query single user record from users table
     const { data: userRecord, error } = await admin
       .from("users")
       .select("*")
-      .eq("id", userId)
+      .eq("id", targetUserId)
       .maybeSingle();
 
     if (error) {
@@ -47,16 +69,16 @@ export async function GET() {
 
     const resolvedName =
       userRecord?.name ||
-      userData.user.user_metadata?.name ||
-      userData.user.user_metadata?.full_name ||
-      "";
+      (targetUserId === currentUserId
+        ? userData.user.user_metadata?.name || userData.user.user_metadata?.full_name || ""
+        : "");
 
     return NextResponse.json({
       success: true,
       profile: userRecord || null,
       user: {
-        id: userId,
-        email: userData.user.email,
+        id: targetUserId,
+        email: userRecord?.email || (targetUserId === currentUserId ? userData.user.email : ""),
         name: resolvedName,
       },
     });
@@ -199,11 +221,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const admin = createAdminClient();
 
+    let effectiveUserId = user.id;
+    if (body.targetUserId && body.targetUserId !== user.id) {
+      // Verify that current user has "editable" permission on a shared roadmap from targetUserId
+      const sharePermission = await (prisma.sharedRoadmap as any).findFirst({
+        where: {
+          ownerId: body.targetUserId,
+          targetUserId: user.id,
+          accessLevel: "editable",
+        },
+      });
+
+      if (!sharePermission) {
+        return NextResponse.json(
+          { error: "Forbidden: No edit permission for this user's profile" },
+          { status: 403 }
+        );
+      }
+
+      effectiveUserId = body.targetUserId;
+    }
+
     // Fetch existing user to preserve identity fields (name, email, locale)
     const { data: existingUser } = await admin
       .from("users")
       .select("name, locale, email")
-      .eq("id", user.id)
+      .eq("id", effectiveUserId)
       .maybeSingle();
 
     // Single upsert directly into users table with onConflict: "id"
@@ -212,9 +255,9 @@ export async function POST(request: NextRequest) {
       .from("users")
       .upsert(
         {
-          id: user.id,
-          email: existingUser?.email || user.email || "",
-          name: body.name ?? existingUser?.name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+          id: effectiveUserId,
+          email: existingUser?.email || (effectiveUserId === user.id ? user.email || "" : ""),
+          name: body.name ?? existingUser?.name ?? (effectiveUserId === user.id ? user.user_metadata?.full_name ?? user.user_metadata?.name : null) ?? null,
           locale: body.locale ?? existingUser?.locale ?? "en",
           employmentStatus: normalizeEmploymentStatus(body.employmentStatus) || "employed_at_risk",
           currentJobTitle: body.currentJobTitle ?? null,

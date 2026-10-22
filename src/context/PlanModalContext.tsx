@@ -14,10 +14,12 @@ interface PlanModalContextType {
   activePlan: PlanData | null;
   wizardPrefillData: any | null;
   shareRoadmapData: { id?: string; title?: string } | null;
-  openPathwaySelect: () => void;
-  openUploadOption: () => void;
-  openWizardOption: (prefillData?: any) => void;
-  openRoleSelect: (profile: ProfileIntakePayload) => void;
+  targetUserId: string | null;
+  targetUserName: string | null;
+  openPathwaySelect: (options?: { targetUserId?: string; targetUserName?: string }) => void;
+  openUploadOption: (options?: { targetUserId?: string; targetUserName?: string }) => void;
+  openWizardOption: (prefillData?: any, options?: { targetUserId?: string; targetUserName?: string }) => void;
+  openRoleSelect: (profile: ProfileIntakePayload, options?: { targetUserId?: string }) => void;
   openShareModal: (roadmapId?: string, roadmapTitle?: string) => void;
   closeModals: () => void;
   saveActivePlan: (plan: PlanData) => void;
@@ -32,46 +34,66 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   const [activePlan, setActivePlan] = useState<PlanData | null>(null);
   const [wizardPrefillData, setWizardPrefillData] = useState<any | null>(null);
   const [shareRoadmapData, setShareRoadmapData] = useState<{ id?: string; title?: string } | null>(null);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const [targetUserName, setTargetUserName] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { isLoggedIn, openAuthModal } = useAuth();
 
   // Redirect to analysis page when user triggers a plan creation or option workflow.
   const navigateToAnalysisIfNeeded = useCallback(() => {
-    if (pathname !== "/analysis") {
+    if (pathname !== "/analysis" && pathname !== "/shared") {
       router.push("/analysis");
     }
   }, [pathname, router]);
 
   // Open pathway selection overlay window.
-  const openPathwaySelect = useCallback(() => {
-    if (!isLoggedIn) {
-      openAuthModal("login");
-      return;
-    }
-    navigateToAnalysisIfNeeded();
-    setActiveModal("pathway_select");
-  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
+  const openPathwaySelect = useCallback(
+    (options?: { targetUserId?: string; targetUserName?: string }) => {
+      if (!isLoggedIn) {
+        openAuthModal("login");
+        return;
+      }
+      if (options?.targetUserId !== undefined) {
+        setTargetUserId(options.targetUserId || null);
+        setTargetUserName(options.targetUserName || null);
+      }
+      navigateToAnalysisIfNeeded();
+      setActiveModal("pathway_select");
+    },
+    [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
+  );
 
   // Directly open upload option overlay window.
-  const openUploadOption = useCallback(() => {
-    if (!isLoggedIn) {
-      openAuthModal("login");
-      return;
-    }
-    navigateToAnalysisIfNeeded();
-    setActiveModal("upload");
-  }, [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]);
+  const openUploadOption = useCallback(
+    (options?: { targetUserId?: string; targetUserName?: string }) => {
+      if (!isLoggedIn) {
+        openAuthModal("login");
+        return;
+      }
+      if (options?.targetUserId !== undefined) {
+        setTargetUserId(options.targetUserId || null);
+        setTargetUserName(options.targetUserName || null);
+      }
+      navigateToAnalysisIfNeeded();
+      setActiveModal("upload");
+    },
+    [isLoggedIn, openAuthModal, navigateToAnalysisIfNeeded]
+  );
 
   // Directly open guided diagnostic wizard option overlay window with optional prefill data.
   const openWizardOption = useCallback(
-    (prefillData?: any) => {
+    (prefillData?: any, options?: { targetUserId?: string; targetUserName?: string }) => {
       if (!isLoggedIn) {
         openAuthModal("login");
         return;
       }
       if (prefillData) {
         setWizardPrefillData(prefillData);
+      }
+      if (options?.targetUserId !== undefined) {
+        setTargetUserId(options.targetUserId || null);
+        setTargetUserName(options.targetUserName || null);
       }
       navigateToAnalysisIfNeeded();
       setActiveModal("wizard");
@@ -80,10 +102,12 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Open role discovery & selection modal with normalized profile data
-  // Open role discovery & selection modal with normalized profile data
   const openRoleSelect = useCallback(
-    (profile: ProfileIntakePayload) => {
+    (profile: ProfileIntakePayload, options?: { targetUserId?: string }) => {
       setActiveProfile(profile);
+      if (options?.targetUserId !== undefined) {
+        setTargetUserId(options.targetUserId || null);
+      }
       navigateToAnalysisIfNeeded();
       setActiveModal("role_select");
     },
@@ -108,6 +132,8 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
     setActiveModal(null);
     setWizardPrefillData(null);
     setShareRoadmapData(null);
+    setTargetUserId(null);
+    setTargetUserName(null);
   }, []);
 
   // Save active synthesized plan
@@ -126,6 +152,8 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
       setWizardPrefillData(null);
       setActiveProfile(null);
       setShareRoadmapData(null);
+      setTargetUserId(null);
+      setTargetUserName(null);
     }
   }, [isLoggedIn, activeModal]);
 
@@ -137,6 +165,8 @@ export function PlanModalProvider({ children }: { children: React.ReactNode }) {
         activePlan,
         wizardPrefillData,
         shareRoadmapData,
+        targetUserId,
+        targetUserName,
         openPathwaySelect,
         openUploadOption,
         openWizardOption,

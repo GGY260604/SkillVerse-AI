@@ -224,7 +224,7 @@ export default function UploadOptionModal() {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={openPathwaySelect}
+              onClick={() => openPathwaySelect()}
               disabled={isAnalyzing}
               className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
               aria-label={t("btn_back")}

@@ -40,7 +40,8 @@ const getDefaultLanguageForLocale = (loc: string) => {
 export default function WizardOptionModal() {
   const t = useTranslations("home.plan");
   const locale = useLocale();
-  const { activeModal, openPathwaySelect, openRoleSelect, closeModals } = usePlanModal();
+  const { activeModal, openPathwaySelect, openRoleSelect, closeModals, targetUserId, targetUserName } =
+    usePlanModal();
 
   // Multi-step index: 1 (Baseline), 2 (Skills & Toolchain), 3 (Future Aspirations), 4 (Learning Logistics)
   const [currentStep, setCurrentStep] = useState(1);
@@ -148,7 +149,8 @@ export default function WizardOptionModal() {
 
     async function loadSavedProfile() {
       try {
-        const res = await fetch("/api/profile", { cache: "no-store" });
+        const queryParam = targetUserId ? `?userId=${encodeURIComponent(targetUserId)}` : "";
+        const res = await fetch(`/api/profile${queryParam}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.profile && !isCancelled) {
@@ -177,7 +179,7 @@ export default function WizardOptionModal() {
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, locale, applyProfileToForm]);
+  }, [isOpen, targetUserId, locale, applyProfileToForm]);
 
   // Handle Escape key to dismiss modal
   useEffect(() => {
@@ -377,6 +379,7 @@ export default function WizardOptionModal() {
     setErrorMessage(null);
 
     const payload = {
+      targetUserId: targetUserId || undefined,
       employmentStatus,
       currentJobTitle: currentJobTitle.trim() || null,
       industry: industry || null,
@@ -409,7 +412,7 @@ export default function WizardOptionModal() {
 
       setSaveSuccess(true);
       setIsSubmitting(false);
-      openRoleSelect(payload as any);
+      openRoleSelect(payload as any, { targetUserId: targetUserId || undefined });
     } catch (err: any) {
       setIsSubmitting(false);
       setErrorMessage(err.message || "An unexpected error occurred while saving profile.");
@@ -437,7 +440,7 @@ export default function WizardOptionModal() {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={openPathwaySelect}
+              onClick={() => openPathwaySelect({ targetUserId: targetUserId || undefined, targetUserName: targetUserName || undefined })}
               disabled={isSubmitting}
               className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
               aria-label={t("btn_back")}
@@ -489,12 +492,19 @@ export default function WizardOptionModal() {
           <>
             {/* Brand & Header Title (Matches Option 1 Title/Subtitle Pattern) */}
             <div className="mb-6 shrink-0">
-          <h3 className="text-lg font-bold text-text-primary tracking-tight mb-1">
-            {currentStep === 1 && (locale === "zh" ? "1. 职业基础档案" : locale === "ms" ? "1. Garis Dasar Profesional" : "1. Professional Baseline")}
-            {currentStep === 2 && (locale === "zh" ? "2. 技能与技术工具栈" : locale === "ms" ? "2. Kemahiran & Rantaian Alat" : "2. Skills & Technical Toolchain")}
-            {currentStep === 3 && (locale === "zh" ? "3. 转型目标与职业抱负" : locale === "ms" ? "3. Aspirasi & Matlamat Kerjaya" : "3. Future Horizons & Career Goals")}
-            {currentStep === 4 && (locale === "zh" ? "4. 学习与培训规划" : locale === "ms" ? "4. Logistik Pembelajaran" : "4. Learning Logistics")}
-          </h3>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="text-lg font-bold text-text-primary tracking-tight">
+                {currentStep === 1 && (locale === "zh" ? "1. 职业基础档案" : locale === "ms" ? "1. Garis Dasar Profesional" : "1. Professional Baseline")}
+                {currentStep === 2 && (locale === "zh" ? "2. 技能与技术工具栈" : locale === "ms" ? "2. Kemahiran & Rantaian Alat" : "2. Skills & Technical Toolchain")}
+                {currentStep === 3 && (locale === "zh" ? "3. 转型目标与职业抱负" : locale === "ms" ? "3. Aspirasi & Matlamat Kerjaya" : "3. Future Horizons & Career Goals")}
+                {currentStep === 4 && (locale === "zh" ? "4. 学习与培训规划" : locale === "ms" ? "4. Logistik Pembelajaran" : "4. Learning Logistics")}
+              </h3>
+              {targetUserName && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-accent/15 text-accent border border-accent/30 font-semibold">
+                  Profile: {targetUserName}
+                </span>
+              )}
+            </div>
           <p className="text-xs text-text-secondary leading-relaxed">
             {currentStep === 1 && (locale === "zh" ? "明确您当前的职业状态、所在行业与资历背景。" : locale === "ms" ? "Tentukan kedudukan pekerjaan semasa, domain dan latar belakang pengalaman anda." : "Define your current occupational standing, domain, and experience background.")}
             {currentStep === 2 && (locale === "zh" ? "输入您的核心专业能力、技术工具、日常职责与语言掌握。" : locale === "ms" ? "Masukkan kecekapan teras, alatan teknikal, rutin harian dan bahasa anda." : "Input your core competencies, technical tools, daily routines, and languages.")}

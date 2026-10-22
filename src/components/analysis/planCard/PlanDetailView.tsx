@@ -10,6 +10,7 @@ interface PlanDetailViewProps {
   plan: PlanData;
   onBack?: () => void;
   isSharedView?: boolean;
+  canEdit?: boolean;
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
@@ -128,6 +129,7 @@ function getPhaseSdgDetails(
 export default function PlanDetailView({
   plan,
   isSharedView = false,
+  canEdit = true,
   onPhaseToggle,
 }: PlanDetailViewProps) {
   const tCurrent = useTranslations("analysis.current");
@@ -191,7 +193,7 @@ export default function PlanDetailView({
 
   // Toggle phase isCompleted status with optimistic UI update and database persistence
   const handleTogglePhase = async (phaseId: string) => {
-    if (!isCurrent || isSharedView) return;
+    if (!isCurrent || (isSharedView && !canEdit)) return;
 
     const targetPhase = phases.find((p) => p.id === phaseId);
     if (!targetPhase) return;
@@ -480,7 +482,7 @@ export default function PlanDetailView({
                         {tCurrent("skill_mastered")}
                       </span>
 
-                      {isCurrent && !isSharedView && (
+                      {isCurrent && (!isSharedView || canEdit) && (
                         <button
                           type="button"
                           onClick={() => {
@@ -497,13 +499,13 @@ export default function PlanDetailView({
                   ) : (
                     <button
                       type="button"
-                      disabled={!isCurrent || isSharedView || isUpdating}
+                      disabled={!isCurrent || (isSharedView && !canEdit) || isUpdating}
                       onClick={() => {
                         setActiveQuizPhase(phase);
                         setActiveQuizIndex(phaseIndex);
                       }}
                       className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wide transition-all duration-300 border cursor-pointer ${
-                        !isCurrent
+                        !isCurrent || (isSharedView && !canEdit)
                           ? "opacity-50 cursor-not-allowed bg-bg-secondary text-text-muted border-border-subtle"
                           : "bg-accent/15 hover:bg-accent text-accent hover:text-bg-primary border-accent/40 hover:border-accent hover:shadow-[0_0_15px_var(--accent-glow)]"
                       }`}
