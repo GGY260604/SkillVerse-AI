@@ -116,6 +116,10 @@ class AnalyzeResponsePayload(BaseModel):
     activeScenario: MacroScenario = Field(description="Active macro scenario")
     radarData: List[RadarAxisItem] = Field(default_factory=list, description="Data points for Recharts radar chart")
     topRoles: List[MatchedRole] = Field(default_factory=list, description="Ranked top 3-5 resilient future roles")
+    scenarioRoles: Optional[Dict[str, List[MatchedRole]]] = Field(
+        default=None,
+        description="Top matched roles evaluated across all macro scenarios (moderate, accelerated_ai, green_economy)",
+    )
     selectedRoleRoadmap: Optional[SelectedRoleRoadmap] = Field(
         default=None,
         description="Synthesized reskilling roadmap for the chosen role",

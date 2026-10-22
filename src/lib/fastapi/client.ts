@@ -183,6 +183,7 @@ export interface AnalyzeResponsePayload {
   activeScenario: "moderate" | "accelerated_ai" | "green_economy";
   radarData: RadarAxisItem[];
   topRoles: MatchedRole[];
+  scenarioRoles?: Record<"moderate" | "accelerated_ai" | "green_economy", MatchedRole[]>;
   selectedRoleRoadmap?: SelectedRoleRoadmap | null;
 }
 

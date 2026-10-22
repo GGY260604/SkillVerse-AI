@@ -446,7 +446,7 @@ async def evaluate_roles(
     profile: AnalyzeProfileData,
     scenario: MacroScenario,
     locale: str,
-) -> Tuple[List[MatchedRole], List[RadarAxisItem]]:
+) -> Tuple[List[MatchedRole], List[RadarAxisItem], Dict[str, List[MatchedRole]]]:
     """
     Computes deterministic role match scores, itemizes strengths/gaps/at-risk skills,
     applies scenario multipliers, and computes radar chart dimensions.
@@ -486,7 +486,7 @@ async def evaluate_roles(
     pgvector_rows = await query_supabase_pgvector(user_vector)
     pgvector_similarity_map = {r["role_id"]: float(r.get("similarity", 0.0)) for r in pgvector_rows} if pgvector_rows else {}
 
-    matched_roles: List[MatchedRole] = []
+    evaluated_candidates: List[Dict[str, Any]] = []
 
     # Pre-embed user skills for dynamic semantic similarity and cross-lingual evaluation (cached in memory)
     user_skill_vectors: Dict[str, List[float]] = {}
@@ -621,10 +621,6 @@ async def evaluate_roles(
             if target_norm in role_def["title"].lower() or role_def["title"].lower() in target_norm:
                 base_match = min(1.0, base_match + 0.15)
 
-        # Apply macro scenario multiplier
-        multiplier = role_def["scenarioMultipliers"].get(scenario, 1.0)
-        final_score = round(min(1.0, max(0.15, base_match * multiplier)), 3)
-
         # Pick localized title
         loc_title = role_def["titleLocalized"].get(locale, role_def["title"])
 
@@ -644,23 +640,50 @@ async def evaluate_roles(
                     )
                 )
 
-        matched_roles.append(
-            MatchedRole(
-                roleId=role_def["roleId"],
-                title=role_def["title"],
-                titleLocalized=loc_title,
-                industry=role_def["industry"],
-                matchScore=final_score,
-                scenarioMultiplierApplied=multiplier,
-                sdgAlignments=sdg_items,
-                matchedStrengths=matched_strengths,
-                skillsGap=skills_gap,
-                atRiskCompetencies=at_risk_items,
-            )
-        )
+        evaluated_candidates.append({
+            "roleId": role_def["roleId"],
+            "title": role_def["title"],
+            "titleLocalized": loc_title,
+            "industry": role_def["industry"],
+            "base_match": base_match,
+            "scenarioMultipliers": role_def["scenarioMultipliers"],
+            "sdgAlignments": sdg_items,
+            "matchedStrengths": matched_strengths,
+            "skillsGap": skills_gap,
+            "atRiskCompetencies": at_risk_items,
+        })
 
-    # Sort roles descending by matchScore
-    matched_roles.sort(key=lambda x: x.matchScore, reverse=True)
+    # Build Top 5 rankings for each macro scenario (moderate, accelerated_ai, green_economy)
+    scenario_roles: Dict[str, List[MatchedRole]] = {}
+    active_scenario_key = str(scenario.value if hasattr(scenario, "value") else scenario)
+    matched_roles: List[MatchedRole] = []
+
+    for scen_key in ["moderate", "accelerated_ai", "green_economy"]:
+        scen_list: List[MatchedRole] = []
+        for cand in evaluated_candidates:
+            multiplier = cand["scenarioMultipliers"].get(scen_key, 1.0)
+            final_score = round(min(1.0, max(0.15, cand["base_match"] * multiplier)), 3)
+            scen_list.append(
+                MatchedRole(
+                    roleId=cand["roleId"],
+                    title=cand["title"],
+                    titleLocalized=cand["titleLocalized"],
+                    industry=cand["industry"],
+                    matchScore=final_score,
+                    scenarioMultiplierApplied=multiplier,
+                    sdgAlignments=cand["sdgAlignments"],
+                    matchedStrengths=cand["matchedStrengths"],
+                    skillsGap=cand["skillsGap"],
+                    atRiskCompetencies=cand["atRiskCompetencies"],
+                )
+            )
+        scen_list.sort(key=lambda x: x.matchScore, reverse=True)
+        scenario_roles[scen_key] = scen_list[:5]
+        if scen_key == active_scenario_key:
+            matched_roles = scen_list
+
+    if not matched_roles and "moderate" in scenario_roles:
+        matched_roles = scenario_roles["moderate"]
 
     # Compute Radar Chart data comparing user baseline against top matched role
     top_role_def = next(
@@ -687,4 +710,4 @@ async def evaluate_roles(
     except Exception:
         pass
 
-    return matched_roles, radar_data
+    return matched_roles, radar_data, scenario_roles
