@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
-ENV ENABLE_LOCAL_BGE_M3=true
+ENV ENABLE_LOCAL_BGE_M3=false
 
 # Copy dependency definition and install
 COPY requirements.txt .
@@ -23,6 +23,6 @@ COPY . /app
 # Expose port (default 8000)
 EXPOSE 8000
 
-# Start Uvicorn ASGI server with root module path
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start Uvicorn ASGI server with dynamic port support (Render assigns $PORT)
+CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 

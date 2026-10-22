@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     # Gemini API Key Pool (Loads GEMINI_API_KEY_1 through GEMINI_API_KEY_50)
     GEMINI_API_KEYS: List[str] = []
     
-    # Supabase Configuration
-    SUPABASE_URL: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
+    # Supabase Configuration (supports both standard backend and NEXT_PUBLIC_ prefixes)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
     # RunPod GPU Inference Microservice (BAAI/bge-m3)
