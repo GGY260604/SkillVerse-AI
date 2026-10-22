@@ -1,8 +1,20 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from config import settings
 from routers.v1 import v1_router
+from services.http_client import get_shared_client, close_shared_client
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Eagerly initialize warm HTTP connection pool on startup
+    get_shared_client()
+    yield
+    # Gracefully close connections on shutdown
+    await close_shared_client()
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -14,6 +26,7 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure Cross-Origin Resource Sharing (CORS) for Next.js frontend

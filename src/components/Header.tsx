@@ -311,7 +311,9 @@ export default function Header() {
         <div className="pt-6 border-t border-border-subtle flex flex-col gap-4">
           {/* Language Switcher in Sidebar */}
           <div>
-            <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">Language</span>
+            <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">
+              {t("language")}
+            </span>
             <div className="grid grid-cols-3 bg-bg-card rounded-xl border border-border-subtle p-1 gap-1">
               {LOCALES.map(({ code, label }) => (
                 <button

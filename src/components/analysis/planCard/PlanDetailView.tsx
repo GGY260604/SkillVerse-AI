@@ -185,6 +185,47 @@ export default function PlanDetailView({
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
 
+  // Helper to resolve localized skill lists for active locale
+  const getSkillsForLocale = (
+    baseList: string[] = [],
+    msList?: string[],
+    zhList?: string[],
+    locMap?: { en?: string[]; ms?: string[]; zh?: string[]; [key: string]: string[] | undefined }
+  ): string[] => {
+    if (locale === "zh") {
+      if (Array.isArray(zhList) && zhList.length > 0) return zhList;
+      if (locMap?.zh && Array.isArray(locMap.zh) && locMap.zh.length > 0) return locMap.zh;
+    } else if (locale === "ms") {
+      if (Array.isArray(msList) && msList.length > 0) return msList;
+      if (locMap?.ms && Array.isArray(locMap.ms) && locMap.ms.length > 0) return locMap.ms;
+    }
+    if (locMap?.[locale] && Array.isArray(locMap[locale]) && locMap[locale]!.length > 0) {
+      return locMap[locale]!;
+    }
+    return baseList && baseList.length > 0 ? baseList : (locMap?.en || []);
+  };
+
+  const localizedMatchedStrengths = getSkillsForLocale(
+    plan.matchedStrengths,
+    plan.matchedStrengthsMs,
+    plan.matchedStrengthsZh,
+    plan.matchedStrengthsLocalized
+  );
+
+  const localizedSkillsGap = getSkillsForLocale(
+    plan.skillsGap,
+    plan.skillsGapMs,
+    plan.skillsGapZh,
+    plan.skillsGapLocalized
+  );
+
+  const localizedAtRiskSkills = getSkillsForLocale(
+    plan.atRiskSkills,
+    plan.atRiskSkillsMs,
+    plan.atRiskSkillsZh,
+    plan.atRiskSkillsLocalized
+  );
+
   // --- UI ---
   return (
     <div
@@ -229,7 +270,9 @@ export default function PlanDetailView({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
           <div className="lg:col-span-2">
             <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
-              {plan.roleCategory}
+              {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
+                ? tCurrent("role_category_default")
+                : plan.roleCategory}
             </span>
 
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
@@ -280,7 +323,10 @@ export default function PlanDetailView({
             </div>
 
             <span className="text-[11px] font-mono text-text-secondary font-medium">
-              {plan.roadmapWeeks} • {plan.roadmapHours}
+              {tCurrent("duration_summary", {
+                weeks: plan.roadmapWeeks?.replace(/\D/g, "") || "10",
+                hours: plan.roadmapHours?.replace(/\D/g, "") || "45",
+              })}
             </span>
           </div>
         </div>
@@ -301,20 +347,20 @@ export default function PlanDetailView({
         </div>
       </div>
 
-      {/* Skill Summary */}
-      <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain py-2 md:grid md:grid-cols-3 md:gap-8 md:overflow-visible">
+      {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
         {/* Matched Strengths */}
-        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
+        <div>
           <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
               {tCurrent("matched_strengths")}
             </h3>
             <span className="text-xs font-mono text-emerald-400 font-semibold">
-              {plan.matchedStrengths.length}
+              {localizedMatchedStrengths.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.matchedStrengths.map((skill) => (
+            {localizedMatchedStrengths.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <span className="text-text-primary font-medium">{skill}</span>
@@ -324,17 +370,17 @@ export default function PlanDetailView({
         </div>
 
         {/* Skills to Acquire */}
-        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
+        <div>
           <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
               {tCurrent("skills_gap")}
             </h3>
             <span className="text-xs font-mono text-amber-400 font-semibold">
-              {plan.skillsGap.length}
+              {localizedSkillsGap.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.skillsGap.map((skill) => (
+            {localizedSkillsGap.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
                 <span className="text-text-primary font-medium">{skill}</span>
@@ -343,18 +389,18 @@ export default function PlanDetailView({
           </ul>
         </div>
 
-        {/* At-Risk Skills */}
-        <div className="w-[85%] min-w-[210px] max-w-[340px] flex-none snap-start md:w-auto md:min-w-0 md:max-w-none">
+        {/* Automation Alerts */}
+        <div>
           <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
               {tCurrent("at_risk_skills")}
             </h3>
             <span className="text-xs font-mono text-rose-400 font-semibold">
-              {plan.atRiskSkills.length}
+              {localizedAtRiskSkills.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.atRiskSkills.map((skill) => (
+            {localizedAtRiskSkills.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
                 <span className="text-text-primary font-medium">{skill}</span>
@@ -371,7 +417,7 @@ export default function PlanDetailView({
             {tCurrent("roadmap_timeline")}
           </h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            {tCurrent("roadmap_instructions")}
+            Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.
           </p>
         </div>
 
@@ -405,7 +451,7 @@ export default function PlanDetailView({
                     >
                       {tCurrent("phase_label", { phase: phaseIndex })}
                     </span>
-                    <h4 className="min-w-0 break-words text-lg sm:text-xl font-bold text-text-primary tracking-tight">
+                    <h4 className="min-w-0 wrap-break-word text-lg sm:text-xl font-bold text-text-primary tracking-tight">
                       {phaseTitleLocalized}
                     </h4>
                   </div>
@@ -469,7 +515,7 @@ export default function PlanDetailView({
                 {/* Learning Content */}
                 <div className="flex snap-x snap-mandatory items-start gap-5 overflow-x-auto overscroll-x-contain pt-1 lg:grid lg:grid-cols-2 lg:gap-8 lg:overflow-visible">
                   {/* Learning Objectives List */}
-                  <div className="w-[85%] min-w-[230px] max-w-[380px] flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
+                  <div className="w-[85%] min-w-57.5 max-w-95 flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
@@ -487,7 +533,7 @@ export default function PlanDetailView({
                   </div>
 
                   {/* Recommended Courses List */}
-                  <div className="w-[85%] min-w-[230px] max-w-[380px] flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
+                  <div className="w-[85%] min-w-57.5 max-w-95 flex-none snap-start flex flex-col gap-3 lg:w-auto lg:min-w-0 lg:max-w-none">
                     <div className="flex items-center gap-2 pb-2 border-b border-border-subtle/50">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <h5 className="text-xs font-bold uppercase tracking-wider font-mono text-text-secondary">
@@ -506,10 +552,10 @@ export default function PlanDetailView({
                             >
                               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0">
-                                  <h6 className="break-words text-xs font-semibold text-text-primary tracking-tight">
+                                  <h6 className="wrap-break-word text-xs font-semibold text-text-primary tracking-tight">
                                     {courseTitle}
                                   </h6>
-                                  <span className="break-words text-[11px] font-mono text-text-muted">
+                                  <span className="wrap-break-word text-[11px] font-mono text-text-muted">
                                     {tCurrent("platform")}: <span className="text-text-secondary">{course.platform}</span>
                                     {course.durationHours &&
                                       ` • ${tCurrent("course_duration", {

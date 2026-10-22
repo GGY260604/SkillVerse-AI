@@ -50,7 +50,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
             </span>
             {plan.roleCategory && (
               <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
-                • {plan.roleCategory}
+                • {plan.roleCategory === "Target Horizon Role" ? tCurrent("role_category_default") : plan.roleCategory}
               </span>
             )}
           </div>
@@ -72,7 +72,12 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
               </p>
             )}
             <div className="flex items-center gap-3 mt-2 text-[11px] font-mono text-zinc-500 flex-wrap">
-              <span>{plan.roadmapWeeks} • {plan.roadmapHours}</span>
+              <span>
+                {tCurrent("duration_summary", {
+                  weeks: plan.roadmapWeeks?.replace(/\D/g, "") || "10",
+                  hours: plan.roadmapHours?.replace(/\D/g, "") || "45",
+                })}
+              </span>
               {plan.sdgs && plan.sdgs.length > 0 && (
                 <div className="flex items-center gap-1">
                   {plan.sdgs.map((sdg) => (
@@ -148,10 +153,12 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
         <div className="lg:col-span-2">
           <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
-            {plan.roleCategory}
+            {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
+              ? tCurrent("role_category_default")
+              : plan.roleCategory}
           </span>
 
-          <h3 className="break-words text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
+          <h3 className="wrap-break-word text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
             {displayRoleTitle}
           </h3>
 
@@ -199,7 +206,10 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
           </div>
 
           <span className="text-[11px] font-mono text-text-secondary font-medium">
-            {plan.roadmapWeeks} • {plan.roadmapHours}
+            {tCurrent("duration_summary", {
+              weeks: plan.roadmapWeeks?.replace(/\D/g, "") || "10",
+              hours: plan.roadmapHours?.replace(/\D/g, "") || "45",
+            })}
           </span>
         </div>
       </div>
@@ -209,7 +219,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
         {/* Roadmap Progress */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="shrink-0 whitespace-nowrap text-xs font-mono text-text-secondary">
-            <span className="hidden sm:inline">Progress: </span>
+            <span className="hidden sm:inline">{tCurrent("progress")}: </span>
             <strong className="text-text-primary">{completedCount} / {totalPhases}</strong>
           </span>
           <div className="h-1.5 min-w-10 max-w-36 flex-1 overflow-hidden rounded-full bg-border-subtle">

@@ -2,6 +2,7 @@ import math
 import httpx
 from typing import List, Optional
 from config import settings
+from services.http_client import get_shared_client
 
 
 async def get_embedding_from_runpod(text: str) -> Optional[List[float]]:
@@ -46,9 +47,9 @@ async def get_embedding_from_runpod(text: str) -> Optional[List[float]]:
         }
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            if response.status_code == 200:
+        client = get_shared_client(timeout=10.0)
+        response = await client.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
                 data = response.json()
                 
                 # Format A: RunPod Native runsync output wrapper {"output": [...]}
@@ -173,18 +174,18 @@ async def get_embedding_from_gemini(text: str) -> Optional[List[float]]:
             api_key = settings.GEMINI_API_KEYS[key_index]
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:embedContent?key={api_key}"
             try:
-                async with httpx.AsyncClient(timeout=4.0) as client:
-                    response = await client.post(url, json=payload)
-                    if response.status_code == 200:
-                        result = response.json()
-                        values = result.get("embedding", {}).get("values", [])
-                        if values:
-                            _active_embedding_key_index = key_index  # Remember working key!
-                            if len(values) < 1024:
-                                return values + [0.0] * (1024 - len(values))
-                            return values[:1024]
-                    elif response.status_code in [402, 429]:
-                        continue
+                client = get_shared_client(timeout=4.0)
+                response = await client.post(url, json=payload)
+                if response.status_code == 200:
+                    result = response.json()
+                    values = result.get("embedding", {}).get("values", [])
+                    if values:
+                        _active_embedding_key_index = key_index  # Remember working key!
+                        if len(values) < 1024:
+                            return values + [0.0] * (1024 - len(values))
+                        return values[:1024]
+                elif response.status_code in [402, 429]:
+                    continue
             except Exception:
                 continue
 

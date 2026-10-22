@@ -232,6 +232,65 @@ export function convertAssessmentToPlanData(
 
   const roleCodeSuffix = selectedRole.roleId.replace(/^role-|^custom-/, "").slice(0, 6).toUpperCase();
 
+  const createdRoadmap = (assessment as any).createdRoadmap;
+
+  const matchedStrengthsLocalized =
+    selectedRole.matchedStrengthsLocalized ||
+    createdRoadmap?.matchedStrengthsLocalized ||
+    createdRoadmap?.matched_strengths_localized;
+
+  const matchedStrengthsMs =
+    (selectedRole as any).matchedStrengthsMs ||
+    createdRoadmap?.matchedStrengthsMs ||
+    createdRoadmap?.matched_strengths_ms ||
+    matchedStrengthsLocalized?.ms ||
+    [];
+
+  const matchedStrengthsZh =
+    (selectedRole as any).matchedStrengthsZh ||
+    createdRoadmap?.matchedStrengthsZh ||
+    createdRoadmap?.matched_strengths_zh ||
+    matchedStrengthsLocalized?.zh ||
+    [];
+
+  const skillsGapLocalized =
+    selectedRole.skillsGapLocalized ||
+    createdRoadmap?.skillsGapLocalized ||
+    createdRoadmap?.skills_gap_localized;
+
+  const skillsGapMs =
+    (selectedRole as any).skillsGapMs ||
+    createdRoadmap?.skillsGapMs ||
+    createdRoadmap?.skills_gap_ms ||
+    skillsGapLocalized?.ms ||
+    [];
+
+  const skillsGapZh =
+    (selectedRole as any).skillsGapZh ||
+    createdRoadmap?.skillsGapZh ||
+    createdRoadmap?.skills_gap_zh ||
+    skillsGapLocalized?.zh ||
+    [];
+
+  const atRiskSkillsLocalized =
+    selectedRole.atRiskSkillsLocalized ||
+    createdRoadmap?.atRiskSkillsLocalized ||
+    createdRoadmap?.at_risk_skills_localized;
+
+  const atRiskSkillsMs =
+    (selectedRole as any).atRiskSkillsMs ||
+    createdRoadmap?.atRiskSkillsMs ||
+    createdRoadmap?.at_risk_skills_ms ||
+    atRiskSkillsLocalized?.ms ||
+    [];
+
+  const atRiskSkillsZh =
+    (selectedRole as any).atRiskSkillsZh ||
+    createdRoadmap?.atRiskSkillsZh ||
+    createdRoadmap?.at_risk_skills_zh ||
+    atRiskSkillsLocalized?.zh ||
+    [];
+
   return {
     id: assessment.assessmentId,
     isCurrent: true,
@@ -239,15 +298,26 @@ export function convertAssessmentToPlanData(
     date: dateStr,
     createdAt: dateStr,
     targetRole: selectedRole.titleLocalized || selectedRole.title,
+    targetTitleLocalized: (selectedRole as any).targetTitleLocalized || createdRoadmap?.targetTitleLocalized || undefined,
     roleCategory: selectedRole.industry || "Target Horizon Role",
     description: `Targeting ${selectedRole.titleLocalized || selectedRole.title} in ${selectedRole.industry}. Aligned with UN ${selectedRole.sdgAlignments?.map((s) => s.targetCode).join(", ") || "SDG 8.2"}.`,
+    descriptionLocalized: (selectedRole as any).descriptionLocalized || createdRoadmap?.descriptionLocalized || undefined,
     scenario: assessment.activeScenario,
     sdgs: selectedRole.sdgAlignments?.map((s) => s.targetCode) || ["SDG 8.2"],
     matchScore: Math.round(selectedRole.matchScore * 1000) / 10,
     matchScoreBasis: selectedRole.scenarioMultiplierApplied > 1 ? "BGE-M3 Vector + Scenario Multiplier" : "Soft Overlap + BGE-M3 Cosine",
     matchedStrengths: selectedRole.matchedStrengths || [],
+    matchedStrengthsMs,
+    matchedStrengthsZh,
+    matchedStrengthsLocalized,
     skillsGap: selectedRole.skillsGap || [],
+    skillsGapMs,
+    skillsGapZh,
+    skillsGapLocalized,
     atRiskSkills: selectedRole.atRiskCompetencies?.map((a) => a.skillName) || [],
+    atRiskSkillsMs,
+    atRiskSkillsZh,
+    atRiskSkillsLocalized,
     roadmapWeeks: `${totalWeeks} Weeks`,
     roadmapHours: `${totalHours} Total Hours`,
     phases: phases.length > 0 ? phases : [],

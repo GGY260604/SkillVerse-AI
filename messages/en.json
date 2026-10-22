@@ -320,7 +320,10 @@
       "roadmap_id": "Roadmap ID",
       "progress": "Progress",
       "phase_label": "Phase {phase}",
-      "phase_duration": "({weeks} weeks • {hours} hours)"
+      "phase_duration": "({weeks} weeks • {hours} hours)",
+      "duration_summary": "{weeks} Weeks • {hours} Total Hours",
+      "roadmap_timeline_subtitle": "Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.",
+      "role_category_default": "Target Horizon Role"
     },
     "history": {
       "badge": "SUPERSEDED • ARCHIVED",
@@ -369,7 +372,8 @@
     "loading_title": "Loading Shared Roadmaps",
     "loading_desc": "Retrieving peer roadmaps and synchronization status...",
     "btn_reset_demo": "Restore Demo Shared Users",
-    "back_to_shared": "← Back to Shared Roadmaps"
+    "back_to_shared": "← Back to Shared Roadmaps",
+    "retry": "Retry"
   },
   "auth": {
     "login": {
@@ -406,6 +410,7 @@
     "common": {
       "login_required": "Login Required",
       "login_required_description": "Please log in to access this page.",
+      "session_expired": "Your session has expired. Please sign in again to continue.",
       "go_home": "Go to Home",
       "login_to_continue": "Login to Continue",
       "email_label": "Email Address",
@@ -419,6 +424,11 @@
       "processing": "Working...",
       "verify_button": "Verify",
       "signin_link": "Sign in here",
+      "back": "Back",
+      "password_show": "Show password",
+      "password_hide": "Hide password",
+      "verification_code_sent": "Verification code dispatched to your email.",
+      "recovery_code_sent": "Password recovery code sent to your email.",
       "resend_code": "Resend Code",
       "resend_countdown": "Resend in {seconds}s",
       "errors": {
@@ -490,7 +500,13 @@
       "level_label": "Level {level}",
       "exp_progress_title": "Competency & EXP Progress",
       "total_exp": "Total EXP",
-      "exp_to_next": "{remaining} EXP to Lv.{nextLevel}"
+      "exp_to_next": "{remaining} EXP to Lv.{nextLevel}",
+      "level_title": "Level {level} ({currentExp}/100 EXP)",
+      "unsaved_changes": "Unsaved changes",
+      "no_email": "No email linked",
+      "uid_label": "UID:",
+      "copy_uid": "Copy UID",
+      "copied": "Copied!"
     },
     "exp_gain": {
       "level_up": "Level up",
@@ -553,14 +569,16 @@
       "login": "Login",
       "signup": "Sign Up",
       "profile": "Profile",
-      "logout": "Log Out"
+      "logout": "Log Out",
+      "language": "Language"
     },
     "footer": {
       "copyright": "SkillVerse AI",
       "hackathon": "Built for SDC Hackathon 2026",
       "author": "Presented by \"I Love You 3000\"",
       "tagline": "All content provided on this website is for reference purposes only; the final decision rests entirely with you.",
-      "github": "GitHub Repository"
+      "github": "GitHub Repository",
+      "license": "License"
     }
   },
   "profile": {

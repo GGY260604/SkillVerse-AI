@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/supabase/prisma";
-import { supabase } from "@/lib/supabase/client";
-import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
+import {
+  getAuthenticatedUser,
+  applyAuthCookies,
+  createUnauthorizedResponse,
+} from "@/lib/supabase/cookies";
 
 /**
  * PATCH /api/analysis/roadmaps/phase.
@@ -10,20 +13,9 @@ import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const { accessToken } = await getAuthTokensFromCookies();
-    if (!accessToken) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+    const { user, newTokens } = await getAuthenticatedUser();
+    if (!user) {
+      return createUnauthorizedResponse();
     }
 
     const body = await request.json();
@@ -50,13 +42,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const roadmapOwnerId = phase.roadmap.userId;
-    const isOwner = roadmapOwnerId === userData.user.id;
+    const isOwner = roadmapOwnerId === user.id;
     const editPermission =
       !isOwner && roadmapOwnerId
         ? await prisma.sharedRoadmap.findFirst({
             where: {
               ownerId: roadmapOwnerId,
-              targetUserId: userData.user.id,
+              targetUserId: user.id,
               roadmapId: phase.roadmapId,
               accessLevel: "editable",
             },
@@ -77,11 +69,12 @@ export async function PATCH(request: NextRequest) {
       data: { isCompleted },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       phaseId: updatedPhase.id,
       isCompleted: updatedPhase.isCompleted,
     });
+    return applyAuthCookies(response, newTokens);
   } catch (error: unknown) {
     console.error("[/api/analysis/roadmaps/phase] Error updating phase status:", error);
     return NextResponse.json(

@@ -38,12 +38,15 @@ class UserSkillItem(BaseModel):
     @classmethod
     def normalize_skill_data(cls, data: Any) -> Any:
         if isinstance(data, str):
-            clean = data.strip()
+            clean = data.strip() or "Competency"
+            from services.analyze.skill_translations import get_trilingual_skill
+            labels = get_trilingual_skill(clean)
             return {
                 "id": f"skill-{uuid.uuid4().hex[:8]}",
-                "name": clean or "Competency",
+                "name": labels.get("en") or clean,
                 "proficiency": SkillProficiency.INTERMEDIATE,
                 "isAiExtracted": True,
+                "localized_labels": labels,
             }
         if isinstance(data, dict):
             d = dict(data)
@@ -70,6 +73,21 @@ class UserSkillItem(BaseModel):
             # Ensure isAiExtracted flag
             if "isAiExtracted" not in d or d["isAiExtracted"] is None:
                 d["isAiExtracted"] = True
+
+            # Ensure trilingual localized_labels {en, ms, zh}
+            labels = d.get("localized_labels")
+            if not isinstance(labels, dict) or not labels.get("zh") or not labels.get("ms") or not labels.get("en"):
+                from services.analyze.skill_translations import get_trilingual_skill
+                auto_labels = get_trilingual_skill(d["name"])
+                if not isinstance(labels, dict):
+                    labels = auto_labels
+                else:
+                    labels = {
+                        "en": labels.get("en") or auto_labels["en"] or d["name"],
+                        "ms": labels.get("ms") or auto_labels["ms"] or d["name"],
+                        "zh": labels.get("zh") or auto_labels["zh"] or d["name"],
+                    }
+                d["localized_labels"] = labels
             return d
         return data
 

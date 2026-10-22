@@ -69,8 +69,17 @@ export interface PlanData {
   matchScore: number;
   matchScoreBasis: string;
   matchedStrengths: string[];
+  matchedStrengthsMs?: string[];
+  matchedStrengthsZh?: string[];
+  matchedStrengthsLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   skillsGap: string[];
+  skillsGapMs?: string[];
+  skillsGapZh?: string[];
+  skillsGapLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   atRiskSkills: string[];
+  atRiskSkillsMs?: string[];
+  atRiskSkillsZh?: string[];
+  atRiskSkillsLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   roadmapWeeks: string;
   roadmapHours: string;
   phases: PlanPhase[];

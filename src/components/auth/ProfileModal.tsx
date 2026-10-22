@@ -62,6 +62,13 @@ export default function ProfileModal() {
     }
   }, [isProfileModalOpen, user]);
 
+  // Auto-close ProfileModal when user session expires or logs out.
+  useEffect(() => {
+    if (isProfileModalOpen && !user) {
+      closeProfileModal();
+    }
+  }, [isProfileModalOpen, user, closeProfileModal]);
+
   // Handle Escape key to dismiss modal.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -220,7 +227,7 @@ export default function ProfileModal() {
                 </div>
                 <span
                   className="absolute -bottom-1 -right-1 px-1.5 py-0.5 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
-                  title={`Level ${level} (${currentLevelExp}/100 EXP)`}
+                  title={tProfile("level_title", { level, currentExp: currentLevelExp })}
                 >
                   Lv.{level}
                 </span>
@@ -231,7 +238,7 @@ export default function ProfileModal() {
                   {currentDisplayName}
                 </h3>
                 <p className="text-xs font-mono text-text-muted truncate mt-0.5">
-                  {user?.email || "No email linked"}
+                  {user?.email || tProfile("no_email")}
                 </p>
               </div>
             </div>
@@ -240,7 +247,7 @@ export default function ProfileModal() {
             {user?.id && (
               <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="uppercase text-[10px] tracking-wider text-zinc-500 font-semibold shrink-0">UID:</span>
+                  <span className="uppercase text-[10px] tracking-wider text-zinc-500 font-semibold shrink-0">{tProfile("uid_label")}</span>
                   <span className="text-zinc-400 select-all truncate">{user.id}</span>
                 </div>
                 <button
@@ -251,11 +258,11 @@ export default function ProfileModal() {
                     setTimeout(() => setCopiedUid(false), 2000);
                   }}
                   className="p-1 text-zinc-400 hover:text-accent transition-colors bg-transparent border-none cursor-pointer rounded flex items-center justify-center shrink-0"
-                  title="Copy UID"
-                  aria-label="Copy UID"
+                  title={tProfile("copy_uid")}
+                  aria-label={tProfile("copy_uid")}
                 >
                   {copiedUid ? (
-                    <span className="text-[10px] text-accent font-semibold">Copied!</span>
+                    <span className="text-[10px] text-accent font-semibold">{tProfile("copied")}</span>
                   ) : (
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -304,7 +311,7 @@ export default function ProfileModal() {
 
                 {isDirty && (
                   <span className="text-[10px] font-mono text-warning">
-                    Unsaved changes
+                    {tProfile("unsaved_changes")}
                   </span>
                 )}
               </div>

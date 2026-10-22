@@ -1,5 +1,6 @@
 import json
-from typing import List, Dict, Any
+import time
+from typing import List, Dict, Any, Tuple
 from schemas.analysis import (
     SelectedRoleRoadmap,
     RoadmapMilestone,
@@ -8,6 +9,10 @@ from schemas.analysis import (
     AnalyzeProfileData,
 )
 from services.gemini_service import call_gemini_with_fallback
+
+# In-memory TTL cache for synthesized reskilling roadmaps (30 minutes TTL)
+_pathway_cache: Dict[str, Tuple[SelectedRoleRoadmap, float]] = {}
+PATHWAY_CACHE_TTL = 1800.0
 
 
 PATHWAY_PROMPT_TEMPLATE = """
@@ -342,7 +347,21 @@ async def synthesize_pathway(
     Synthesizes a tailored trilingual reskilling roadmap using Gemini,
     grounding recommendations in free courses and Malaysian HRD Corp programs,
     and generating the UN SDG goal relationship explanations for every phase at once.
+    Caches results in-memory for 30 minutes for instantaneous (< 1ms) repeat retrievals.
     """
+    cache_key = (
+        f"{target_role.roleId}:"
+        f"{profile.weeklyCommitmentHours or '3-5'}:"
+        f"{(locale or 'en').lower().strip()}:"
+        f"{','.join(sorted([s.lower().strip() for s in target_role.skillsGap[:5]]))}"
+    )
+
+    now = time.time()
+    if cache_key in _pathway_cache:
+        cached_roadmap, timestamp = _pathway_cache[cache_key]
+        if now - timestamp < PATHWAY_CACHE_TTL:
+            return cached_roadmap
+
     target_sdgs_str = (
         ", ".join([s.targetCode for s in target_role.sdgAlignments])
         if target_role.sdgAlignments
@@ -459,11 +478,13 @@ async def synthesize_pathway(
             )
 
         if milestones:
-            return SelectedRoleRoadmap(
+            roadmap_result = SelectedRoleRoadmap(
                 targetRoleId=target_role.roleId,
                 totalWeeks=total_weeks,
                 milestones=milestones,
             )
+            _pathway_cache[cache_key] = (roadmap_result, now)
+            return roadmap_result
 
     except Exception as e:
         # Graceful fallback to guarantee zero crash

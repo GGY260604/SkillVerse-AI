@@ -4,6 +4,7 @@ import time
 import httpx
 from typing import List, Dict, Any, Tuple, Optional
 from config import settings
+from services.http_client import get_shared_client
 from services.embedding_service import generate_embedding, cosine_similarity, persist_embedding_cache
 from schemas.analysis import (
     MacroScenario,
@@ -12,6 +13,12 @@ from schemas.analysis import (
     AtRiskSkillItem,
     RadarAxisItem,
     AnalyzeProfileData,
+)
+from services.analyze.skill_translations import (
+    localize_skill_name,
+    warm_skills_cache_batch,
+    localize_skill_list_trilingual,
+    get_trilingual_skill,
 )
 
 
@@ -94,9 +101,9 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(endpoint, headers=headers)
-            if resp.status_code == 200:
+        client = get_shared_client(timeout=4.0)
+        resp = await client.get(endpoint, headers=headers)
+        if resp.status_code == 200:
                 rows = resp.json()
                 if isinstance(rows, list) and len(rows) > 0:
                     loaded: Dict[str, Dict[str, Any]] = {}
@@ -212,12 +219,12 @@ async def query_supabase_pgvector(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            response = await client.post(endpoint, json=payload, headers=headers)
-            if response.status_code == 200:
-                rows = response.json()
-                if isinstance(rows, list) and len(rows) > 0:
-                    return rows
+        client = get_shared_client(timeout=4.0)
+        response = await client.post(endpoint, json=payload, headers=headers)
+        if response.status_code == 200:
+            rows = response.json()
+            if isinstance(rows, list) and len(rows) > 0:
+                return rows
     except Exception:
         # Supabase migration not yet run or network offline -> seamlessly fallback
         pass
@@ -234,6 +241,7 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     """
     Fetches the active catalog of real ESCO occupational roles dynamically from Supabase.
     Caches in memory for 5 minutes for sub-millisecond retrieval.
+    Project only essential metadata columns to avoid transferring heavy 1024-dim embedding vectors.
     Falls back to FALLBACK_ROLES_CATALOG if offline.
     """
     global _cached_active_roles, _last_active_roles_fetch_time
@@ -248,16 +256,20 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     if base_url.endswith("/rest/v1"):
         base_url = base_url[:-8]
 
-    endpoint = f"{base_url}/rest/v1/esco_roles"
+    # Explicit column projection: Exclude heavy 1024-dim vector 'embedding' column from catalog queries
+    endpoint = (
+        f"{base_url}/rest/v1/esco_roles"
+        "?select=role_id,title,title_ms,title_zh,industry,required_skills,required_skills_localized,sdg_alignments,scenario_multipliers,radar_requirements"
+    )
     headers = {
         "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(endpoint, headers=headers)
-            if resp.status_code == 200:
+        client = get_shared_client(timeout=5.0)
+        resp = await client.get(endpoint, headers=headers)
+        if resp.status_code == 200:
                 rows = resp.json()
                 if isinstance(rows, list) and len(rows) > 0:
                     formatted = []
@@ -277,6 +289,7 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                             },
                             "industry": r["industry"],
                             "requiredSkills": r.get("required_skills", []),
+                            "requiredSkillsLocalized": r.get("required_skills_localized") or localize_skill_list_trilingual(r.get("required_skills", [])),
                             "sdgAlignments": r.get("sdg_alignments", []),
                             "scenarioMultipliers": r.get("scenario_multipliers", {
                                 "moderate": 1.0, "accelerated_ai": 1.0, "green_economy": 1.0
@@ -318,13 +331,15 @@ async def synthesize_on_demand_role(
         f"Role Title: \"{title}\"\n"
         f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
         f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
-        f"Generate a canonical competency profile for this role in strict JSON format:\n"
+        f"Generate a canonical competency profile for this role in strict JSON format with all titles and skills provided in English, Bahasa Melayu, and Simplified Chinese:\n"
         f"{{\n"
         f'  "title": "{title}",\n'
         f'  "title_ms": "Bahasa Melayu translation of title",\n'
         f'  "title_zh": "Simplified Chinese translation of title",\n'
         f'  "industry": "Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance / etc.",\n'
-        f'  "required_skills": ["top 6-8 essential professional skills required for this job"],\n'
+        f'  "required_skills": ["top 6-8 essential professional skills in English"],\n'
+        f'  "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order"],\n'
+        f'  "required_skills_zh": ["Simplified Chinese translations of the 6-8 skills in matching order"],\n'
         f'  "sdg_alignments": [\n'
         f'    {{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}}\n'
         f"  ],\n"
@@ -347,21 +362,44 @@ async def synthesize_on_demand_role(
         data = await call_gemini_json(contents=contents)
 
         parsed_title = data.get("title", title)
-        skills = data.get("required_skills", [f"{title} Operations", "Problem Solving", "Digital Collaboration"])
+        skills_en = data.get("required_skills", [f"{title} Operations", "Problem Solving", "Digital Collaboration"])
+        skills_ms = data.get("required_skills_ms") or []
+        skills_zh = data.get("required_skills_zh") or []
+
+        if not skills_ms or len(skills_ms) < len(skills_en):
+            skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
+        if not skills_zh or len(skills_zh) < len(skills_en):
+            skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
+
+        # Register newly synthesized competencies into the dynamic cache
+        from services.analyze.skill_translations import register_skill_translation
+        for i, s_en in enumerate(skills_en):
+            s_zh = skills_zh[i] if i < len(skills_zh) else s_en
+            s_ms = skills_ms[i] if i < len(skills_ms) else s_en
+            register_skill_translation(s_en, s_zh, s_ms)
+
         industry_val = data.get("industry", industry or "Cross-Industry")
 
         # 1024-dim embedding
-        emb_text = f"Occupational Title: {parsed_title}. Sector: {industry_val}. Essential Competencies: {', '.join(skills)}."
+        emb_text = f"Occupational Title: {parsed_title}. Sector: {industry_val}. Essential Competencies: {', '.join(skills_en)}."
         vector = await generate_embedding(emb_text)
 
-        # Build role record
+        # Build role record with trilingual required skills
+        localized_skills = {
+            "en": skills_en,
+            "ms": skills_ms,
+            "zh": skills_zh,
+        }
         role_record = {
             "role_id": role_id,
             "title": parsed_title,
             "title_ms": data.get("title_ms", parsed_title),
             "title_zh": data.get("title_zh", parsed_title),
             "industry": industry_val,
-            "required_skills": skills,
+            "required_skills": skills_en,
+            "required_skills_ms": skills_ms,
+            "required_skills_zh": skills_zh,
+            "required_skills_localized": localized_skills,
             "sdg_alignments": data.get("sdg_alignments", [{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}]),
             "scenario_multipliers": {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.15},
             "radar_requirements": data.get("radar_requirements", {
@@ -373,6 +411,7 @@ async def synthesize_on_demand_role(
             }),
             "embedding": vector,
         }
+
 
         # Async persist to Supabase esco_roles
         if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
@@ -386,10 +425,10 @@ async def synthesize_on_demand_role(
                 "Content-Type": "application/json",
                 "Prefer": "resolution=merge-duplicates",
             }
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(endpoint, json=role_record, headers=headers)
+            client = get_shared_client(timeout=5.0)
+            await client.post(endpoint, json=role_record, headers=headers)
 
-        return {
+        new_role_entry = {
             "roleId": role_id,
             "title": parsed_title,
             "titleLocalized": {
@@ -398,11 +437,18 @@ async def synthesize_on_demand_role(
                 "zh": role_record["title_zh"],
             },
             "industry": industry_val,
-            "requiredSkills": skills,
+            "requiredSkills": skills_en,
+            "requiredSkillsLocalized": localized_skills,
             "sdgAlignments": role_record["sdg_alignments"],
             "scenarioMultipliers": role_record["scenario_multipliers"],
             "radarRequirement": role_record["radar_requirements"],
         }
+
+        # Immediately register in-memory active roles cache for sub-millisecond retrieval
+        if _cached_active_roles:
+            _cached_active_roles.append(new_role_entry)
+
+        return new_role_entry
     except Exception:
         return None
 
@@ -479,6 +525,9 @@ async def evaluate_roles(
     DISALLOWED_TARGET_TITLES = {
         "none", "no", "n/a", "na", "experience", "experienced", "any", "not sure",
         "nil", "tiada", "belum", "tidak", "fresh", "student", "null", "undefined",
+        "all", "anything", "whatever", "any role", "flexible", "open",
+        "apa-apa", "apa sahaja", "sebarang", "tak kisah", "mana-mana",
+        "都可以", "随便", "任意", "无所谓", "没有", "看情况", "皆可", "不限",
     }
     if profile.targetJobTitle and profile.targetJobTitle.strip():
         target_clean = profile.targetJobTitle.strip()
@@ -486,11 +535,13 @@ async def evaluate_roles(
         clean_slug = target_norm.replace(" ", "-").replace("/", "-")
         expected_custom_id = f"custom-{clean_slug}"
 
-        if len(target_clean) >= 3 and target_norm not in DISALLOWED_TARGET_TITLES:
+        if len(target_clean) >= 2 and target_norm not in DISALLOWED_TARGET_TITLES:
             exists = any(
                 r["roleId"] == expected_custom_id
                 or target_norm in r["title"].lower()
                 or r["title"].lower() in target_norm
+                or (r.get("titleLocalized", {}).get("zh") and target_norm in r["titleLocalized"]["zh"].lower())
+                or (r.get("titleLocalized", {}).get("ms") and target_norm in r["titleLocalized"]["ms"].lower())
                 for r in active_roles
             )
             if not exists:
@@ -705,6 +756,14 @@ async def evaluate_roles(
             if item["is_target_role"]:
                 item["base_match"] = min(1.0, item["base_match"] + 0.25)
 
+    # Dynamic zero-shot skill cache warming for new or custom future competencies
+    top_skills_pool = []
+    for it in raw_evaluations[:10]:
+        top_skills_pool.extend(it.get("matched_strengths", []))
+        top_skills_pool.extend(it.get("skills_gap", []))
+    if top_skills_pool:
+        await warm_skills_cache_batch(top_skills_pool)
+
     # Package final evaluations for all active roles
     for item in raw_evaluations:
         role_def = item["role_def"]
@@ -730,6 +789,10 @@ async def evaluate_roles(
                     )
                 )
 
+        matched_loc = localize_skill_list_trilingual(item["matched_strengths"])
+        gap_loc = localize_skill_list_trilingual(item["skills_gap"])
+        at_risk_loc = localize_skill_list_trilingual([a.skillName for a in at_risk_items])
+
         evaluated_candidates.append({
             "roleId": role_def["roleId"],
             "title": role_def["title"],
@@ -738,9 +801,12 @@ async def evaluate_roles(
             "base_match": item["base_match"],
             "scenarioMultipliers": role_def["scenarioMultipliers"],
             "sdgAlignments": sdg_items,
-            "matchedStrengths": item["matched_strengths"],
-            "skillsGap": item["skills_gap"],
+            "matchedStrengths": matched_loc.get(locale, item["matched_strengths"]),
+            "matchedStrengthsLocalized": matched_loc,
+            "skillsGap": gap_loc.get(locale, item["skills_gap"]),
+            "skillsGapLocalized": gap_loc,
             "atRiskCompetencies": at_risk_items,
+            "atRiskSkillsLocalized": at_risk_loc,
         })
 
 
@@ -768,8 +834,11 @@ async def evaluate_roles(
                     scenarioMultiplierApplied=multiplier,
                     sdgAlignments=cand["sdgAlignments"],
                     matchedStrengths=cand["matchedStrengths"],
+                    matchedStrengthsLocalized=cand.get("matchedStrengthsLocalized"),
                     skillsGap=cand["skillsGap"],
+                    skillsGapLocalized=cand.get("skillsGapLocalized"),
                     atRiskCompetencies=cand["atRiskCompetencies"],
+                    atRiskSkillsLocalized=cand.get("atRiskSkillsLocalized"),
                 )
             )
         scen_list.sort(key=lambda x: x.matchScore, reverse=True)

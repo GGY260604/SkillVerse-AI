@@ -1,9 +1,14 @@
+import time
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from services.gemini_service import call_gemini_with_fallback
 from schemas.quiz import PhaseQuizRequest, PhaseQuizResponse, QuizQuestion
 
 logger = logging.getLogger("skillverse.quiz")
+
+# In-memory TTL cache for generated phase verification quizzes (1 hour TTL)
+_quiz_cache: Dict[str, Tuple[PhaseQuizResponse, float]] = {}
+QUIZ_CACHE_TTL = 3600.0
 
 QUIZ_SYSTEM_INSTRUCTION = """
 You are the Chief Technical Certification Auditor for SkillVerse AI.
@@ -151,7 +156,24 @@ async def generate_phase_quiz(request: PhaseQuizRequest) -> PhaseQuizResponse:
     """
     Generates a 10-question technical competency quiz using Gemini Flash,
     evaluating the skills declared in the phase and calibrating an EXP reward in steps of 5.
+    Caches results in-memory for 1 hour for instantaneous (< 1ms) repeat retrievals.
     """
+    # 1. Check in-memory cache for instant (< 1ms) retrieval on repeat requests
+    cache_key = (
+        f"{request.phaseIndex}:"
+        f"{(request.targetRole or '').lower().strip()}:"
+        f"{(request.courseTopic or '').lower().strip()}:"
+        f"{(request.locale or 'en').lower().strip()}:"
+        f"{','.join(sorted([s.lower().strip() for s in request.skills or []]))}"
+    )
+
+    now = time.time()
+    if not request.forceRefresh and cache_key in _quiz_cache:
+        cached_resp, timestamp = _quiz_cache[cache_key]
+        if now - timestamp < QUIZ_CACHE_TTL:
+            logger.info(f"Phase Quiz cache HIT for {cache_key} (age: {now - timestamp:.1f}s)")
+            return cached_resp
+
     skills_text = ", ".join(request.skills) if request.skills else "Core Modern Competencies"
     user_prompt = f"""
 Candidate Reskilling Context:
@@ -223,7 +245,7 @@ TASK:
             exp_tier = str(raw_response.get("expDifficultyTier", f"Phase {request.phaseIndex} Mastery ({exp_reward} EXP)"))
             eval_reason = str(raw_response.get("evaluationReason", f"Calibrated based on cognitive depth of {skills_text}."))
 
-            return PhaseQuizResponse(
+            result = PhaseQuizResponse(
                 phaseIndex=request.phaseIndex,
                 phaseTitle=request.phaseTitle,
                 expReward=exp_reward,
@@ -232,6 +254,8 @@ TASK:
                 passingScore=10,
                 questions=parsed_questions[:10],
             )
+            _quiz_cache[cache_key] = (result, now)
+            return result
         else:
             logger.warning("Gemini quiz output incomplete; returning deterministic fallback.")
             return _generate_fallback_quiz(request)

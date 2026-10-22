@@ -320,7 +320,10 @@
       "roadmap_id": "路线图 ID",
       "progress": "进度",
       "phase_label": "第 {phase} 阶段",
-      "phase_duration": "（{weeks} 周 • {hours} 小时）"
+      "phase_duration": "（{weeks} 周 • {hours} 小时）",
+      "duration_summary": "{weeks} 周 • 共 {hours} 小时",
+      "roadmap_timeline_subtitle": "遵循分阶段课程。完成每个阶段的 10 道 AI 能力评估题（需达到 10/10 分），以验证您的技能掌握程度并赚取升级经验值。",
+      "role_category_default": "目标前沿职位"
     },
     "history": {
       "badge": "已废弃 • 历史归档",
@@ -369,7 +372,8 @@
     "loading_title": "正在加载共享规划",
     "loading_desc": "正在同步并检索同行与团队成员共享的成长路线图...",
     "btn_reset_demo": "恢复演示用户数据",
-    "back_to_shared": "← 返回共享规划列表"
+    "back_to_shared": "← 返回共享规划列表",
+    "retry": "重试"
   },
   "auth": {
     "login": {
@@ -406,6 +410,7 @@
     "common": {
       "login_required": "需要登录",
       "login_required_description": "请登录以访问此页面。",
+      "session_expired": "您的登录会话已过期，请重新登录以继续操作。",
       "go_home": "返回首页",
       "login_to_continue": "登录以继续",
       "email_label": "电子邮箱",
@@ -419,6 +424,11 @@
       "processing": "处理中...",
       "verify_button": "验证",
       "signin_link": "前往登录",
+      "back": "返回",
+      "password_show": "显示密码",
+      "password_hide": "隐藏密码",
+      "verification_code_sent": "验证码已发送至您的邮箱。",
+      "recovery_code_sent": "密码重置验证码已发送至您的邮箱。",
       "resend_code": "重新发送",
       "resend_countdown": "{seconds} 秒后重新发送",
       "errors": {
@@ -490,7 +500,13 @@
       "level_label": "等级 Lv.{level}",
       "exp_progress_title": "技能经验（EXP）成长进度",
       "total_exp": "累计总经验",
-      "exp_to_next": "距升至 Lv.{nextLevel} 还需 {remaining} EXP"
+      "exp_to_next": "距升至 Lv.{nextLevel} 还需 {remaining} EXP",
+      "level_title": "等级 Lv.{level} ({currentExp}/100 经验值)",
+      "unsaved_changes": "未保存的更改",
+      "no_email": "未绑定邮箱",
+      "uid_label": "UID:",
+      "copy_uid": "复制 UID",
+      "copied": "已复制！"
     },
     "exp_gain": {
       "level_up": "等级提升",
@@ -553,14 +569,16 @@
       "login": "登录",
       "signup": "注册",
       "profile": "个人资料",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "language": "语言"
     },
     "footer": {
       "copyright": "SkillVerse AI",
       "hackathon": "为 SDC Hackathon 2026 打造",
       "author": "由 \"I Love You 3000\" 呈现",
       "tagline": "本网站提供的所有内容仅供参考；最终决定权完全在您手中。",
-      "github": "GitHub 仓库"
+      "github": "GitHub 仓库",
+      "license": "开源协议"
     }
   },
   "profile": {

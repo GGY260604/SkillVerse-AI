@@ -320,7 +320,10 @@
       "roadmap_id": "ID Pelan Hala Tuju",
       "progress": "Kemajuan",
       "phase_label": "Fasa {phase}",
-      "phase_duration": "({weeks} minggu • {hours} jam)"
+      "phase_duration": "({weeks} minggu • {hours} jam)",
+      "duration_summary": "{weeks} Minggu • {hours} Jumlah Jam",
+      "roadmap_timeline_subtitle": "Ikuti kurikulum berperingkat ini. Selesaikan penilaian kecekapan AI 10 soalan untuk setiap fasa (10/10 diperlukan) untuk mengesahkan penguasaan kemahiran anda dan memperoleh EXP tahap.",
+      "role_category_default": "Peranan Horizon Sasaran"
     },
     "history": {
       "badge": "DITINGGALKAN • DIARKIBKAN",
@@ -369,7 +372,8 @@
     "loading_title": "Memuatkan Pelan Dikongsi",
     "loading_desc": "Mendapatkan semula pelan kerjaya rakan sebaya dan status penyegerakan...",
     "btn_reset_demo": "Pulihkan Data Pengguna Demo",
-    "back_to_shared": "← Kembali ke Senarai Dikongsi"
+    "back_to_shared": "← Kembali ke Senarai Dikongsi",
+    "retry": "Cuba semula"
   },
   "auth": {
     "login": {
@@ -406,6 +410,7 @@
     "common": {
       "login_required": "Log Masuk Diperlukan",
       "login_required_description": "Sila log masuk untuk mengakses halaman ini.",
+      "session_expired": "Sesi anda telah tamat. Sila log masuk semula untuk meneruskan.",
       "go_home": "Ke Laman Utama",
       "login_to_continue": "Log Masuk untuk Meneruskan",
       "email_label": "Alamat Emel",
@@ -419,6 +424,11 @@
       "processing": "Memproses...",
       "verify_button": "Sahkan",
       "signin_link": "Log masuk di sini",
+      "back": "Kembali",
+      "password_show": "Tunjukkan kata laluan",
+      "password_hide": "Sembunyikan kata laluan",
+      "verification_code_sent": "Kod pengesahan telah dihantar ke e-mel anda.",
+      "recovery_code_sent": "Kod pemulihan kata laluan telah dihantar ke e-mel anda.",
       "resend_code": "Hantar Semula Kod",
       "resend_countdown": "Hantar semula dalam {seconds}s",
       "errors": {
@@ -490,7 +500,13 @@
       "level_label": "Tahap {level}",
       "exp_progress_title": "Kemajuan Kompetensi & EXP",
       "total_exp": "Jumlah EXP",
-      "exp_to_next": "{remaining} EXP ke Tahap {nextLevel}"
+      "exp_to_next": "{remaining} EXP ke Tahap {nextLevel}",
+      "level_title": "Tahap {level} ({currentExp}/100 EXP)",
+      "unsaved_changes": "Perubahan belum disimpan",
+      "no_email": "Tiada e-mel dipautkan",
+      "uid_label": "UID:",
+      "copy_uid": "Salin UID",
+      "copied": "Disalin!"
     },
     "exp_gain": {
       "level_up": "Naik tahap",
@@ -553,14 +569,16 @@
       "login": "Log Masuk",
       "signup": "Daftar",
       "profile": "Profil",
-      "logout": "Log Keluar"
+      "logout": "Log Keluar",
+      "language": "Bahasa"
     },
     "footer": {
       "copyright": "SkillVerse AI",
       "hackathon": "Dibina untuk SDC Hackathon 2026",
       "author": "Dipersembahkan oleh \"I Love You 3000\"",
       "tagline": "Semua kandungan yang disediakan di laman web ini adalah untuk rujukan sahaja; keputusan muktamad terletak sepenuhnya pada anda.",
-      "github": "Repositori GitHub"
+      "github": "Repositori GitHub",
+      "license": "Lesen"
     }
   },
   "profile": {

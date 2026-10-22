@@ -56,13 +56,24 @@ export interface MatchedRole {
   roleId: string;
   title: string;
   titleLocalized: string;
+  targetTitleLocalized?: { en?: string; ms?: string; zh?: string };
+  descriptionLocalized?: { en?: string; ms?: string; zh?: string };
   industry: string;
   matchScore: number;
   scenarioMultiplierApplied: number;
   sdgAlignments: SdgAlignmentItem[];
   matchedStrengths: string[];
+  matchedStrengthsMs?: string[];
+  matchedStrengthsZh?: string[];
+  matchedStrengthsLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   skillsGap: string[];
+  skillsGapMs?: string[];
+  skillsGapZh?: string[];
+  skillsGapLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   atRiskCompetencies: AtRiskSkillItem[];
+  atRiskSkillsMs?: string[];
+  atRiskSkillsZh?: string[];
+  atRiskSkillsLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
 }
 
 export interface RecommendedCourse {
