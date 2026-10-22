@@ -22,6 +22,11 @@ from services.analyze.matching_service import (
     synthesize_on_demand_role,
     compute_string_similarity,
 )
+from services.analyze.skill_translations import (
+    get_trilingual_skill,
+    localize_skill_list_trilingual,
+    warm_skills_cache_batch,
+)
 
 
 READINESS_LABELS = {
@@ -57,6 +62,138 @@ EFFORT_LABELS = {
         "en": "4-6 Weeks - Intensive",
         "ms": "4-6 Minggu - Latihan Intensif",
         "zh": "4-6 周 - 零基础强化",
+    },
+}
+
+STATUS_LABELS = {
+    SkillMatchStatus.MASTERED: {
+        "en": "Mastered",
+        "ms": "Dikuasai",
+        "zh": "已掌握",
+    },
+    SkillMatchStatus.GAP: {
+        "en": "Skill Gap",
+        "ms": "Jurang Kemahiran",
+        "zh": "能力差距",
+    },
+    SkillMatchStatus.CRITICAL_DEFICIT: {
+        "en": "Critical Deficit",
+        "ms": "Kekurangan Kritikal",
+        "zh": "严重短缺",
+    },
+}
+
+MATCH_TYPE_LABELS = {
+    "exact": {
+        "en": "Exact Lexical Overlap",
+        "ms": "Padanan Leksikal Tepat",
+        "zh": "精确词法匹配",
+    },
+    "token_jaccard": {
+        "en": "Token Jaccard Overlap",
+        "ms": "Pertindihan Token Jaccard",
+        "zh": "词元交集重叠匹配",
+    },
+    "semantic_bge_m3": {
+        "en": "BGE-M3 Dense Cosine Vector",
+        "ms": "Vektor Kosinus Padat BGE-M3",
+        "zh": "BGE-M3 语义向量相似匹配",
+    },
+    "unmatched": {
+        "en": "Unmatched Deficit",
+        "ms": "Kekurangan Belum Dipadankan",
+        "zh": "尚未匹配缺失能力",
+    },
+}
+
+PROFICIENCY_LABELS = {
+    "advanced": {
+        "en": "Advanced",
+        "ms": "Lanjutan",
+        "zh": "熟练精通",
+    },
+    "expert": {
+        "en": "Expert",
+        "ms": "Pakar",
+        "zh": "专家水平",
+    },
+    "senior": {
+        "en": "Senior",
+        "ms": "Kanan",
+        "zh": "资深资历",
+    },
+    "lead": {
+        "en": "Lead",
+        "ms": "Ketua",
+        "zh": "主导领军",
+    },
+    "intermediate": {
+        "en": "Intermediate",
+        "ms": "Sederhana",
+        "zh": "良好进阶",
+    },
+    "mid": {
+        "en": "Mid-Level",
+        "ms": "Tahap Pertengahan",
+        "zh": "中级水平",
+    },
+    "competent": {
+        "en": "Competent",
+        "ms": "Berwibawa",
+        "zh": "胜任合格",
+    },
+    "beginner": {
+        "en": "Beginner",
+        "ms": "Permulaan",
+        "zh": "初学基础",
+    },
+    "junior": {
+        "en": "Junior",
+        "ms": "Muda",
+        "zh": "入门基础",
+    },
+    "novice": {
+        "en": "Novice",
+        "ms": "Baharu",
+        "zh": "新手起步",
+    },
+}
+
+INDUSTRY_LABELS = {
+    "Responsible AI & Enterprise Digitalization": {
+        "en": "Responsible AI & Enterprise Digitalization",
+        "ms": "AI Bertanggungjawab & Pendigitalan Perusahaan",
+        "zh": "可信负责任 AI 与企业数字化",
+    },
+    "Responsible AI & Digital Transformation": {
+        "en": "Responsible AI & Digital Transformation",
+        "ms": "AI Bertanggungjawab & Transformasi Digital",
+        "zh": "负责任 AI 与数字化转型",
+    },
+    "Software Engineering & Modern Cloud": {
+        "en": "Software Engineering & Modern Cloud",
+        "ms": "Kejuruteraan Perisian & Awan Moden",
+        "zh": "软件工程与现代云架构",
+    },
+    "Clean Energy & Sustainable Infrastructure": {
+        "en": "Clean Energy & Sustainable Infrastructure",
+        "ms": "Tenaga Bersih & Infrastruktur Mampan",
+        "zh": "清洁能源与可持续基础设施",
+    },
+    "Clean Energy & ESG": {
+        "en": "Clean Energy & ESG",
+        "ms": "Tenaga Bersih & ESG",
+        "zh": "清洁能源与 ESG 可持续发展",
+    },
+    "Enterprise Custom Benchmark": {
+        "en": "Enterprise Custom Benchmark",
+        "ms": "Penanda Aras Khusus Perusahaan",
+        "zh": "企业自定义对标基准",
+    },
+    "General Technology": {
+        "en": "General Technology",
+        "ms": "Teknologi Umum",
+        "zh": "通用数字科技",
     },
 }
 
@@ -235,6 +372,7 @@ async def evaluate_team_skill_matrix(
 
     all_distinct_skills = list(set(req_skills) | all_candidate_skill_names)
     if all_distinct_skills:
+        await warm_skills_cache_batch(all_distinct_skills, locale=locale)
         all_vecs = await asyncio.gather(*(generate_embedding(s) for s in all_distinct_skills))
         global_skill_vectors: Dict[str, List[float]] = {
             s: v for s, v in zip(all_distinct_skills, all_vecs) if v
@@ -243,6 +381,21 @@ async def evaluate_team_skill_matrix(
         global_skill_vectors = {}
 
     req_skill_vectors = {r: global_skill_vectors.get(r) for r in req_skills if r in global_skill_vectors}
+
+    # Industry trilingual localization
+    industry_loc = INDUSTRY_LABELS.get(
+        role_industry,
+        {
+            "en": role_industry,
+            "ms": role_industry,
+            "zh": role_industry,
+        },
+    )
+    industry_display = industry_loc.get(locale, role_industry)
+
+    # Required competencies trilingual localization
+    req_skills_trilingual = localize_skill_list_trilingual(req_skills)
+    req_skills_display = req_skills_trilingual.get(locale, req_skills)
 
     # 3. Evaluate Each Candidate synchronously with zero per-candidate network awaits
     evaluated_candidates: List[TeamMemberAnalysis] = []
@@ -266,7 +419,6 @@ async def evaluate_team_skill_matrix(
         user_skill_vectors: Dict[str, List[float]] = {
             k: global_skill_vectors.get(k) for k in cand_keys if k in global_skill_vectors
         }
-
 
         skills_status_map: Dict[str, SkillEvaluationItem] = {}
         total_score_acc = 0.0
@@ -344,16 +496,57 @@ async def evaluate_team_skill_matrix(
             effort_labels = EFFORT_LABELS[status]
             effort_str = effort_labels.get(locale, effort_labels["en"])
 
-            skills_status_map[r_skill] = SkillEvaluationItem(
-                skillName=r_skill,
+            status_labels = STATUS_LABELS[status]
+            status_str = status_labels.get(locale, status_labels["en"])
+
+            r_skill_trilingual = get_trilingual_skill(r_skill)
+            matched_skill_trilingual = (
+                get_trilingual_skill(matched_skill_name) if matched_skill_name else None
+            )
+
+            prof_key = (matched_proficiency or "").lower()
+            prof_loc = (
+                PROFICIENCY_LABELS.get(
+                    prof_key,
+                    {"en": matched_proficiency, "ms": matched_proficiency, "zh": matched_proficiency},
+                )
+                if matched_proficiency
+                else None
+            )
+            prof_display = prof_loc.get(locale, matched_proficiency) if prof_loc else matched_proficiency
+
+            match_type_loc = MATCH_TYPE_LABELS.get(
+                match_type,
+                {"en": match_type, "ms": match_type, "zh": match_type},
+            )
+
+            eval_item = SkillEvaluationItem(
+                skillName=r_skill_trilingual.get(locale, r_skill),
+                skillNameLocalized=r_skill_trilingual,
                 status=status,
+                statusLabel=status_str,
+                statusLabelLocalized=status_labels,
                 score=round(skill_score, 2),
-                matchedUserSkill=matched_skill_name,
+                matchedUserSkill=matched_skill_trilingual.get(locale, matched_skill_name) if matched_skill_trilingual else None,
+                matchedUserSkillLocalized=matched_skill_trilingual,
                 matchType=match_type,
-                proficiency=matched_proficiency,
+                matchTypeLocalized=match_type_loc,
+                proficiency=prof_display,
+                proficiencyLocalized=prof_loc,
                 reskillEffortWeeks=effort_weeks,
                 reskillEffortLabel=effort_str,
+                reskillEffortLabelLocalized=effort_labels,
             )
+
+            # Map canonical English name as primary key, plus localized names so client lookups in any language succeed
+            skills_status_map[r_skill] = eval_item
+            if eval_item.skillName != r_skill:
+                skills_status_map[eval_item.skillName] = eval_item
+            if r_skill_trilingual.get("zh") and r_skill_trilingual["zh"] != r_skill:
+                skills_status_map[r_skill_trilingual["zh"]] = eval_item
+            if r_skill_trilingual.get("ms") and r_skill_trilingual["ms"] != r_skill:
+                skills_status_map[r_skill_trilingual["ms"]] = eval_item
+
             total_score_acc += skill_score
 
         # Calculate Overall Candidate Match
@@ -413,9 +606,11 @@ async def evaluate_team_skill_matrix(
         d_cnt = sum(1 for c in evaluated_candidates if c.skillsStatus[r_skill].status == SkillMatchStatus.CRITICAL_DEFICIT)
         def_pct = round(((g_cnt + d_cnt) / max(total_candidates, 1)) * 100, 1)
 
+        skill_trilingual = get_trilingual_skill(r_skill)
         deficit_metrics.append(
             SkillDeficitMetric(
-                skillName=r_skill,
+                skillName=skill_trilingual.get(locale, r_skill),
+                skillNameLocalized=skill_trilingual,
                 masteredCount=m_cnt,
                 gapCount=g_cnt,
                 deficitCount=d_cnt,
@@ -430,14 +625,34 @@ async def evaluate_team_skill_matrix(
                 for c in evaluated_candidates
                 if c.skillsStatus[r_skill].status in [SkillMatchStatus.GAP, SkillMatchStatus.CRITICAL_DEFICIT]
             ]
+            course_title_loc = {
+                "en": f"Professional Masterclass: {skill_trilingual['en']}",
+                "ms": f"Masterclass Profesional: {skill_trilingual['ms']}",
+                "zh": f"专业进阶大师课：{skill_trilingual['zh']}",
+            }
+            platform_loc = {
+                "en": "HRD Corp Claimable (Malaysia)",
+                "ms": "Boleh Dituntut HRD Corp (Malaysia)",
+                "zh": "马来西亚 HRD Corp 培训基金可申报",
+            }
+            duration_loc = {
+                "en": "16 Hours",
+                "ms": "16 Jam",
+                "zh": "16 学时",
+            }
             cohort_recommendations.append(
                 CohortTrainingRecommendation(
-                    skillName=r_skill,
-                    courseTitle=f"Professional Masterclass: {r_skill}",
-                    platform="HRD Corp Claimable (Malaysia)",
+                    skillName=skill_trilingual.get(locale, r_skill),
+                    skillNameLocalized=skill_trilingual,
+                    courseTitle=course_title_loc.get(locale, course_title_loc["en"]),
+                    courseTitleLocalized=course_title_loc,
+                    platform=platform_loc.get(locale, platform_loc["en"]),
+                    platformLocalized=platform_loc,
                     isHrdCorpClaimable=True,
                     isFree=False,
                     durationHours=16,
+                    durationHoursLabel=duration_loc.get(locale, duration_loc["en"]),
+                    durationHoursLabelLocalized=duration_loc,
                     targetTeamMembers=target_members,
                 )
             )
@@ -459,8 +674,10 @@ async def evaluate_team_skill_matrix(
         targetRoleId=role_id,
         targetRoleTitle=title_loc.get(locale, role_title),
         targetRoleTitleLocalized=title_loc,
-        industry=role_industry,
-        requiredSkills=req_skills,
+        industry=industry_display,
+        industryLocalized=industry_loc,
+        requiredSkills=req_skills_display,
+        requiredSkillsLocalized=req_skills_trilingual,
         candidates=evaluated_candidates,
         cohortSummary=cohort_summary,
         analyzedAt=datetime.now(timezone.utc).isoformat(),

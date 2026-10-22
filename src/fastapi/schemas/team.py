@@ -33,6 +33,26 @@ class SkillEvaluationItem(BaseModel):
         default=None,
         description="Candidate's claimed or evaluated proficiency: beginner, intermediate, advanced",
     )
+    proficiencyLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual candidate proficiency across en, ms, zh",
+    )
+    statusLabel: Optional[str] = Field(
+        default=None,
+        description="Localized status label in active locale",
+    )
+    statusLabelLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual status label across en, ms, zh",
+    )
+    matchedUserSkillLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual matched candidate skill name across en, ms, zh",
+    )
+    matchTypeLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual match mechanism label across en, ms, zh",
+    )
     reskillEffortWeeks: int = Field(
         default=0,
         description="Estimated reskilling duration in weeks needed to bridge this specific competency",
@@ -40,6 +60,10 @@ class SkillEvaluationItem(BaseModel):
     reskillEffortLabel: str = Field(
         default="0 Weeks - Ready",
         description="Human-friendly label describing reskilling runway",
+    )
+    reskillEffortLabelLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual reskill effort runway label across en, ms, zh",
     )
 
 
@@ -90,6 +114,10 @@ class TeamMemberAnalysis(BaseModel):
 
 class SkillDeficitMetric(BaseModel):
     skillName: str = Field(description="Required competency name")
+    skillNameLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual competency name across en, ms, zh",
+    )
     masteredCount: int = Field(description="Number of team members who have mastered this skill")
     gapCount: int = Field(description="Number of team members with a bridgeable gap")
     deficitCount: int = Field(description="Number of team members with critical deficit")
@@ -100,14 +128,34 @@ class SkillDeficitMetric(BaseModel):
 
 class CohortTrainingRecommendation(BaseModel):
     skillName: str = Field(description="Target skill for the cohort training module")
+    skillNameLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual competency name across en, ms, zh",
+    )
     courseTitle: str = Field(description="Recommended course or curriculum title")
+    courseTitleLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual course or curriculum title across en, ms, zh",
+    )
     platform: str = Field(description="Provider platform, e.g. HRD Corp Malaysia, Coursera, edX")
+    platformLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual training provider platform label across en, ms, zh",
+    )
     isHrdCorpClaimable: bool = Field(
         default=True,
         description="Whether this training can be claimed under Malaysian HRD Corp levy",
     )
     isFree: bool = Field(default=False, description="Whether free audit track is available")
     durationHours: int = Field(default=16, description="Total learning hours")
+    durationHoursLabel: Optional[str] = Field(
+        default=None,
+        description="Human-friendly duration label in active locale",
+    )
+    durationHoursLabelLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual duration label across en, ms, zh",
+    )
     targetTeamMembers: List[str] = Field(
         default_factory=list,
         description="List of candidate names who should participate in this training cohort",
@@ -162,8 +210,16 @@ class TeamSkillMatrixResponse(BaseModel):
         description="Localized role title across en, ms, zh",
     )
     industry: str = Field(description="Industry sector")
+    industryLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual industry sector: en, ms, zh",
+    )
     requiredSkills: List[str] = Field(
         description="The 5-8 essential required competencies for this benchmark role"
+    )
+    requiredSkillsLocalized: Optional[Dict[str, List[str]]] = Field(
+        default=None,
+        description="Trilingual required competencies: en, ms, zh",
     )
     candidates: List[TeamMemberAnalysis] = Field(
         description="Ranked candidate evaluations sorted from closest match to furthest"

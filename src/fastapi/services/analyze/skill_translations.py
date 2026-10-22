@@ -634,6 +634,86 @@ SKILL_TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "eBPF Kernel Observability (Cilium)": {
         "zh": "基于 eBPF 的 Linux 内核级可观测性 (Cilium)",
         "ms": "Kebolehcerapan Kernel eBPF (Cilium)"
+    },
+    "LLM Architecture & Fine-tuning": {
+        "zh": "大语言模型架构设计与微调",
+        "ms": "Seni Bina & Penalaan Halus Model Bahasa Besar (LLM)"
+    },
+    "Python & PyTorch": {
+        "zh": "Python 与 PyTorch 深度学习开发",
+        "ms": "Pembangunan Pembelajaran Mendalam Python & PyTorch"
+    },
+    "Vector Databases & RAG Pipelines": {
+        "zh": "向量数据库与 RAG 检索增强架构",
+        "ms": "Pangkalan Data Vektor & Saluran Paip RAG"
+    },
+    "Cloud Infrastructure & MLOps": {
+        "zh": "云原生基础设施与 MLOps 运维",
+        "ms": "Infrastruktur Awan & Operasi MLOps"
+    },
+    "AI Ethics & Governance Frameworks": {
+        "zh": "AI 伦理审查与合规治理框架",
+        "ms": "Etika AI & Rangka Kerja Tadbir Urus"
+    },
+    "React & Next.js": {
+        "zh": "React 与 Next.js 现代化前端开发",
+        "ms": "Pembangunan Frontend Moden React & Next.js"
+    },
+    "TypeScript & Node.js": {
+        "zh": "TypeScript 与 Node.js 全栈服务端开发",
+        "ms": "Pembangunan Penuh Tindanan TypeScript & Node.js"
+    },
+    "REST & GraphQL API Design": {
+        "zh": "RESTful 与 GraphQL 现代 API 架构设计",
+        "ms": "Reka Bentuk Seni Bina API REST & GraphQL"
+    },
+    "PostgreSQL & Vector Search": {
+        "zh": "PostgreSQL 关系型数据库与向量检索",
+        "ms": "Pangkalan Data PostgreSQL & Carian Vektor"
+    },
+    "Docker & CI/CD Pipelines": {
+        "zh": "Docker 容器化与 CI/CD 自动化流水线",
+        "ms": "Pengkontenaan Docker & Saluran Paip CI/CD"
+    },
+    "ESG Reporting & Compliance Standards": {
+        "zh": "ESG 可持续发展披露与合规标准",
+        "ms": "Piawaian Pelaporan & Pematuhan ESG"
+    },
+    "Python & Pandas": {
+        "zh": "Python 与 Pandas 数据清洗分析",
+        "ms": "Analisis Data Python & Pandas"
+    },
+    "Carbon Footprint Accounting": {
+        "zh": "企业组织碳足迹核算与碳盘查",
+        "ms": "Perakaunan Jejak Karbon Organisasi"
+    },
+    "SQL & Relational Databases": {
+        "zh": "SQL 查询优化与关系型数据库设计",
+        "ms": "Pertanyaan SQL & Pangkalan Data Hubungan"
+    },
+    "Power BI & ESG Dashboards": {
+        "zh": "Power BI 与 ESG 可视化分析看板",
+        "ms": "Papan Pemuka Visualisasi Power BI & ESG"
+    },
+    "Core Systems Architecture": {
+        "zh": "核心系统软件架构设计",
+        "ms": "Seni Bina Sistem Teras"
+    },
+    "Technical Problem Solving": {
+        "zh": "复杂技术攻关与问题解决",
+        "ms": "Penyelesaian Masalah Teknikal Kompleks"
+    },
+    "Modern Toolchain Mastery": {
+        "zh": "现代数字化工程工具链应用",
+        "ms": "Penguasaan Rantaian Alat Moden"
+    },
+    "Process Automation": {
+        "zh": "端到端业务与系统自动化",
+        "ms": "Automasi Proses Perniagaan & Sistem"
+    },
+    "Cross-functional Collaboration": {
+        "zh": "跨职能跨团队敏捷协作沟通",
+        "ms": "Kerjasama Rentas Fungsi"
     }
 }
 
