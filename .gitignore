@@ -50,3 +50,8 @@ env/
 venv/
 .venv/
 
+# local embedding cache
+src/fastapi/db/*.json
+*skill_embeddings_cache.json
+
+

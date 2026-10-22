@@ -138,37 +138,12 @@ def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
 
 
 _EMBEDDING_CACHE: Dict[str, List[float]] = {}
-_active_embedding_key_index = 4
-_cache_dirty = False
-
-# Auto-load precomputed skill embeddings cache on startup
-try:
-    import json
-    import os
-    _cache_file = os.path.join(os.path.dirname(__file__), "..", "db", "skill_embeddings_cache.json")
-    if os.path.exists(_cache_file):
-        with open(_cache_file, "r", encoding="utf-8") as _f:
-            _loaded_cache = json.load(_f)
-            for _k, _v in _loaded_cache.items():
-                _EMBEDDING_CACHE[_k.lower().strip()] = _v
-except Exception:
-    pass
+_active_embedding_key_index = 0
 
 
 def persist_embedding_cache():
-    """Flushes newly generated embeddings to the persistent JSON cache on disk."""
-    global _cache_dirty
-    if not _cache_dirty:
-        return
-    try:
-        import json
-        import os
-        _cache_file = os.path.join(os.path.dirname(__file__), "..", "db", "skill_embeddings_cache.json")
-        with open(_cache_file, "w", encoding="utf-8") as _f:
-            json.dump(_EMBEDDING_CACHE, _f)
-        _cache_dirty = False
-    except Exception:
-        pass
+    """No-op: In-memory RAM cache is maintained during runtime; disk writes disabled for stateless RunPod deployments."""
+    pass
 
 
 async def get_embedding_from_gemini(text: str) -> Optional[List[float]]:
@@ -225,7 +200,6 @@ async def generate_embedding(text: str) -> List[float]:
     3. Fallback: Google Gemini Embedding API (gemini-embedding-001 / 1024-dim).
     4. Failsafe fallback: Deterministic hash pseudo-vector (guarantees zero crashes).
     """
-    global _cache_dirty
     clean_text = text.lower().strip()
     if not clean_text:
         return [0.0] * 1024
@@ -260,7 +234,6 @@ async def generate_embedding(text: str) -> List[float]:
 
     # Store in memory cache
     _EMBEDDING_CACHE[clean_text] = vector
-    _cache_dirty = True
 
     return vector
 
