@@ -36,12 +36,22 @@ export async function POST(request: NextRequest) {
 
     // 1. Persist directly to public.users table in PostgreSQL (Prisma)
     try {
-      await prisma.user.updateMany({
+      await (prisma.user as any).updateMany({
         where: { id: userId },
         data: { exp: totalExp, level: calculatedLevel },
       });
     } catch (dbErr) {
-      console.warn("[/api/user/exp POST] public.users update warning:", dbErr);
+      console.warn("[/api/user/exp POST] public.users Prisma update warning:", dbErr);
+    }
+
+    // Direct fallback to Supabase admin client for public.users
+    try {
+      await admin
+        .from("users")
+        .update({ exp: totalExp, level: calculatedLevel })
+        .eq("id", userId);
+    } catch (adminErr) {
+      console.warn("[/api/user/exp POST] public.users Admin update warning:", adminErr);
     }
 
     // 2. Persist directly to auth.users (raw_user_meta_data) in PostgreSQL (Supabase Auth)
@@ -86,22 +96,47 @@ export async function GET() {
     }
 
     const userId = userData.user.id;
+    let dbUser: { exp?: number | null; level?: number | null } | null = null;
 
-    // Check public.users first
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { exp: true, level: true },
-    });
+    // 1. Try public.users via Prisma
+    try {
+      dbUser = await (prisma.user as any).findUnique({
+        where: { id: userId },
+        select: { exp: true, level: true },
+      });
+    } catch (prismaErr) {
+      console.warn("[/api/user/exp GET] Prisma query warning, trying admin client fallback:", prismaErr);
+    }
 
-    if (dbUser && typeof dbUser.exp === "number") {
+    // 2. Fallback to Supabase admin client if Prisma query returned null or threw
+    if (!dbUser) {
+      try {
+        const admin = createAdminClient();
+        const { data: adminUser } = await admin
+          .from("users")
+          .select("exp, level")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (adminUser) {
+          dbUser = adminUser;
+        }
+      } catch (adminErr) {
+        console.warn("[/api/user/exp GET] Admin client query warning:", adminErr);
+      }
+    }
+
+    if (dbUser && (typeof dbUser.exp === "number" || typeof dbUser.level === "number")) {
+      const dbExp = typeof dbUser.exp === "number" ? dbUser.exp : 0;
+      const dbLevel = typeof dbUser.level === "number" ? dbUser.level : Math.floor(dbExp / 100) + 1;
       return NextResponse.json({
         success: true,
-        totalExp: dbUser.exp,
-        level: dbUser.level,
+        totalExp: dbExp,
+        level: dbLevel,
       });
     }
 
-    // Fallback to auth.users user_metadata
+    // 3. Fallback to auth.users user_metadata
     const metadata = userData.user.user_metadata || {};
     const totalExp = typeof metadata.exp === "number" ? metadata.exp : 0;
     const level = typeof metadata.level === "number" ? metadata.level : Math.floor(totalExp / 100) + 1;
