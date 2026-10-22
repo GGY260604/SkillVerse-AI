@@ -8,6 +8,7 @@ interface PlanDetailViewProps {
   plan: PlanData;
   onBack?: () => void;
   isSharedView?: boolean;
+  canEdit?: boolean;
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
 }
 
@@ -35,6 +36,7 @@ function getLocalizedList(
 export default function PlanDetailView({
   plan,
   isSharedView = false,
+  canEdit = true,
   onPhaseToggle,
 }: PlanDetailViewProps) {
   const tCurrent = useTranslations("analysis.current");
@@ -56,7 +58,7 @@ export default function PlanDetailView({
 
   // Toggle phase isCompleted status with optimistic UI update and database persistence
   const handleTogglePhase = async (phaseId: string) => {
-    if (!isCurrent || isSharedView) return;
+    if (!isCurrent || (isSharedView && !canEdit)) return;
 
     const targetPhase = phases.find((p) => p.id === phaseId);
     if (!targetPhase) return;
@@ -340,13 +342,15 @@ export default function PlanDetailView({
                   {/* Clean Completion Checkbox Button */}
                   <button
                     type="button"
-                    disabled={!isCurrent || isSharedView || isUpdating}
+                    disabled={!isCurrent || (isSharedView && !canEdit) || isUpdating}
                     onClick={() => handleTogglePhase(phase.id)}
-                    className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer border ${
+                    className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all border ${
+                      !isCurrent || (isSharedView && !canEdit) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                    } ${
                       phase.isCompleted
                         ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
                         : "bg-bg-secondary hover:bg-bg-card text-text-secondary hover:text-text-primary border-border-subtle hover:border-accent/50"
-                    } ${!isCurrent ? "opacity-50 cursor-not-allowed" : ""}`}
+                    }`}
                   >
                     <span
                       className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${

@@ -21,6 +21,7 @@ export interface ExistPlanStateProps {
   currentPlan?: PlanData;
   historyPlans?: PlanData[];
   isSharedView?: boolean;
+  canEdit?: boolean;
   sharedUser?: SharedUserInfo;
   onBackToSharedList?: () => void;
   onPhaseToggle?: (phaseId: string, isCompleted: boolean) => void;
@@ -34,6 +35,7 @@ export default function ExistPlanState({
   currentPlan = CURRENT_PLAN,
   historyPlans = HISTORY_PLANS,
   isSharedView = false,
+  canEdit = true,
   sharedUser,
   onBackToSharedList,
   onPhaseToggle,
@@ -151,78 +153,94 @@ export default function ExistPlanState({
           ) : null}
 
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
-                {isSharedView && sharedUser ? `${sharedUser.name}'s Roadmap` : t("title")}
-              </h1>
-              {isSharedView && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-semibold bg-accent/10 text-accent border border-accent/25">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                  Peer Shared View
-                </span>
-              )}
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+              {isSharedView && sharedUser ? `${sharedUser.name}'s Roadmap` : t("title")}
+            </h1>
             <p className="text-xs sm:text-sm text-text-secondary mt-1">
               {isSharedView && sharedUser
-                ? `Shared by ${sharedUser.name} • ${sharedUser.role}${sharedUser.department ? ` (${sharedUser.department})` : ""} • Read-only Peer View`
+                ? `Shared by ${sharedUser.name} • ${sharedUser.role}${sharedUser.department ? ` (${sharedUser.department})` : ""}`
                 : t("subtitle")}
             </p>
           </div>
         </div>
 
         {/* Header Actions: Share Plan and Edit Plan Buttons */}
-        {/* Shown in non-shared view when in Overview or Current plan detail. Hidden in History mode and Shared mode. */}
-        {!isSharedView && (!selectedPlan || selectedPlan.isCurrent) && (
+        {/* Share button is NEVER rendered on shared view. */}
+        {(!selectedPlan || selectedPlan.isCurrent) && (
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Share Plan Action Button */}
-            <button
-              type="button"
-              onClick={() =>
-                openShareModal(
-                  selectedPlan?.id || activeCurrentPlan.id,
-                  selectedPlan?.targetRole || activeCurrentPlan.targetRole
-                )
-              }
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
-              title={t("share_plan")}
-            >
-              {/* Share Node Network SVG Icon */}
-              <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-              <span>{t("share_plan")}</span>
-            </button>
+            {/* Share Plan Action Button - Strictly hidden in all shared views */}
+            {!isSharedView && (
+              <button
+                type="button"
+                onClick={() =>
+                  openShareModal(
+                    selectedPlan?.id || activeCurrentPlan.id,
+                    selectedPlan?.targetRole || activeCurrentPlan.targetRole
+                  )
+                }
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+                title={t("share_plan")}
+              >
+                {/* Share Node Network SVG Icon */}
+                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+                <span>{t("share_plan")}</span>
+              </button>
+            )}
 
-            {/* Edit Plan Action Button (Pencil Icon) */}
-            <button
-              type="button"
-              onClick={openPathwaySelect}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
-              title={t("edit_plan")}
-            >
-              {/* Pencil SVG Icon */}
-              <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
-              </svg>
-              <span>{t("edit_plan")}</span>
-            </button>
-          </div>
-        )}
-
-        {/* Read-Only Pill Indicator for Shared View */}
-        {isSharedView && (
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border-subtle bg-bg-card/70 text-text-muted font-mono text-xs shadow-sm">
-            <span>🔒 Read-only Peer Access</span>
+            {/* Edit Plan Action Button */}
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSharedView && sharedUser?.id) {
+                    openPathwaySelect({
+                      targetUserId: sharedUser.id,
+                      targetUserName: sharedUser.name,
+                    });
+                  } else {
+                    openPathwaySelect();
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-primary hover:text-accent bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+                title={t("edit_plan")}
+              >
+                {/* Pencil SVG Icon */}
+                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+                <span>{t("edit_plan")}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold font-mono text-text-muted bg-bg-card/50 border border-border-subtle rounded-xl shadow-sm opacity-60 cursor-not-allowed select-none"
+                title="Viewable Only"
+              >
+                {/* Lock SVG Icon */}
+                <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                <span>Viewable Only</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -235,6 +253,7 @@ export default function ExistPlanState({
           plan={selectedPlan}
           onBack={() => setSelectedPlan(null)}
           isSharedView={isSharedView}
+          canEdit={canEdit}
           onPhaseToggle={handleInternalPhaseToggle}
         />
       ) : (

@@ -42,7 +42,7 @@ function getRoleReason(role: MatchedRole, locale: string): string {
 export default function RoleSelectorModal() {
   const locale = useLocale();
   const { user } = useAuth();
-  const { activeModal, activeProfile, openWizardOption, closeModals, saveActivePlan } =
+  const { activeModal, activeProfile, openWizardOption, closeModals, saveActivePlan, targetUserId } =
     usePlanModal();
 
   // Execution phases:
@@ -230,7 +230,7 @@ export default function RoleSelectorModal() {
       );
 
       const synthesizeReq = {
-        userId: user?.id,
+        userId: targetUserId || user?.id,
         sessionId: analysisResult?.sessionId,
         assessmentId: analysisResult?.assessmentId,
         locale,
