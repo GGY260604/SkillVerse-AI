@@ -43,6 +43,68 @@ function getRoleReason(role: MatchedRole, locale: string): string {
 
 // --- Role Selector Modal ---
 // Match prospective roles and synthesize a personalized learning roadmap.
+type MacroScenarioType = "moderate" | "accelerated_ai" | "green_economy";
+
+interface ScenarioConfig {
+  id: MacroScenarioType;
+  icon: string;
+  label: Record<string, string>;
+  description: Record<string, string>;
+  multiplierBadge: string;
+  badgeStyle: string;
+}
+
+const SCENARIO_OPTIONS: ScenarioConfig[] = [
+  {
+    id: "moderate",
+    icon: "🌐",
+    label: {
+      en: "Baseline",
+      ms: "Garis Dasar",
+      zh: "稳健基准",
+    },
+    description: {
+      en: "Standard economic growth trajectory (1.0x)",
+      ms: "Trajektori pertumbuhan ekonomi standard (1.0x)",
+      zh: "标准平稳经济增长预测轨迹 (1.0x)",
+    },
+    multiplierBadge: "1.0x",
+    badgeStyle: "bg-border-subtle/60 text-text-muted",
+  },
+  {
+    id: "accelerated_ai",
+    icon: "⚡",
+    label: {
+      en: "AI Surge",
+      ms: "Lonjakan AI",
+      zh: "AI 颠覆浪潮",
+    },
+    description: {
+      en: "Rapid AI & autonomous systems adoption (+15% Tech affinity)",
+      ms: "Penggunaan pesat AI & automasi (+15% afiniti teknologi)",
+      zh: "大模型与自动化智能体深度渗透 (+15% 技术亲和度)",
+    },
+    multiplierBadge: "+15% AI",
+    badgeStyle: "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30",
+  },
+  {
+    id: "green_economy",
+    icon: "🌿",
+    label: {
+      en: "Green / ESG",
+      ms: "Hijau / ESG",
+      zh: "绿色与 ESG",
+    },
+    description: {
+      en: "Net-zero transition & sustainability mandates (+15% ESG affinity)",
+      ms: "Peralihan sifar bersih & mandat kelestarian (+15% afiniti ESG)",
+      zh: "双碳绿色经济转型与可持续合规 (+15% ESG 亲和度)",
+    },
+    multiplierBadge: "+15% ESG",
+    badgeStyle: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+  },
+];
+
 export default function RoleSelectorModal() {
   // --- Context and Locale ---
   const locale = useLocale();
@@ -64,6 +126,7 @@ export default function RoleSelectorModal() {
 
   const [topRoles, setTopRoles] = useState<MatchedRole[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<MacroScenarioType>("moderate");
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResponsePayload | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -184,9 +247,12 @@ export default function RoleSelectorModal() {
         });
 
         if (!isCancelled && result && result.topRoles && result.topRoles.length > 0) {
-          setTopRoles(result.topRoles);
-          setSelectedRoleId(result.topRoles[0].roleId);
+          const scenarioKey = "moderate";
+          const rolesForScenario = result.scenarioRoles?.[scenarioKey] || result.topRoles;
+          setTopRoles(rolesForScenario);
+          setSelectedRoleId(rolesForScenario[0]?.roleId || null);
           setAnalysisResult(result);
+          setSelectedScenario("moderate");
           // Keep progress bar at 50% for user action
           setProgressPercent(50);
           setIsMatching(false);
@@ -209,6 +275,16 @@ export default function RoleSelectorModal() {
   }, [isOpen, activeProfile, locale]);
 
   // --- Role Selection Handler ---
+  // Handles user switching between simulation scenarios
+  const handleScenarioChange = (newScenario: MacroScenarioType) => {
+    setSelectedScenario(newScenario);
+    const candidateRoles = analysisResult?.scenarioRoles?.[newScenario] || analysisResult?.topRoles || topRoles;
+    setTopRoles(candidateRoles);
+    if (!candidateRoles.some((r) => r.roleId === selectedRoleId)) {
+      setSelectedRoleId(candidateRoles[0]?.roleId || null);
+    }
+  };
+
   // Stage 2: User explicitly confirms role selection and synthesizes roadmap
   const handleConfirmRole = async () => {
     if (!activeProfile || !selectedRoleId || isSynthesizing) return;
@@ -242,7 +318,7 @@ export default function RoleSelectorModal() {
         sessionId: analysisResult?.sessionId,
         assessmentId: analysisResult?.assessmentId,
         locale,
-        macroScenario: "moderate" as const,
+        macroScenario: selectedScenario,
         targetRoleId: chosenRole.roleId,
         profile: activeProfile,
         topRoles,
@@ -390,6 +466,50 @@ export default function RoleSelectorModal() {
               </p>
             </div>
 
+            {/* Macro Scenario Simulation Switcher */}
+            <div className="mb-4 shrink-0">
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="text-[11px] font-mono font-medium text-text-muted flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                  {locale === "zh"
+                    ? "未来宏观模拟情景"
+                    : locale === "ms"
+                    ? "Mod Simulasi Makro Masa Depan"
+                    : "Future Labor Market Scenario"}
+                </span>
+                <span className="text-[10px] font-mono text-text-muted hidden sm:inline-block">
+                  {SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.description[locale] ||
+                    SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.description.en}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-bg-secondary/40 border border-border-subtle">
+                {SCENARIO_OPTIONS.map((scen) => {
+                  const isActive = selectedScenario === scen.id;
+                  return (
+                    <button
+                      key={scen.id}
+                      type="button"
+                      onClick={() => handleScenarioChange(scen.id)}
+                      className={`py-2 px-2.5 rounded-lg text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        isActive
+                          ? "bg-accent/15 border-accent text-accent font-bold shadow-[0_0_12px_var(--accent-glow)]"
+                          : "border-transparent text-text-muted hover:text-text-primary hover:bg-bg-elevated/40"
+                      }`}
+                    >
+                      <span className="text-sm shrink-0">{scen.icon}</span>
+                      <span className="truncate">{scen.label[locale] || scen.label.en}</span>
+                      <span
+                        className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 hidden md:inline-block ${scen.badgeStyle}`}
+                      >
+                        {scen.multiplierBadge}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Error Message: Plain red text, no background, no border */}
             {errorMessage && (
               <p className="mb-3 text-xs text-rose-400 font-mono animate-fade-in shrink-0">
@@ -456,10 +576,10 @@ export default function RoleSelectorModal() {
             <div className="flex items-center justify-between pt-4 border-t border-border-subtle mt-4 shrink-0">
               <span className="text-[11px] font-mono text-text-muted">
                 {locale === "zh"
-                  ? "已选定 1 个职业方向"
+                  ? `已选定 1 个岗位（${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.zh || "稳健基准"}模式）`
                   : locale === "ms"
-                  ? "1 peranan dipilih"
-                  : "1 role selected"}
+                  ? `1 peranan dipilih (${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.ms || "Garis Dasar"})`
+                  : `1 role selected (${SCENARIO_OPTIONS.find((s) => s.id === selectedScenario)?.label.en || "Baseline"})`}
               </span>
 
               <button

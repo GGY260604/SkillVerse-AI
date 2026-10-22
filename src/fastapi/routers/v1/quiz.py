@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from schemas.quiz import PhaseQuizRequest, PhaseQuizResponse
-from services.quiz_service import generate_phase_quiz
+from services.quiz import generate_phase_quiz
 
 router = APIRouter(prefix="/quiz", tags=["Phase Mastery Quiz & Level Engine"])
 

@@ -12,8 +12,7 @@ from schemas.analysis import (
     SynthesizeRoadmapResponse,
     MatchedRole,
 )
-from services.matching_service import evaluate_roles
-from services.pathway_service import synthesize_pathway
+from services.analyze import evaluate_roles, synthesize_pathway
 
 router = APIRouter()
 
@@ -31,7 +30,7 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
     assessment_id = str(uuid.uuid4())
 
     # 1. Deterministic Role Matching & Radar Chart computation
-    matched_roles, radar_data = await evaluate_roles(
+    matched_roles, radar_data, scenario_roles = await evaluate_roles(
         profile=request.profile,
         scenario=request.macroScenario,
         locale=request.locale,
@@ -62,6 +61,7 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
         activeScenario=request.macroScenario,
         radarData=radar_data,
         topRoles=top_5_roles,
+        scenarioRoles=scenario_roles,
         selectedRoleRoadmap=roadmap,
     )
 
@@ -90,7 +90,7 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
             # Phase 3 & 4: Execute real role evaluation
             yield f"data: {json.dumps({'phase': 3, 'title': 'Occupational Taxonomy Search', 'detail': 'Querying Supabase HNSW pgvector index & calculating soft overlaps...', 'percent': 75})}\n\n"
 
-            matched_roles, radar_data = await evaluate_roles(
+            matched_roles, radar_data, scenario_roles = await evaluate_roles(
                 profile=request.profile,
                 scenario=request.macroScenario,
                 locale=request.locale,
@@ -110,6 +110,7 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
                 activeScenario=request.macroScenario,
                 radarData=radar_data,
                 topRoles=top_5_roles,
+                scenarioRoles=scenario_roles,
                 selectedRoleRoadmap=None,
             )
 
@@ -150,7 +151,7 @@ async def synthesize_selected_role_roadmap(request: SynthesizeRoadmapRequest):
 
     # If topRoles not provided or role not found in cached list, evaluate dynamically
     if not target_role:
-        matched_roles, radar_data = await evaluate_roles(
+        matched_roles, radar_data, _ = await evaluate_roles(
             profile=request.profile,
             scenario=request.macroScenario,
             locale=request.locale,

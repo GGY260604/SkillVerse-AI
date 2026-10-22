@@ -1,7 +1,7 @@
 import httpx
 from fastapi import APIRouter
 from config import settings
-from services.trend_sync_service import sync_live_trend_signals_to_supabase
+from services.trends import sync_live_trend_signals_to_supabase
 
 router = APIRouter()
 
