@@ -91,6 +91,10 @@ class RoadmapMilestone(BaseModel):
     learningObjectives: List[str] = Field(default_factory=list, description="Canonical objectives")
     objectivesLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual objectives: en, ms, zh")
     recommendedCourses: List[RecommendedCourse] = Field(default_factory=list)
+    sdgGoal: Optional[str] = Field(default="SDG 8.2", description="Associated UN SDG target code, e.g. SDG 4.4, SDG 8.2, SDG 9.4")
+    sdgTitle: Optional[str] = Field(default="Decent Work & Economic Productivity", description="Title of the associated UN SDG goal")
+    sdgExplanation: Optional[str] = Field(default=None, description="Explanation of how this phase connects to the UN SDG goal and protects from automation")
+    sdgExplanationLocalized: Optional[Dict[str, str]] = Field(default=None, description="Trilingual SDG explanation: en, ms, zh")
 
 
 class SelectedRoleRoadmap(BaseModel):

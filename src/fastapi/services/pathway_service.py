@@ -16,6 +16,7 @@ You are designing a personalized, progressive Reskilling Pathway for an individu
 
 CANDIDATE CONTEXT:
 - Target Role: {target_role_title} ({target_industry})
+- Target Role SDGs: {target_sdgs}
 - Skills to Acquire (Gap): {skills_gap}
 - Matched Strengths (Already Mastered): {matched_strengths}
 - Weekly Availability: {weekly_hours} hours per week
@@ -35,7 +36,12 @@ MANDATORY REQUIREMENTS:
 3. RECOMMENDED COURSES:
    - Recommend 1-2 realistic courses per phase (e.g. Coursera, edX, freeCodeCamp, DeepLearning.AI, HRD Corp Malaysia).
    - Mark whether isHrdCorpClaimable (boolean) and isFree (boolean).
-4. Output MUST be ONLY valid JSON matching this schema:
+4. UN SDG GOAL RELATION EXPLANATION (CRITICAL):
+   For EACH phase/milestone, you MUST identify the primary UN Sustainable Development Goal it aligns with (e.g. "SDG 4.4", "SDG 8.2", "SDG 9.4", "SDG 12.2") and provide a motivating, clear trilingual explanation in "sdgExplanationLocalized" with keys "en", "ms", and "zh":
+   - Explicitly connect the specific skills acquired in this milestone (e.g. data ingestion, production tools, or capstone architecture) to that SDG target.
+   - Explain how this phase shields the candidate from routine automation risk and elevates them to higher-productivity, sustainable economic work.
+   - Include "sdgGoal" (e.g. "SDG 4.4 & 8.2"), "sdgTitle", and "sdgExplanation" (canonical English summary).
+5. Output MUST be ONLY valid JSON matching this schema:
 {{
   "totalWeeks": 10,
   "milestones": [
@@ -87,7 +93,15 @@ MANDATORY REQUIREMENTS:
           "isFree": true,
           "durationHours": 12
         }}
-      ]
+      ],
+      "sdgGoal": "SDG 4.4 & 8.2",
+      "sdgTitle": "Technical & Vocational Skills for Decent Work",
+      "sdgExplanation": "Mastering the fundamental concepts directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient digital literacy.",
+      "sdgExplanationLocalized": {{
+        "en": "Mastering the fundamental concepts directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient digital literacy, shielding you from routine automation.",
+        "ms": "Menguasai kemahiran asas fasa ini memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin berisiko kepada literasi digital berdaya tahan.",
+        "zh": "掌握本阶段核心底层技术，直接契合联合国 SDG 4.4 与 SDG 8.2，将传统机械常规经验重塑为抗自动化替代的前沿数字素养。"
+      }}
     }}
   ]
 }}
@@ -100,6 +114,11 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
     second_gap = target_role.skillsGap[1] if len(target_role.skillsGap) > 1 else "Workflow Automation"
     role_name_en = target_role.title
     role_name_localized = target_role.titleLocalized or target_role.title
+    primary_role_sdg = (
+        target_role.sdgAlignments[0].targetCode
+        if target_role.sdgAlignments
+        else "SDG 8.2"
+    )
 
     m1_title_loc = {
         "en": "Phase 1: Foundation Core",
@@ -215,6 +234,14 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
                     durationHours=16,
                 ),
             ],
+            sdgGoal="SDG 4.4 & 8.2",
+            sdgTitle="Technical & Vocational Skills for Decent Work",
+            sdgExplanation=f"Mastering core fundamentals of {first_gap} advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy.",
+            sdgExplanationLocalized={
+                "en": f"Mastering core fundamentals of {first_gap} directly advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy, shielding you from routine automation.",
+                "ms": f"Menguasai asas teras {first_gap} memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin kepada literasi digital berdaya tahan.",
+                "zh": f"深入掌握 {first_gap} 核心理论基础直接契合联合国 SDG 4.4 与 SDG 8.2，将机械常规流程重塑为具备抗自动化韧性的数字化素养。",
+            },
         ),
         RoadmapMilestone(
             phaseIndex=2,
@@ -254,6 +281,14 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
                     durationHours=24,
                 ),
             ],
+            sdgGoal="SDG 9.4 & 8.2",
+            sdgTitle="Modern Infrastructure Upgrade & Sustainable Digital Innovation",
+            sdgExplanation=f"Applying modern toolchains like {second_gap} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
+            sdgExplanationLocalized={
+                "en": f"Applying modern toolchains like {second_gap} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
+                "ms": f"Mengaplikasikan alatan praktikal {second_gap} memenuhi UN SDG 9.4 dan SDG 8.2 dengan memodenkan aliran kerja manual dan memacu inovasi industri mampan.",
+                "zh": f"深入实操 {second_gap} 等现代工具链深度推进联合国 SDG 9.4 与 SDG 8.2，淘汰低效手工内耗，加速数字化基础设施改造与可持续技术升级。",
+            },
         ),
         RoadmapMilestone(
             phaseIndex=3,
@@ -280,6 +315,14 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
                     durationHours=20,
                 )
             ],
+            sdgGoal=primary_role_sdg,
+            sdgTitle="High-Value Economic Productivity & Standards Verification",
+            sdgExplanation=f"Delivering the {role_name_en} portfolio capstone directly achieves UN SDG 8.2 by certifying your capability for high-value economic productivity and sustainable career longevity.",
+            sdgExplanationLocalized={
+                "en": f"Delivering the {role_name_en} portfolio capstone directly achieves UN SDG 8.2 by certifying your capability for high-value economic productivity and sustainable career longevity.",
+                "ms": f"Menyempurnakan capstone industri untuk {role_name_localized} memenuhi UN SDG 8.2 secara langsung dengan memperakui keupayaan produktiviti bernilai tinggi anda.",
+                "zh": f"完成面向 {role_name_localized} 的综合实战作品集直接践行联合国 SDG 8.2，认证高附加值工程实战水准，实现高质量体面就业跃升。",
+            },
         ),
     ]
 
@@ -297,14 +340,22 @@ async def synthesize_pathway(
 ) -> SelectedRoleRoadmap:
     """
     Synthesizes a tailored trilingual reskilling roadmap using Gemini,
-    grounding recommendations in free courses and Malaysian HRD Corp programs.
+    grounding recommendations in free courses and Malaysian HRD Corp programs,
+    and generating the UN SDG goal relationship explanations for every phase at once.
     """
+    target_sdgs_str = (
+        ", ".join([s.targetCode for s in target_role.sdgAlignments])
+        if target_role.sdgAlignments
+        else "SDG 8.2, SDG 4.4, SDG 9.4"
+    )
+
     prompt = PATHWAY_PROMPT_TEMPLATE.format(
         target_role_title=target_role.title,
         target_industry=target_role.industry,
         skills_gap=", ".join(target_role.skillsGap[:5]) or "General Upgrading",
         matched_strengths=", ".join(target_role.matchedStrengths[:4]) or "Foundational experience",
         weekly_hours=profile.weeklyCommitmentHours or "3-5",
+        target_sdgs=target_sdgs_str,
     )
 
     contents = [{"parts": [{"text": prompt}]}]
@@ -357,6 +408,37 @@ async def synthesize_pathway(
             if not isinstance(objs_loc, dict):
                 objs_loc = {"en": objs, "ms": objs, "zh": objs}
 
+            # Extract trilingual SDG relationship explanations
+            role_sdg_default = (
+                target_role.sdgAlignments[0].targetCode
+                if target_role.sdgAlignments
+                else "SDG 8.2"
+            )
+            sdg_goal = m.get("sdgGoal") or (
+                "SDG 4.4 & 8.2" if idx == 1 else "SDG 9.4 & 8.2" if idx == 2 else role_sdg_default
+            )
+            sdg_title = m.get("sdgTitle") or (
+                "Technical & Vocational Skills for Decent Work"
+                if idx == 1
+                else "Modern Infrastructure Upgrade & Automation"
+                if idx == 2
+                else "High-Value Economic Productivity & Standards"
+            )
+
+            sdg_exp_loc = m.get("sdgExplanationLocalized")
+            if not isinstance(sdg_exp_loc, dict) or not sdg_exp_loc.get("en"):
+                p_en = t_loc.get("en", p_title)
+                p_ms = t_loc.get("ms", p_title)
+                p_zh = t_loc.get("zh", p_title)
+                raw_exp = m.get("sdgExplanation")
+                sdg_exp_loc = {
+                    "en": raw_exp
+                    or f"Mastering {p_en} competencies directly advances {sdg_goal} by upgrading routine tasks into resilient, non-automatable skills.",
+                    "ms": f"Menguasai kemahiran {p_ms} memacu {sdg_goal} secara langsung dengan menaik taraf tugas rutin kepada kemahiran berdaya tahan kalis automasi.",
+                    "zh": f"深入掌握「{p_zh}」阶段核心技能直接赋能 {sdg_goal}，将传统常规流程重塑为具备抗自动化韧性的前沿数字化认知底座。",
+                }
+            sdg_exp = m.get("sdgExplanation") or sdg_exp_loc.get("en", "")
+
             milestones.append(
                 RoadmapMilestone(
                     phaseIndex=int(m.get("phaseIndex", idx)),
@@ -369,6 +451,10 @@ async def synthesize_pathway(
                     learningObjectives=objs,
                     objectivesLocalized=objs_loc,
                     recommendedCourses=courses,
+                    sdgGoal=sdg_goal,
+                    sdgTitle=sdg_title,
+                    sdgExplanation=sdg_exp,
+                    sdgExplanationLocalized=sdg_exp_loc,
                 )
             )
 

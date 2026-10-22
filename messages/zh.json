@@ -127,7 +127,18 @@
       "at_risk_skills": "高自动化风险技能",
       "roadmap_timeline": "3阶段能力重塑路线图",
       "view_details": "查看完整详情",
-      "collapse_details": "收起详情"
+      "collapse_details": "收起详情",
+      "sdg_impact_label": "联合国可持续发展目标（SDG）赋能解析",
+      "sdg_why_relates": "本阶段技能如何赋能联合国 SDG 目标",
+      "sdg_hide_rationale": "收起 SDG 赋能解析",
+      "sdg_view_rationale": "展开 SDG 赋能解析",
+      "sdg_pillar_automation": "自动化替代防御",
+      "sdg_pillar_productivity": "高附加值生产力",
+      "sdg_pillar_sustainable": "可持续职业升级",
+      "answer_quiz": "作答技能测验",
+      "skill_mastered": "技能已掌握",
+      "retake_quiz": "重新测试",
+      "quiz_passing_req": "通关要求：必须全部 10 题答对方可认证掌握。"
     },
     "history": {
       "badge": "已废弃 • 历史归档",
@@ -274,7 +285,11 @@
       "save_success": "个人资料已成功更新！",
       "save_error": "更新失败，请重试。",
       "member_badge": "SkillVerse 认证成员",
-      "btn_close": "关闭"
+      "btn_close": "关闭",
+      "level_label": "等级 Lv.{level}",
+      "exp_progress_title": "技能经验（EXP）成长进度",
+      "total_exp": "累计总经验",
+      "exp_to_next": "距升至 Lv.{nextLevel} 还需 {remaining} EXP"
     }
   }
 }

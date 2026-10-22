@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useUserLevel } from "@/context/UserLevelContext";
 import Logo from "@/components/Logo";
 
 // Supported Languages Configuration
@@ -26,6 +27,7 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { user, isLoggedIn, isLoading, openAuthModal, openProfileModal, logout } = useAuth();
+  const { level, currentLevelExp } = useUserLevel();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -125,15 +127,25 @@ export default function Header() {
               <div className="h-9 w-20 rounded-lg bg-bg-card/40 animate-pulse border border-border-subtle/50" />
             ) : isLoggedIn ? (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={openProfileModal}
-                  aria-label={t("profile")}
-                  title={t("profile")}
-                  className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
-                >
-                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
-                </button>
+                <div className="relative inline-flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={openProfileModal}
+                    aria-label={t("profile")}
+                    title={`Level ${level} (${currentLevelExp}/100 EXP) - ${t("profile")}`}
+                    className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
+                  >
+                    {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                  </button>
+
+                  {/* Level Badge floating on top right upon the profile icon */}
+                  <span
+                    className="absolute -top-1.5 -right-2 px-1.5 py-0.5 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
+                    title={`Level ${level} (${currentLevelExp}/100 EXP)`}
+                  >
+                    Lv.{level}
+                  </span>
+                </div>
 
                 <button
                   type="button"
@@ -163,23 +175,59 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile Hamburger Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-            className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-bg-card border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-accent transition-all cursor-pointer"
-          >
-            {isMobileMenuOpen ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+          {/* Mobile Right Controls: Profile Icon & Hamburger Button */}
+          <div className="flex items-center gap-3 md:hidden">
+            {/* Mobile Profile Icon / Login Button */}
+            {isLoading ? (
+              <div className="w-8 h-8 rounded-full bg-bg-card/40 animate-pulse border border-border-subtle/50" />
+            ) : isLoggedIn ? (
+              <div className="relative inline-flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={openProfileModal}
+                  aria-label={t("profile")}
+                  title={`Level ${level} (${currentLevelExp}/100 EXP) - ${t("profile")}`}
+                  className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_12px_var(--accent-glow)] transition-all hover:scale-105 active:scale-95"
+                >
+                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                </button>
+
+                {/* Level Badge floating on top right upon the mobile profile icon */}
+                <span
+                  className="absolute -top-1.5 -right-2 px-1.2 py-0.2 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
+                  title={`Level ${level} (${currentLevelExp}/100 EXP)`}
+                >
+                  Lv.{level}
+                </span>
+              </div>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <button
+                type="button"
+                onClick={() => openAuthModal("login")}
+                className="px-3 py-1.5 text-xs font-semibold bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 font-mono shadow-[0_0_10px_var(--accent-glow)]"
+              >
+                {t("login")}
+              </button>
             )}
-          </button>
+
+            {/* Mobile Hamburger Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-bg-card border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-accent transition-all cursor-pointer"
+            >
+              {isMobileMenuOpen ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -287,7 +335,7 @@ export default function Header() {
             <div className="w-full h-12 rounded-xl bg-bg-card/40 animate-pulse border border-border-subtle/50" />
           ) : isLoggedIn ? (
             <div className="flex items-center gap-2">
-              {/* Profile Button with (S) Avatar */}
+              {/* Profile Button with (S) Avatar & Level Badge */}
               <button
                 type="button"
                 onClick={() => {
@@ -296,11 +344,19 @@ export default function Header() {
                 }}
                 className="flex-1 h-12 px-3 rounded-xl bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent text-text-primary flex items-center gap-2.5 min-w-0 cursor-pointer transition-all"
               >
-                <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shrink-0 shadow-[0_0_10px_var(--accent-glow)]">
-                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shadow-[0_0_10px_var(--accent-glow)]">
+                    {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <span className="absolute -top-1.5 -right-2 px-1.2 py-0.2 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none">
+                    Lv.{level}
+                  </span>
                 </div>
                 <div className="flex flex-col text-left min-w-0 flex-1">
-                  <span className="text-xs font-bold text-text-primary truncate">{user?.name || t("profile")}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-text-primary truncate">{user?.name || t("profile")}</span>
+                    <span className="text-[10px] font-mono text-accent font-bold">Lv.{level}</span>
+                  </div>
                   <span className="text-[10px] text-text-muted font-mono truncate">{user?.email}</span>
                 </div>
               </button>

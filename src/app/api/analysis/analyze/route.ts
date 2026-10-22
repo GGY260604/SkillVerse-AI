@@ -181,8 +181,22 @@ export async function POST(request: NextRequest) {
               m.description || learningObjectives[0] || "Foundational competency acquisition";
             const descriptionLocalized =
               typeof m.descriptionLocalized === "object" && m.descriptionLocalized !== null
-                ? m.descriptionLocalized
-                : { en: description, ms: description, zh: description };
+                ? {
+                    ...m.descriptionLocalized,
+                    ...(m.sdgGoal ? { sdgGoal: m.sdgGoal } : {}),
+                    ...(m.sdgTitle ? { sdgTitle: m.sdgTitle } : {}),
+                    ...(m.sdgExplanation ? { sdgExplanation: m.sdgExplanation } : {}),
+                    ...(m.sdgExplanationLocalized ? { sdgExplanationLocalized: m.sdgExplanationLocalized } : {}),
+                  }
+                : {
+                    en: description,
+                    ms: description,
+                    zh: description,
+                    ...(m.sdgGoal ? { sdgGoal: m.sdgGoal } : {}),
+                    ...(m.sdgTitle ? { sdgTitle: m.sdgTitle } : {}),
+                    ...(m.sdgExplanation ? { sdgExplanation: m.sdgExplanation } : {}),
+                    ...(m.sdgExplanationLocalized ? { sdgExplanationLocalized: m.sdgExplanationLocalized } : {}),
+                  };
 
             return {
               phaseIndex: Number(m.phaseIndex) || idx + 1,

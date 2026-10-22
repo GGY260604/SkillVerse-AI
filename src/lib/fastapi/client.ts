@@ -148,6 +148,10 @@ export interface RoadmapMilestone {
   learningObjectives: string[];
   objectivesLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
   recommendedCourses: RecommendedCourse[];
+  sdgGoal?: string;
+  sdgTitle?: string;
+  sdgExplanation?: string;
+  sdgExplanationLocalized?: { en?: string; ms?: string; zh?: string };
 }
 
 export interface SelectedRoleRoadmap {
@@ -395,6 +399,10 @@ export function convertAssessmentToPlanData(
       objectivesLocalized: m.objectivesLocalized,
       recommendedCourses: m.recommendedCourses,
       isCompleted: false,
+      sdgGoal: m.sdgGoal,
+      sdgTitle: m.sdgTitle,
+      sdgExplanation: m.sdgExplanation,
+      sdgExplanationLocalized: m.sdgExplanationLocalized,
     };
   });
 

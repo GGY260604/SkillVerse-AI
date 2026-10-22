@@ -33,6 +33,11 @@ from .replan import (
     ReplanRequestPayload,
     ShiftAdvisoryPayload,
 )
+from .quiz import (
+    QuizQuestion,
+    PhaseQuizRequest,
+    PhaseQuizResponse,
+)
 
 __all__ = [
     "EmploymentStatus",

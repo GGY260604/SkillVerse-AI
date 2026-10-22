@@ -18,6 +18,10 @@ model User {
   name                  String?
   locale                String        @default("en") // 'en' | 'ms' | 'zh'
   
+  // Progression & Leveling System
+  exp                   Int           @default(0)
+  level                 Int           @default(1)
+  
   // ==========================================
   // Profile Information
   // ==========================================

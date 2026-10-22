@@ -98,6 +98,10 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
       objectivesLocalized: p.objectivesLocalized || undefined,
       recommendedCourses: courses,
       isCompleted: Boolean(p.isCompleted),
+      sdgGoal: (p.descriptionLocalized as Record<string, unknown> | null)?.sdgGoal as string | undefined,
+      sdgTitle: (p.descriptionLocalized as Record<string, unknown> | null)?.sdgTitle as string | undefined,
+      sdgExplanation: (p.descriptionLocalized as Record<string, unknown> | null)?.sdgExplanation as string | undefined,
+      sdgExplanationLocalized: (p.descriptionLocalized as Record<string, unknown> | null)?.sdgExplanationLocalized as Record<string, string> | undefined,
     };
   });
 

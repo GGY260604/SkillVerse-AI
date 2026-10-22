@@ -127,7 +127,18 @@
       "at_risk_skills": "Automation Alerts",
       "roadmap_timeline": "3-Phase Reskilling Roadmap",
       "view_details": "View Full Details",
-      "collapse_details": "Collapse Details"
+      "collapse_details": "Collapse Details",
+      "sdg_impact_label": "UN SDG Impact & Alignment",
+      "sdg_why_relates": "Why this phase connects to UN SDGs",
+      "sdg_hide_rationale": "Hide SDG Alignment",
+      "sdg_view_rationale": "Explore SDG Alignment",
+      "sdg_pillar_automation": "Automation Shield",
+      "sdg_pillar_productivity": "Productivity Multiplier",
+      "sdg_pillar_sustainable": "Sustainable Future",
+      "answer_quiz": "Answer Quiz",
+      "skill_mastered": "Skill Mastered",
+      "retake_quiz": "Retake Quiz",
+      "quiz_passing_req": "Passing Requirement: 10/10 questions correct to verify mastery."
     },
     "history": {
       "badge": "SUPERSEDED • ARCHIVED",
@@ -272,9 +283,12 @@
       "btn_save": "Save Changes",
       "btn_saving": "Saving...",
       "save_success": "Profile name updated successfully!",
-      "save_error": "Failed to update profile. Please try again.",
       "member_badge": "SkillVerse Member",
-      "btn_close": "Close"
+      "btn_close": "Close",
+      "level_label": "Level {level}",
+      "exp_progress_title": "Competency & EXP Progress",
+      "total_exp": "Total EXP",
+      "exp_to_next": "{remaining} EXP to Lv.{nextLevel}"
     }
   }
 }

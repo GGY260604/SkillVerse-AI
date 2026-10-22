@@ -43,6 +43,10 @@ export interface PlanPhase {
   objectivesLocalized?: LocalizedListMap;
   recommendedCourses?: CourseItem[];
   isCompleted?: boolean;
+  sdgGoal?: string;
+  sdgTitle?: string;
+  sdgExplanation?: string;
+  sdgExplanationLocalized?: LocalizedStringMap;
   verifiedArtifact?: {
     name: string;
     score: number;
@@ -126,6 +130,13 @@ export const CURRENT_PLAN: PlanData = {
         "Implement Semantic Chunking and Vector Embeddings Benchmarks in Python",
         "Upload Coursera Certificate or Colab Notebook for AI Rubric Verification",
       ],
+      sdgGoal: "SDG 4.4 & 8.2",
+      sdgTitle: "Relevant Skills for Decent Work & Technical Literacy",
+      sdgExplanationLocalized: {
+        en: "Mastering mathematical foundation, transformer internals, and vector topologies upgrades routine manual computing habits into high-demand algorithmic literacy, directly advancing UN SDG 4.4 by equipping you with resilient, non-automatable cognitive competencies.",
+        ms: "Menguasai asas matematik, dalaman transformer, dan topologi vektor menaik taraf kemahiran pengkomputeran rutin kepada literasi algoritma permintaan tinggi, memajukan UN SDG 4.4 secara langsung dengan membekalkan anda kecekapan kognitif kalis automasi.",
+        zh: "深入掌握 Transformer 内部机制、数学底层与向量拓扑，将传统的常规机械式编码习惯重构为前沿算法思维，直接践行联合国 SDG 4.4（提升优质体面就业技能），为抵御自动化替代构筑核心认知壁垒。"
+      },
     },
     {
       id: "phase-2",
@@ -142,6 +153,13 @@ export const CURRENT_PLAN: PlanData = {
         "Develop Multi-Agent Orchestration Workflow with LangChain & LangSmith",
         "Upload Source Code Archive (.zip) or Completion Proof for AI Certification",
       ],
+      sdgGoal: "SDG 9.4 & 8.2",
+      sdgTitle: "Modern Infrastructure Upgrade & Sustainable Digital Innovation",
+      sdgExplanationLocalized: {
+        en: "Building production hybrid search with Supabase pgvector and agentic orchestration modernizes legacy enterprise software architecture, aligning directly with UN SDG 9.4 through resource-efficient cloud deployments and sustainable digital infrastructure.",
+        ms: "Membina carian hibrid pengeluaran menggunakan Supabase pgvector dan orkestrasi ejen memodenkan seni bina perisian perusahaan lama, sejajar dengan UN SDG 9.4 melalui penggunaan awan yang cekap sumber dan infrastruktur digital mampan.",
+        zh: "基于 Supabase pgvector 构建混合向量检索与智能体编排，赋能传统企业软件架构的现代化升级，深度契合联合国 SDG 9.4（工业数字化基础设施改造与可持续技术升级），大幅提升系统能效与业务响应敏捷度。"
+      },
     },
     {
       id: "phase-3",
@@ -158,6 +176,13 @@ export const CURRENT_PLAN: PlanData = {
         "Execute Live Latency (<50ms P95) & High-Concurrency Load Testing",
         "Upload Architecture Defense Artifact & Live System Telemetry Report",
       ],
+      sdgGoal: "SDG 8.2 & 12.2",
+      sdgTitle: "High-Value Economic Productivity & Standards Verification",
+      sdgExplanationLocalized: {
+        en: "Deploying enterprise-grade resilient AI microservices with GPU scheduling demonstrates high-value innovation, directly achieving UN SDG 8.2 by multiplying economic productivity and shielding professionals into sustainable, top-tier compensation roles.",
+        ms: "Menggunakan mikroperkhidmatan AI berdaya tahan gred perusahaan dengan penjadualan GPU membuktikan inovasi bernilai tinggi, mencapai UN SDG 8.2 secara langsung dengan menggandakan produktiviti ekonomi dan melindungi pekerja ke arah peranan bergaji tinggi yang mampan.",
+        zh: "部署生产级高可用 AI 微服务与 GPU 调度工程，以过硬的实战交付物直接践行联合国 SDG 8.2（通过高新技术升级实现高水平经济生产力与体面就业），彻底完成从传统开发向顶尖架构师的高薪可持续跃升。"
+      },
     },
   ],
 };
