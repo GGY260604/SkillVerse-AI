@@ -28,6 +28,7 @@ import {
   getLocalized,
   getSectorLocalizedLabel,
   normalizeProfileForForm,
+  normalizeEmploymentStatus,
 } from "@/lib/profileNormalization";
 
 const getDefaultLanguageForLocale = (loc: string) => {
@@ -363,22 +364,36 @@ export default function WizardOptionModal() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const sanitizedSkills: UserSkillItem[] = (skills || []).map((s, idx) => ({
+      id: s.id || `skill-${Date.now()}-${idx}`,
+      name: s.name?.trim() || "Competency",
+      proficiency: s.proficiency || "intermediate",
+      escoUri: s.escoUri || null,
+      isAiExtracted: s.isAiExtracted ?? true,
+    }));
+
+    const sanitizedEmploymentStatus =
+      normalizeEmploymentStatus(employmentStatus) || "employed_at_risk";
+
     const profilePayload: ProfileIntakePayload = {
-      employmentStatus,
+      employmentStatus: sanitizedEmploymentStatus,
       currentJobTitle: currentJobTitle.trim() || null,
       industry: industry || null,
       educationLevel: educationLevel || null,
       yearsOfExperience: yearsOfExperience || null,
-      skills,
+      skills: sanitizedSkills,
       toolsAndSoftware,
       casualDescription: casualDescription.trim() || null,
       languages,
-      careerGoal,
+      careerGoal: careerGoal || "explore",
       targetSectors,
       targetJobTitle: targetJobTitle.trim() || null,
-      workArrangement,
-      weeklyCommitmentHours,
-      learningProviders,
+      workArrangement: workArrangement || "any",
+      weeklyCommitmentHours: weeklyCommitmentHours || "3-5",
+      learningProviders:
+        learningProviders.length > 0
+          ? learningProviders
+          : ["free_open", "hrd_corp"],
       outputLanguage: locale || "en",
     };
     const requestPayload = {

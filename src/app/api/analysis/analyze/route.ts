@@ -100,7 +100,17 @@ export async function POST(request: NextRequest) {
               });
 
               if (!response.ok || !response.body) {
-                lastStreamError = `Tier ${target.tier} returned status ${response.status}${response.body ? "" : " without a response body"}.`;
+                let errorDetails = "";
+                try {
+                  const errorText = await response.text();
+                  errorDetails = errorText ? `: ${errorText}` : "";
+                } catch {
+                  // ignore
+                }
+                console.error(
+                  `[/api/analysis/analyze] FastAPI stream target '${target.tier}' failed with status ${response.status}${errorDetails}`
+                );
+                lastStreamError = `Tier ${target.tier} returned status ${response.status}${errorDetails}`;
                 void response.body?.cancel().catch(() => {});
                 continue;
               }

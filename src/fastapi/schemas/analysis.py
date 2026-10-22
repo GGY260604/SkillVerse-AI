@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from .profile import UserSkillItem
 
 
@@ -11,13 +11,14 @@ class MacroScenario(str, Enum):
 
 
 class AnalyzeProfileData(BaseModel):
-    employmentStatus: str = Field(default="employed_at_risk")
+    employmentStatus: Optional[str] = Field(default="employed_at_risk")
     currentJobTitle: Optional[str] = None
     industry: Optional[str] = None
     educationLevel: Optional[str] = None
     yearsOfExperience: Optional[str] = None
     skills: List[UserSkillItem] = Field(default_factory=list)
     toolsAndSoftware: Optional[List[str]] = Field(default_factory=list)
+    casualDescription: Optional[str] = None
     languages: Optional[List[str]] = Field(default_factory=list)
     careerGoal: Optional[str] = Field(default="explore")
     targetSectors: Optional[List[str]] = Field(default_factory=list)
@@ -26,6 +27,34 @@ class AnalyzeProfileData(BaseModel):
     weeklyCommitmentHours: Optional[str] = Field(default="3-5")
     learningProviders: Optional[List[str]] = Field(default_factory=lambda: ["free_open", "hrd_corp"])
     outputLanguage: Optional[str] = Field(default="en")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_profile(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            d = dict(data)
+            if not d.get("employmentStatus"):
+                d["employmentStatus"] = "employed_at_risk"
+            if d.get("skills") is None:
+                d["skills"] = []
+            if d.get("toolsAndSoftware") is None:
+                d["toolsAndSoftware"] = []
+            if d.get("languages") is None:
+                d["languages"] = []
+            if d.get("targetSectors") is None:
+                d["targetSectors"] = []
+            if d.get("learningProviders") is None:
+                d["learningProviders"] = ["free_open", "hrd_corp"]
+            if not d.get("careerGoal"):
+                d["careerGoal"] = "explore"
+            if not d.get("workArrangement"):
+                d["workArrangement"] = "any"
+            if not d.get("weeklyCommitmentHours"):
+                d["weeklyCommitmentHours"] = "3-5"
+            if not d.get("outputLanguage"):
+                d["outputLanguage"] = "en"
+            return d
+        return data
 
 
 class AnalyzeRequestPayload(BaseModel):
@@ -39,6 +68,20 @@ class AnalyzeRequestPayload(BaseModel):
     profile: AnalyzeProfileData = Field(..., description="Verified profile intake payload")
     targetRoleId: Optional[str] = Field(default=None, description="Optional specific role ID chosen by the user")
     autoSynthesizeRoadmap: bool = Field(default=True, description="Whether to immediately synthesize the roadmap")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_request(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            d = dict(data)
+            if not d.get("locale"):
+                d["locale"] = "en"
+            raw_scenario = d.get("macroScenario")
+            valid_scenarios = {e.value for e in MacroScenario}
+            if not raw_scenario or raw_scenario not in valid_scenarios:
+                d["macroScenario"] = MacroScenario.MODERATE
+            return d
+        return data
 
 
 class SdgAlignmentItem(BaseModel):

@@ -108,7 +108,15 @@ export async function analyzeWorkforceProfileStream(
 
       onProgress(parsed);
       if (parsed.error) {
-        throw new Error(parsed.errorCode || parsed.error);
+        const errorMsg =
+          typeof parsed.error === "string"
+            ? parsed.error
+            : parsed.errorCode || "Role matching failed";
+        const err = new Error(errorMsg);
+        if (parsed.errorCode) {
+          (err as any).code = parsed.errorCode;
+        }
+        throw err;
       }
       if (parsed.result) finalResult = parsed.result;
     };

@@ -190,12 +190,23 @@ export default function RoleSelectorModal() {
       } catch (err: unknown) {
         if (!isCancelled) {
           setIsMatching(false);
+          const isTimeout =
+            err instanceof Error &&
+            (err.message === "MATCHING_TIMEOUT" ||
+              (err as any).code === "MATCHING_TIMEOUT");
+          const isRoleMatchingFailed =
+            err instanceof Error &&
+            ((err as any).code === "ROLE_MATCHING_FAILED" ||
+              err.message === "ROLE_MATCHING_FAILED");
+
           setErrorMessage(
-            err instanceof Error && err.message === "MATCHING_TIMEOUT"
+            isTimeout
               ? t("matching_timeout")
-              : err instanceof Error
-                ? err.message
-                : t("matching_failed")
+              : isRoleMatchingFailed
+                ? t("matching_failed")
+                : err instanceof Error
+                  ? err.message
+                  : t("matching_failed")
           );
         }
       }
