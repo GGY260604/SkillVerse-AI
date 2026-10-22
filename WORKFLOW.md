@@ -229,7 +229,7 @@ flowchart TD
        ├─► [Tier 3: Google gemini-embedding-001 (1024d)] (Success: <300ms)─► [Cache & Return]
        └─► [Tier 4: Deterministic SHA-256 Pseudo-Vector] (Zero-Downtime Failsafe)
   ```
-* **Persistent Disk Cache:** Automatically flushed to [`db/skill_embeddings_cache.json`](file:///c:/Users/Owner/Documents/GitHub/SDC-HACKATHON-2026/src/fastapi/db/skill_embeddings_cache.json) on disk so recurring terms never incur re-embedding overhead.
+* **In-Memory RAM Cache:** Maintained in memory (`_EMBEDDING_CACHE`) during runtime so recurring terms incur 0.00ms latency, optimized for stateless RunPod and containerized cloud deployments.
 
 ---
 
