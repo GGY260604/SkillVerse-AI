@@ -293,7 +293,7 @@ export default function ProfileModal() {
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <span className="shrink-0 text-xs font-mono font-extrabold text-emerald-400">
+              <span className="shrink-0 text-xs font-mono font-extrabold text-accent">
                 {currentLevelExp}/100
               </span>
             </div>

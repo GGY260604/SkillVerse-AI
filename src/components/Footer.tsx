@@ -12,15 +12,15 @@ export default function Footer() {
   // --- UI ---
   return (
     <footer className="border-t border-border-subtle bg-bg-secondary mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
         {/* Main Footer Block */}
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pb-6 border-b border-border-subtle">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pb-3.5 border-b border-border-subtle">
           {/* Brand & Authorship */}
           <div className="min-w-0 flex-1">
-            <Logo text={t("copyright")} size="md" />
+            <Logo text={t("copyright")} size="sm" />
 
             {/* Hackathon & Author Info */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-text-muted">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-muted">
               <span>{t("hackathon")}</span>
               <span className="hidden text-border-subtle select-none sm:inline">•</span>
               <span className="basis-full text-text-secondary font-medium sm:basis-auto">{t("author")}</span>
@@ -28,16 +28,16 @@ export default function Footer() {
           </div>
 
           {/* Embedded GitHub Action & License */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
             <a
               href={GITHUB_REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-text-secondary bg-bg-card hover:text-text-primary hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent transition-all duration-300 group w-auto"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary bg-bg-card hover:text-text-primary hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent transition-all duration-300 group w-auto"
             >
               {/* GitHub SVG */}
               <svg
-                className="w-4 h-4 fill-current text-text-secondary group-hover:text-accent transition-colors duration-200 shrink-0"
+                className="w-3.5 h-3.5 fill-current text-text-secondary group-hover:text-accent transition-colors duration-200 shrink-0"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
@@ -49,7 +49,7 @@ export default function Footer() {
               </svg>
               <span className="hidden sm:inline">{t("github")}</span>
               <span className="sm:hidden max-[320px]:hidden">GitHub</span>
-              <span className="text-[11px] text-text-muted transition-colors duration-200 group-hover:text-accent max-[320px]:hidden">↗</span>
+              <span className="text-[10px] text-text-muted transition-colors duration-200 group-hover:text-accent max-[320px]:hidden">↗</span>
             </a>
 
             {/* License */}
@@ -57,7 +57,7 @@ export default function Footer() {
               href={LICENSE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 text-[11px] font-mono text-text-muted hover:text-text-primary transition-colors flex items-center justify-end gap-1.5"
+              className="shrink-0 text-[11px] font-mono text-text-muted hover:text-text-primary transition-colors flex items-center justify-end gap-1"
             >
               <span className="hidden sm:inline">License:</span>
               <span className="text-text-secondary hover:text-accent underline decoration-border-subtle underline-offset-2">Apache-2.0</span>
@@ -66,8 +66,8 @@ export default function Footer() {
         </div>
 
         {/* Disclaimer / Notice Row */}
-        <div className="pt-4 flex items-center justify-between gap-3 text-[11px] text-text-muted">
-          <p className="min-w-0 max-w-3xl leading-relaxed">{t("tagline")}</p>
+        <div className="pt-2.5 flex items-center justify-between gap-3 text-[11px] text-text-muted">
+          <p className="min-w-0 max-w-3xl leading-snug">{t("tagline")}</p>
           <p className="shrink-0 whitespace-nowrap text-right">© 2026 SkillVerse AI</p>
         </div>
       </div>

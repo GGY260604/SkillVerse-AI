@@ -289,7 +289,7 @@ export default function PlanDetailView({
                 {plan.sdgs.map((sdg) => (
                   <span
                     key={sdg}
-                    className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold bg-accent/15 text-accent border border-accent/30 shadow-xs"
                   >
                     {sdg}
                   </span>
@@ -349,60 +349,60 @@ export default function PlanDetailView({
 
       {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
-        {/* Matched Strengths */}
+        {/* Matched Strengths (Green) */}
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-emerald-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+          <div className="flex items-center justify-between pb-3 border-b-2 border-emerald-800/60 dark:border-emerald-500/20 mb-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-950 dark:text-emerald-400 font-mono">
               {tCurrent("matched_strengths")}
             </h3>
-            <span className="text-xs font-mono text-emerald-400 font-semibold">
+            <span className="text-xs font-mono text-emerald-950 dark:text-emerald-400 font-black">
               {localizedMatchedStrengths.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {localizedMatchedStrengths.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
+                <span className="text-emerald-950 dark:text-emerald-400 font-black shrink-0 mt-0.5">✓</span>
                 <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Skills to Acquire */}
+        {/* Skills to Acquire (Amber) */}
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 font-mono">
+          <div className="flex items-center justify-between pb-3 border-b-2 border-amber-800/60 dark:border-amber-500/20 mb-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-amber-950 dark:text-amber-400 font-mono">
               {tCurrent("skills_gap")}
             </h3>
-            <span className="text-xs font-mono text-amber-400 font-semibold">
+            <span className="text-xs font-mono text-amber-950 dark:text-amber-400 font-black">
               {localizedSkillsGap.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {localizedSkillsGap.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
+                <span className="text-amber-950 dark:text-amber-400 font-black shrink-0 mt-0.5">▲</span>
                 <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Automation Alerts */}
+        {/* Automation Alerts (Rose/Red) */}
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-rose-500/20 mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
+          <div className="flex items-center justify-between pb-3 border-b-2 border-rose-800/60 dark:border-rose-500/20 mb-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 dark:text-rose-400 font-mono">
               {tCurrent("at_risk_skills")}
             </h3>
-            <span className="text-xs font-mono text-rose-400 font-semibold">
+            <span className="text-xs font-mono text-rose-950 dark:text-rose-400 font-black">
               {localizedAtRiskSkills.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
             {localizedAtRiskSkills.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
-                <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
+                <span className="text-rose-950 dark:text-rose-400 font-black shrink-0 mt-0.5">✕</span>
                 <span className="text-text-primary font-medium">{skill}</span>
               </li>
             ))}
@@ -433,10 +433,10 @@ export default function PlanDetailView({
             return (
               <div
                 key={phase.id || idx}
-                className={`rounded-2xl border p-6 sm:p-7 transition-all flex flex-col gap-5 ${
+                className={`rounded-2xl border p-6 sm:p-7 flex flex-col gap-5 ${
                   phase.isCompleted
-                    ? "bg-bg-card/90 border-emerald-500/30 border-l-4 border-l-emerald-500 shadow-sm"
-                    : "bg-bg-card/70 border-border-subtle border-l-4 border-l-accent hover:border-border-subtle/80 shadow-xs"
+                    ? "bg-bg-card border-emerald-500/40 border-l-4 border-l-emerald-500 shadow-sm"
+                    : "bg-bg-card border-border-subtle border-l-4 border-l-zinc-300 dark:border-l-zinc-700 shadow-xs"
                 }`}
               >
                 {/* Phase Header */}
@@ -646,7 +646,7 @@ export default function PlanDetailView({
                       {isSdgExpanded && (
                         <div className="mt-3.5 flex flex-col gap-2.5 animate-fade-in">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                               {tCurrent("sdg_target_label")}
                             </span>
                             <span className="text-xs sm:text-sm font-semibold text-text-primary">

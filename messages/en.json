@@ -450,6 +450,7 @@
       "password_hide": "Hide password",
       "verification_code_sent": "Verification code dispatched to your email.",
       "recovery_code_sent": "Password recovery code sent to your email.",
+      "fresh_code_sent": "A fresh 6-digit code has been sent.",
       "resend_code": "Resend Code",
       "resend_countdown": "Resend in {seconds}s",
       "errors": {
@@ -591,7 +592,10 @@
       "signup": "Sign Up",
       "profile": "Profile",
       "logout": "Log Out",
-      "language": "Language"
+      "language": "Language",
+      "theme": "Theme",
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode"
     },
     "footer": {
       "copyright": "SkillVerse AI",

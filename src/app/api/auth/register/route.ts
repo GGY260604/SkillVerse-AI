@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // 1. Request Body Parsing and Format Validation
     // Parse the incoming JSON payload and validate credential requirements.
     const body = await request.json();
-    const { email, password, locale } = body;
+    const { email, password, locale, theme } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.trim().toLowerCase();
     const userLocale = locale || "en";
+    const userTheme = theme || "dark";
 
     // 2. User Account Creation via Admin Client
     // Generate signup verification link and token while bypassing built-in email templates.
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
         token: otp,
         email: normalizedEmail,
         locale: userLocale,
+        theme: userTheme,
       });
 
       await sendEmail({

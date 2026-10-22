@@ -340,9 +340,9 @@ export default function SharedPlansModal() {
                       </span>
 
                       {/* User ID */}
-                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-mono text-text-muted">
+                      <div className="mt-1 inline-flex max-w-full items-center gap-1.5 text-[10px] font-mono text-text-muted">
                         <span className="shrink-0 font-semibold text-text-secondary">{t("uid")}</span>
-                        <span className="min-w-0 flex-1 select-all truncate text-text-muted">
+                        <span className="select-all truncate text-text-muted">
                           {user.id}
                         </span>
                         <button

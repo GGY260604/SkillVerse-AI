@@ -9,6 +9,8 @@ import { useProfileModal } from "@/context/auth/ProfileModalContext";
 import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
 import { getAvatarInitials } from "@/lib/avatar";
+import { useTheme } from "@/context/ThemeContext";
+import DarkLightSwicher from "@/components/DarkLightSwicher";
 
 // --- Supported Languages Configuration ---
 // Define available locales and visual labels for the header language switcher.
@@ -31,6 +33,7 @@ export default function Header() {
   const { user, isLoggedIn, isLoading, openAuthModal, logout } = useAuth();
   const { openProfileModal } = useProfileModal();
   const { level, currentLevelExp } = useExpGain();
+  const { theme, toggleTheme } = useTheme();
 
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
@@ -106,8 +109,11 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Desktop Right Controls: Language Switcher & Auth */}
-          <div className="hidden md:flex items-center gap-4">
+          {/* Desktop Right Controls: Theme Switcher, Language Switcher & Auth */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* Dark / Light Mode Switcher */}
+            <DarkLightSwicher />
+
             {/* Language Switcher */}
             <div className="flex items-center bg-bg-card rounded-lg border border-border-subtle overflow-hidden">
               {LOCALES.map(({ code, label }) => (
@@ -310,6 +316,14 @@ export default function Header() {
 
         {/* Sidebar Bottom Controls */}
         <div className="pt-6 border-t border-border-subtle flex flex-col gap-4">
+          {/* Dark / Light Mode Switcher in Sidebar */}
+          <div>
+            <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">
+              {t("theme") || "Theme"}
+            </span>
+            <DarkLightSwicher showLabel className="w-full justify-center" />
+          </div>
+
           {/* Language Switcher in Sidebar */}
           <div>
             <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">

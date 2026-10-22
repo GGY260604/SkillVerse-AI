@@ -36,21 +36,21 @@ const SCENARIO_OPTIONS: ScenarioConfig[] = [
     labelKey: "scenario_baseline",
     descriptionKey: "scenario_baseline_desc",
     multiplierBadge: "1.0x",
-    badgeStyle: "bg-border-subtle/60 text-text-muted",
+    badgeStyle: "bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-300 dark:border-zinc-700 shadow-xs",
   },
   {
     id: "accelerated_ai",
     labelKey: "scenario_ai_surge",
     descriptionKey: "scenario_ai_surge_desc",
     multiplierBadge: "+15% AI",
-    badgeStyle: "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30",
+    badgeStyle: "bg-blue-600 dark:bg-blue-500 text-white font-extrabold shadow-sm border border-blue-700 dark:border-blue-400",
   },
   {
     id: "green_economy",
     labelKey: "scenario_green_esg",
     descriptionKey: "scenario_green_esg_desc",
     multiplierBadge: "+15% ESG",
-    badgeStyle: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+    badgeStyle: "bg-emerald-600 dark:bg-emerald-500 text-white font-extrabold shadow-sm border border-emerald-700 dark:border-emerald-400",
   },
 ];
 
@@ -416,7 +416,7 @@ export default function RoleSelectorModal() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-bg-secondary/40 border border-border-subtle">
+              <div className="grid grid-cols-3 gap-2 p-1.5 rounded-xl bg-bg-card border border-border-subtle">
                 {SCENARIO_OPTIONS.map((scen) => {
                   const isActive = selectedScenario === scen.id;
                   return (
@@ -427,12 +427,12 @@ export default function RoleSelectorModal() {
                       className={`py-2 px-2.5 rounded-lg text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
                         isActive
                           ? "bg-accent/15 border-accent text-accent font-bold shadow-[0_0_12px_var(--accent-glow)]"
-                          : "border-transparent text-text-muted hover:text-text-primary hover:bg-bg-elevated/40"
+                          : "bg-bg-secondary/60 border-transparent text-text-secondary hover:text-text-primary hover:bg-bg-elevated/70"
                       }`}
                     >
                       <span className="truncate">{t(scen.labelKey)}</span>
                       <span
-                        className={`text-[9px] px-1 py-0.5 rounded font-bold shrink-0 hidden md:inline-block ${scen.badgeStyle}`}
+                        className={`text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shrink-0 inline-block tracking-tight ${scen.badgeStyle}`}
                       >
                         {scen.multiplierBadge}
                       </span>
