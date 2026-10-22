@@ -52,7 +52,6 @@ model User {
   roadmaps              Roadmap[]
   sharedRoadmaps        SharedRoadmap[] @relation("SharedRoadmapOwner")
   receivedRoadmaps      SharedRoadmap[] @relation("SharedRoadmapTarget")
-  auditLogs             SkillMismatchAuditLog[]
 
   @@map("users")
 }
@@ -106,33 +105,6 @@ model TrendSignal {
   updatedAt      DateTime @updatedAt
 
   @@map("trend_signals")
-}
-
-model CustomEmergingSkill {
-  id              String                       @id @default(uuid()) @db.Uuid
-  canonicalEn     String                       @unique
-  localizedLabels Json                         // {"en": "...", "ms": "...", "zh": "..."}
-  embedding       Unsupported("vector(1024)")? // bge-m3 1024-dimensional vector
-  firstSeenAt     DateTime                     @default(now())
-  frequencyCount  Int                          @default(1)
-  isPromoted      Int                          @default(0)
-
-  @@map("custom_emerging_skills")
-}
-
-model SkillMismatchAuditLog {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @db.Uuid
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rawUserInput         String
-  aiSuggestedCanonical String
-  userAction           String   // deleted, renamed, replaced
-  userReplacement      String?
-  locale               String
-  createdAt            DateTime @default(now())
-
-  @@index([userId])
-  @@map("skill_mismatch_audit_logs")
 }
 
 // ==========================================

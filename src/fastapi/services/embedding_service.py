@@ -1,6 +1,6 @@
 import math
 import httpx
-from typing import List, Optional
+from typing import List, Optional, Dict
 from config import settings
 from services.http_client import get_shared_client
 
@@ -138,7 +138,7 @@ def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
     return None
 
 
-_EMBEDDING_CACHE: Dict[str, List[float]] = {}
+_EMBEDDING_CACHE: dict[str, List[float]] = {}
 _active_embedding_key_index = 0
 
 

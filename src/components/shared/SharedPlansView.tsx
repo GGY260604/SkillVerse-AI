@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth/AuthContext";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import type { PlanData } from "@/components/analysis/planCard/planData";
+import { getAvatarInitials } from "@/lib/avatar";
 
 // --- Schema ---
 
@@ -232,9 +233,9 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
           <button
             type="button"
             onClick={() => setIsHeatMapSelectionMode((isEnabled) => !isEnabled)}
-            aria-label="HeatMap"
+            aria-label={t("heatmap.button_label")}
             aria-pressed={isHeatMapSelectionMode}
-            title="HeatMap"
+            title={t("heatmap.button_label")}
             className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               isHeatMapSelectionMode
                 ? "border-accent bg-accent text-bg-primary"
@@ -247,7 +248,7 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
               <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="2" />
               <rect x="14" y="14" width="7" height="7" rx="1" strokeWidth="2" />
             </svg>
-            <span className="hidden sm:inline">HeatMap</span>
+            <span className="hidden sm:inline">{t("heatmap.button_label")}</span>
           </button>
           {isHeatMapSelectionMode && (
             <button
@@ -371,7 +372,7 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
         <div className="space-y-3.5">
           {filteredRoadmaps.map((item) => {
             const displayName = item.owner.name || item.owner.email.split("@")[0] || tModal("user");
-            const initial = (item.owner.name || item.owner.email || "U").charAt(0).toUpperCase();
+            const initial = getAvatarInitials(item.owner.name || item.owner.email);
             const userLevel = item.owner.level ?? 1;
             const isHeatMapUserSelected = selectedHeatMapUserIds.includes(item.owner.id);
 

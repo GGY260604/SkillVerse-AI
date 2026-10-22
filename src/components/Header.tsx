@@ -8,6 +8,7 @@ import { useAuth } from "@/context/auth/AuthContext";
 import { useProfileModal } from "@/context/auth/ProfileModalContext";
 import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
+import { getAvatarInitials } from "@/lib/avatar";
 
 // --- Supported Languages Configuration ---
 // Define available locales and visual labels for the header language switcher.
@@ -138,7 +139,7 @@ export default function Header() {
                     title={`Level ${level} (${currentLevelExp}/100 EXP) - ${t("profile")}`}
                     className="w-9 h-9 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_15px_var(--accent-glow)] transition-all hover:scale-105 hover:shadow-[0_0_20px_var(--accent-glow-strong)]"
                   >
-                    {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                    {getAvatarInitials(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)}
                   </button>
 
                   {/* Level Badge floating on top right upon the profile icon */}
@@ -192,7 +193,7 @@ export default function Header() {
                   title={`Level ${level} (${currentLevelExp}/100 EXP) - ${t("profile")}`}
                   className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary cursor-pointer border-none shadow-[0_0_12px_var(--accent-glow)] transition-all hover:scale-105 active:scale-95"
                 >
-                  {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                  {getAvatarInitials(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)}
                 </button>
 
                 {/* Level Badge floating on top right upon the mobile profile icon */}
@@ -351,7 +352,7 @@ export default function Header() {
               >
                 <div className="relative shrink-0">
                   <div className="w-8 h-8 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-xs font-bold text-bg-primary shadow-[0_0_10px_var(--accent-glow)]">
-                    {(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)?.charAt(0).toUpperCase() || "U"}
+                    {getAvatarInitials(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)}
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none flex items-center justify-center">
                     {level}

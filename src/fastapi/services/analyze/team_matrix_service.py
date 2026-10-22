@@ -297,8 +297,16 @@ async def evaluate_team_skill_matrix(
     if not target_role_dict and request.targetRoleTitle:
         req_title_lower = request.targetRoleTitle.lower().strip()
         for r in active_roles:
-            r_title = r.get("title", "").lower().strip()
-            if r_title == req_title_lower or req_title_lower in r_title:
+            r_title_en = (r.get("title") or "").lower().strip()
+            r_title_ms = (r.get("title_ms") or (r.get("titleLocalized") or {}).get("ms") or "").lower().strip()
+            r_title_zh = (r.get("title_zh") or (r.get("titleLocalized") or {}).get("zh") or "").lower().strip()
+
+            if (
+                req_title_lower in [r_title_en, r_title_ms, r_title_zh]
+                or (r_title_en and req_title_lower in r_title_en)
+                or (r_title_ms and req_title_lower in r_title_ms)
+                or (r_title_zh and req_title_lower in r_title_zh)
+            ):
                 target_role_dict = r
                 break
 
@@ -319,18 +327,46 @@ async def evaluate_team_skill_matrix(
                 "requiredSkills": request.customRequiredSkills[:8],
             }
         elif request.targetRoleTitle:
-            # Attempt AI on-demand synthesis
+            # Attempt AI on-demand synthesis with protective timeout
             user_skill_sample = []
             for m in request.teamMembers[:3]:
                 for s in m.skills[:3]:
                     user_skill_sample.append(s.name)
 
-            synth_role = await synthesize_on_demand_role(
-                title=request.targetRoleTitle,
-                user_skills=user_skill_sample,
-            )
-            if synth_role:
-                target_role_dict = synth_role
+            try:
+                synth_role = await asyncio.wait_for(
+                    synthesize_on_demand_role(
+                        title=request.targetRoleTitle,
+                        user_skills=user_skill_sample,
+                    ),
+                    timeout=4.0,
+                )
+                if synth_role:
+                    target_role_dict = synth_role
+            except Exception as synth_err:
+                print(f"[team-matrix] On-demand synthesis timed out or failed ({synth_err}), building dynamic benchmark.")
+
+            # If synthesis timed out or failed, build custom on-demand benchmark preserving requested title
+            if not target_role_dict:
+                clean_title = request.targetRoleTitle.strip()
+                clean_slug = clean_title.lower().replace(" ", "-").replace("/", "-")
+                target_role_dict = {
+                    "roleId": f"custom-{clean_slug}",
+                    "title": clean_title,
+                    "titleLocalized": {
+                        "en": clean_title,
+                        "ms": clean_title,
+                        "zh": clean_title,
+                    },
+                    "industry": "Enterprise Custom Benchmark",
+                    "requiredSkills": [
+                        f"{clean_title} Core Principles",
+                        "System Architecture & Design",
+                        "Modern Engineering Toolchain",
+                        "Quality Assurance & Testing",
+                        "Agile Collaboration & Delivery",
+                    ],
+                }
 
     # Final fallback if still unresolved
     if not target_role_dict:
@@ -372,11 +408,25 @@ async def evaluate_team_skill_matrix(
 
     all_distinct_skills = list(set(req_skills) | all_candidate_skill_names)
     if all_distinct_skills:
-        await warm_skills_cache_batch(all_distinct_skills, locale=locale)
-        all_vecs = await asyncio.gather(*(generate_embedding(s) for s in all_distinct_skills))
-        global_skill_vectors: Dict[str, List[float]] = {
-            s: v for s, v in zip(all_distinct_skills, all_vecs) if v
-        }
+        try:
+            await asyncio.wait_for(
+                warm_skills_cache_batch(all_distinct_skills, locale=locale),
+                timeout=2.5,
+            )
+        except Exception:
+            pass
+
+        try:
+            all_vecs = await asyncio.wait_for(
+                asyncio.gather(*(generate_embedding(s) for s in all_distinct_skills), return_exceptions=True),
+                timeout=4.0,
+            )
+            global_skill_vectors: Dict[str, List[float]] = {}
+            for s, v in zip(all_distinct_skills, all_vecs):
+                if isinstance(v, list) and len(v) > 0:
+                    global_skill_vectors[s] = v
+        except Exception:
+            global_skill_vectors = {}
     else:
         global_skill_vectors = {}
 
@@ -393,8 +443,20 @@ async def evaluate_team_skill_matrix(
     )
     industry_display = industry_loc.get(locale, role_industry)
 
-    # Required competencies trilingual localization
-    req_skills_trilingual = localize_skill_list_trilingual(req_skills)
+    # Required competencies trilingual localization:
+    # 1. First check if role already has pre-cached trilingual skills
+    existing_skills_loc = target_role_dict.get("requiredSkillsLocalized") or target_role_dict.get("required_skills_localized")
+    if (
+        isinstance(existing_skills_loc, dict)
+        and existing_skills_loc.get("zh")
+        and existing_skills_loc.get("ms")
+        and len(existing_skills_loc.get("zh", [])) == len(req_skills)
+        and len(existing_skills_loc.get("ms", [])) == len(req_skills)
+    ):
+        req_skills_trilingual = existing_skills_loc
+    else:
+        req_skills_trilingual = localize_skill_list_trilingual(req_skills)
+
     req_skills_display = req_skills_trilingual.get(locale, req_skills)
 
     # 3. Evaluate Each Candidate synchronously with zero per-candidate network awaits

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useSharedModal } from "@/context/analysis/SharedModalContext";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { getAvatarInitials } from "@/lib/avatar";
 
 // --- Shared Plans Modal ---
 // Search users, display their roadmap access and level, and update sharing permissions.
@@ -303,7 +304,7 @@ export default function SharedPlansModal() {
           {!isLoading &&
             collaborators.map((user) => {
               const displayName = user.name || user.email.split("@")[0] || t("user");
-              const initial = (user.name || user.email || "U").charAt(0).toUpperCase();
+              const initial = getAvatarInitials(user.name || user.email);
               const isUpdating = updatingUserId === user.id;
               const isShared = user.accessLevel === "viewable" || (user.accessLevel as string) === "editable";
 
