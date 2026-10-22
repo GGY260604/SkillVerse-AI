@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// One-Time Password Verification
-// Confirm 6-digit verification code for signup confirmation or password recovery.
+// --- Route Handler ---
+// Endpoint: POST /api/auth/verify-otp
+// Purpose: Confirm 6-digit verification code for signup confirmation or password recovery.
+// Target Service: Supabase Auth
 export async function POST(request: NextRequest) {
   try {
+    // 1. Request Body Parsing and Format Validation
+    // Validate email presence and enforce strict 6-digit numeric pattern.
     const body = await request.json();
     const { email, token, type } = body;
 
@@ -19,7 +23,6 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.trim().toLowerCase();
     const cleanToken = token.toString().trim();
 
-    // Enforce strict 6-digit numeric validation.
     if (!/^\d{6}$/.test(cleanToken)) {
       return NextResponse.json(
         { error: "Verification code must be exactly 6 digits.", errorCode: "invalid_otp" },
@@ -27,7 +30,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify OTP against Supabase authentication service.
+    // 2. Token Verification with Supabase
+    // Verify the one-time code against Supabase authentication service.
     const otpType = type === "recovery" ? "recovery" : "signup";
     const { data, error } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
@@ -39,7 +43,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, errorCode: "invalid_otp" }, { status: 400 });
     }
 
-    // Ensure user record exists in prisma user table
+    // 3. Database User Synchronization
+    // Ensure the verified user record exists in the local database.
     if (data.user?.id && data.user.email) {
       try {
         const { prisma } = await import("@/lib/prisma");
@@ -57,13 +62,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4. Session Cookie Attachment and Response Dispatch
+    // Create success response and attach authentication cookies if session exists.
     const response = NextResponse.json({
       success: true,
       message: "Verification successful.",
       user: data.user ? { id: data.user.id, email: data.user.email } : null,
     });
 
-    // Attach authentication cookies when session is established.
     if (data.session) {
       attachAuthCookies(
         response,
@@ -75,6 +81,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: unknown) {
+    // 5. Internal Error Handling
+    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

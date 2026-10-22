@@ -269,7 +269,46 @@
       "err_invalid_otp": "Kod pengesahan 6 digit tidak sah atau telah tamat tempoh.",
       "err_network": "Ralat rangkaian berlaku. Sila semak sambungan anda dan cuba lagi.",
       "err_default": "Ralat tidak dijangka berlaku. Sila cuba lagi.",
-      "err_email_required": "Sila masukkan alamat emel anda."
+      "err_email_required": "Sila masukkan alamat emel anda.",
+      "email": {
+        "common": {
+          "badge": "SkillVerse Auth",
+          "btn_return": "Kembali ke SkillVerse AI",
+          "footer_rights": "© 2026 SkillVerse AI. Hak Cipta Terpelihara."
+        },
+        "signup": {
+          "title": "Pengesahan Emel",
+          "description": "Terima kasih kerana mendaftar dengan SkillVerse AI. Masukkan kod pengesahan 6 digit di bawah untuk mengesahkan akaun anda.",
+          "otp_label": "Kod Pengesahan 6 Digit",
+          "security_notice": "Jika anda tidak membuat permintaan ini, sila abaikan emel ini. Keselamatan akaun anda tetap terjamin.",
+          "expiry_notice": "Kod pengesahan ini sah selama 10 minit. Jangan kongsi kod ini dengan sesiapa.",
+          "subject": "SkillVerse AI - Kod Pengesahan Anda: {token}"
+        },
+        "recovery": {
+          "title": "Tetapkan Semula Kata Laluan",
+          "description": "Kami telah menerima permintaan untuk menetapkan semula kata laluan anda. Masukkan kod pemulihan 6 digit di bawah.",
+          "otp_label": "Kod Pengesahan 6 Digit",
+          "security_notice": "Jika anda tidak meminta penetapan semula kata laluan, sila abaikan emel ini dengan selamat.",
+          "expiry_notice": "Demi keselamatan, kod ini akan tamat tempoh dalam masa 10 minit.",
+          "subject": "SkillVerse AI - Kod Tetapkan Semula Kata Laluan: {token}"
+        },
+        "magiclink": {
+          "title": "Log Masuk Pantas",
+          "description": "Anda sedang log masuk ke SkillVerse AI tanpa kata laluan. Sila masukkan kod 6 digit di bawah.",
+          "otp_label": "Kod Pengesahan 6 Digit",
+          "security_notice": "Jika bukan anda yang memulakannya, sila abaikan emel ini.",
+          "expiry_notice": "Kod ini akan tamat tempoh dalam masa 10 minit.",
+          "subject": "SkillVerse AI - Kod Log Masuk Sekali: {token}"
+        },
+        "email_change": {
+          "title": "Tukar Emel",
+          "description": "Anda telah meminta untuk menukar emel akaun SkillVerse AI anda. Masukkan kod pengesahan 6 digit di bawah.",
+          "otp_label": "Kod Pengesahan 6 Digit",
+          "security_notice": "Jika anda tidak memohon pertukaran emel, sila abaikan emel ini.",
+          "expiry_notice": "Kod pengesahan ini akan tamat tempoh dalam masa 10 minit.",
+          "subject": "SkillVerse AI - Sahkan Pertukaran Emel: {token}"
+        }
+      }
     },
     "profile": {
       "title": "Profil Pengguna",
@@ -289,6 +328,23 @@
       "exp_progress_title": "Kemajuan Kompetensi & EXP",
       "total_exp": "Jumlah EXP",
       "exp_to_next": "{remaining} EXP ke Tahap {nextLevel}"
+    },
+    "helper": {
+      "date": {
+        "format": "{day} {month} {year}",
+        "month_1": "Jan",
+        "month_2": "Feb",
+        "month_3": "Mac",
+        "month_4": "Apr",
+        "month_5": "Mei",
+        "month_6": "Jun",
+        "month_7": "Jul",
+        "month_8": "Ogo",
+        "month_9": "Sep",
+        "month_10": "Okt",
+        "month_11": "Nov",
+        "month_12": "Dis"
+      }
     }
   }
 }

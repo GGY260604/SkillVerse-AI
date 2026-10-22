@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserLevel } from "@/context/UserLevelContext";
 import Logo from "@/components/Logo";
 
-// Supported Languages Configuration
+// --- Supported Languages Configuration ---
 // Define available locales and visual labels for the header language switcher.
 const LOCALES = [
   { code: "en", label: "EN" },
@@ -16,7 +16,7 @@ const LOCALES = [
   { code: "zh", label: "ZH" },
 ] as const;
 
-// Header Navigation Component
+// --- Header Navigation Component ---
 // Provide global branding, localized navigation links, language selection, and responsive mobile sidebar.
 export default function Header() {
   const t = useTranslations("other.nav");
@@ -53,6 +53,7 @@ export default function Header() {
     }
   };
 
+  // --- UI ---
   return (
     <>
       <header
@@ -399,4 +400,3 @@ export default function Header() {
     </>
   );
 }
-

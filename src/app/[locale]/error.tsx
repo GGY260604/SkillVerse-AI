@@ -4,22 +4,25 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n/navigation";
 
+// --- Component Props ---
 interface ErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
 
-// Localized Error Boundary Component
+// --- Localized Error Boundary Component ---
 // Catch unhandled exceptions and render high-tech diagnostic dashboard with retry action.
 export default function ErrorBoundary({ error, reset }: ErrorProps) {
   const t = useTranslations("status.error");
   const [showDetails, setShowDetails] = useState(false);
 
-  // Log error digest to browser telemetry console.
+  // --- Error Logging ---
+  // Log the error to the browser telemetry console.
   useEffect(() => {
     console.error("[SKILLVERSE RUNTIME ERROR]", error);
   }, [error]);
 
+  // --- UI ---
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[75vh] px-4 sm:px-6 relative overflow-hidden select-none animate-fade-in py-16">
       {/* Background Radial Ambient Warning Glow */}

@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// User Authentication and Session Initialization
-// Authenticate user credentials and establish session cookies.
+// --- Route Handler ---
+// Endpoint: POST /api/auth/login
+// Purpose: Authenticate user credentials and establish session cookies.
+// Target Service: Supabase Auth & Prisma Database
 export async function POST(request: NextRequest) {
   try {
+    // 1. Request Body Parsing and Validation
+    // Extract user credentials and remember-me preference from JSON payload.
+    // Validate that both email and password are provided.
     const body = await request.json();
     const { email, password, rememberMe } = body;
 
@@ -16,23 +21,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 2. Supabase Authentication
+    // Authenticate user credentials against the Supabase Auth service.
+    const normalizedEmail = email.trim().toLowerCase();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password,
     });
 
-    if (error || !data.session) {
-      const rawMsg = error?.message || "";
-      const isNotConfirmed = rawMsg.toLowerCase().includes("not confirmed");
-      const errorCode = isNotConfirmed ? "email_not_confirmed" : "invalid_credentials";
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
 
+    if (!data.session) {
       return NextResponse.json(
-        { error: rawMsg || "Invalid login credentials.", errorCode },
+        { error: "Authentication failed. No active session returned." },
         { status: 401 }
       );
     }
 
-    // Ensure user record exists in user table
+    // 3. User Synchronization
+    // Ensure user record exists in Prisma database for relation mapping.
     if (data.user?.id && data.user.email) {
       try {
         const { prisma } = await import("@/lib/prisma");
@@ -50,26 +59,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4. Response Dispatch and Cookie Attachment
+    // Build user profile payload and attach authentication cookies.
+    const name =
+      (data.user.user_metadata?.name ||
+        data.user.user_metadata?.full_name ||
+        null) as string | null;
+
     const response = NextResponse.json({
       success: true,
       user: {
         id: data.user.id,
         email: data.user.email,
-        metadata: data.user.user_metadata,
+        name,
       },
     });
 
-    // Persist session for 30 days when rememberMe is selected; otherwise default to browser session.
-    const maxAge = rememberMe !== false ? 60 * 60 * 24 * 30 : undefined;
+    const expiresIn = rememberMe ? 60 * 60 * 24 * 30 : data.session.expires_in;
 
-    // Attach session tokens to HTTP-only authentication cookies.
     return attachAuthCookies(
       response,
       data.session.access_token,
       data.session.refresh_token,
-      maxAge
+      expiresIn
     );
   } catch (err: unknown) {
+    // 5. Internal Error Handling
+    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

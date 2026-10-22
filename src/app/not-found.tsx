@@ -1,9 +1,10 @@
 import Link from "next/link";
 import "./globals.css";
 
-// Root Platform 404 Screen
+// --- Root Platform 404 Screen ---
 // Render global dark futuristic fallback when route does not resolve to any localized path.
 export default function GlobalNotFound() {
+  // --- UI ---
   return (
     <html lang="en" className="dark scheme-dark">
       <head>

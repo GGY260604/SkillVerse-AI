@@ -269,7 +269,46 @@
       "err_invalid_otp": "6 位数验证码无效或已过期，请重试。",
       "err_network": "网络连接异常，请检查网络后重试。",
       "err_default": "发生意外错误，请稍后重试。",
-      "err_email_required": "请输入电子邮箱地址。"
+      "err_email_required": "请输入电子邮箱地址。",
+      "email": {
+        "common": {
+          "badge": "SkillVerse Auth",
+          "btn_return": "返回 SkillVerse AI",
+          "footer_rights": "© 2026 SkillVerse AI. 保留所有权利。"
+        },
+        "signup": {
+          "title": "邮箱验证",
+          "description": "感谢注册 SkillVerse AI 平台。请输入下方 6 位数验证码完成账号认证。",
+          "otp_label": "6 位数验证码",
+          "security_notice": "若非本人操作，请忽略此邮件，您的账号安全不会受到影响。",
+          "expiry_notice": "验证码有效期为 10 分钟，请勿泄露给他人。",
+          "subject": "【SkillVerse AI】您的注册验证码：{token}"
+        },
+        "recovery": {
+          "title": "设置新密码",
+          "description": "我们收到了为您的账号重置密码的申请。请输入下方 6 位数恢复验证码以继续操作。",
+          "otp_label": "6 位数验证码",
+          "security_notice": "如果您未曾申请重置密码，请立即检查账号安全或忽略此邮件。",
+          "expiry_notice": "出于安全保护，验证码将在 10 分钟后失效。",
+          "subject": "【SkillVerse AI】密码重置验证码：{token}"
+        },
+        "magiclink": {
+          "title": "快捷登录",
+          "description": "您正在使用一次性验证码登录 SkillVerse AI。请输入下方 6 位数代码。",
+          "otp_label": "6 位数验证码",
+          "security_notice": "如非本人操作，请勿将验证码透露给任何人。",
+          "expiry_notice": "验证码将在 10 分钟后过期。",
+          "subject": "【SkillVerse AI】快捷登录验证码：{token}"
+        },
+        "email_change": {
+          "title": "更换邮箱",
+          "description": "您正在请求将 SkillVerse AI 账号绑定到此邮箱。请输入以下 6 位数验证码确认更换。",
+          "otp_label": "6 位数验证码",
+          "security_notice": "如果您并未申请更换邮箱，请立即联系管理员或忽略此邮件。",
+          "expiry_notice": "验证码将在 10 分钟后失效。",
+          "subject": "【SkillVerse AI】更换邮箱验证码：{token}"
+        }
+      }
     },
     "profile": {
       "title": "用户个人资料",
@@ -290,6 +329,23 @@
       "exp_progress_title": "技能经验（EXP）成长进度",
       "total_exp": "累计总经验",
       "exp_to_next": "距升至 Lv.{nextLevel} 还需 {remaining} EXP"
+    },
+    "helper": {
+      "date": {
+        "format": "{year}年{month}月{day}日",
+        "month_1": "1",
+        "month_2": "2",
+        "month_3": "3",
+        "month_4": "4",
+        "month_5": "5",
+        "month_6": "6",
+        "month_7": "7",
+        "month_8": "8",
+        "month_9": "9",
+        "month_10": "10",
+        "month_11": "11",
+        "month_12": "12"
+      }
     }
   }
 }

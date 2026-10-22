@@ -3,12 +3,13 @@
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
-// Localized 404 Not Found Screen
+// --- Localized 404 Not Found Screen ---
 // Display futuristic celestial 404 message with interactive navigation options.
 export default function NotFound() {
   const t = useTranslations("status.not_found");
   const router = useRouter();
 
+  // --- UI ---
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[75vh] px-4 sm:px-6 relative overflow-hidden select-none animate-fade-in py-16">
       {/* Background Radial Ambient Glow */}

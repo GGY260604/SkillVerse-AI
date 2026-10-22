@@ -8,10 +8,12 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   MatchedRole,
   AnalyzeResponsePayload,
+} from "@/lib/analysis/types";
+import {
   analyzeWorkforceProfileStream,
   synthesizeSelectedRoadmap,
   convertAssessmentToPlanData,
-} from "@/lib/fastapi/client";
+} from "@/lib/analysis/client";
 import { useAuth } from "@/context/AuthContext";
 
 /**
@@ -39,12 +41,16 @@ function getRoleReason(role: MatchedRole, locale: string): string {
   return "Closely aligns with your career transition goals and high-growth industry demands.";
 }
 
+// --- Role Selector Modal ---
+// Match prospective roles and synthesize a personalized learning roadmap.
 export default function RoleSelectorModal() {
+  // --- Context and Locale ---
   const locale = useLocale();
   const { user } = useAuth();
   const { activeModal, activeProfile, openWizardOption, closeModals, saveActivePlan, targetUserId } =
     usePlanModal();
 
+  // --- State ---
   // Execution phases:
   // 1. isMatching: Stage 1 stream running (progress 15% -> 50%)
   // 2. !isMatching && !isSynthesizing: Role selection view (progress paused at 50%)
@@ -64,6 +70,7 @@ export default function RoleSelectorModal() {
   const modalRef = useRef<HTMLDivElement>(null);
   const isOpen = activeModal === "role_select";
 
+  // --- Matching Effect ---
   // Stage 1: Trigger /api/analysis/analyze stream matching upon modal open
   useEffect(() => {
     if (!isOpen || !activeProfile) return;
@@ -201,6 +208,7 @@ export default function RoleSelectorModal() {
     };
   }, [isOpen, activeProfile, locale]);
 
+  // --- Role Selection Handler ---
   // Stage 2: User explicitly confirms role selection and synthesizes roadmap
   const handleConfirmRole = async () => {
     if (!activeProfile || !selectedRoleId || isSynthesizing) return;
@@ -299,6 +307,7 @@ export default function RoleSelectorModal() {
 
   if (!isOpen) return null;
 
+  // --- UI ---
   return (
     <div
       role="dialog"

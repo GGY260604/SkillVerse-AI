@@ -3,56 +3,16 @@
 import React from "react";
 import Logo from "@/components/Logo";
 
+// --- Component Props ---
 export interface LoadingSpinnerProps {
-  /**
-   * Title text or React node to display below the spinner.
-   * If omitted, null, or false, the title will not be rendered.
-   */
   title?: React.ReactNode;
-
-  /**
-   * Subtitle text or React node to display below the title.
-   * If omitted, null, or false, the subtitle will not be rendered.
-   */
   subtitle?: React.ReactNode;
-
-  /**
-   * Whether to display the bottom blue line / progress bar track.
-   * Defaults to true. Set to false to hide completely.
-   */
   showProgressBar?: boolean;
-
-  /**
-   * Optional progress percentage (0 - 100).
-   * When provided, renders a filled progress track of that percentage.
-   * When omitted, renders an ambient infinite shimmering blue beam.
-   */
   progressPercent?: number;
-
-  /**
-   * Size variant for the orbital animation.
-   * 'sm' | 'md' | 'lg'. Defaults to 'md'.
-   */
   size?: "sm" | "md" | "lg";
-
-  /**
-   * Custom className for the root wrapper.
-   */
   className?: string;
-
-  /**
-   * Custom className for the title.
-   */
   titleClassName?: string;
-
-  /**
-   * Custom className for the subtitle.
-   */
   subtitleClassName?: string;
-
-  /**
-   * Custom className for the progress bar track.
-   */
   progressBarClassName?: string;
 }
 
@@ -89,6 +49,8 @@ const SIZE_CONFIGS = {
   },
 } as const;
 
+// --- Loading Spinner Component ---
+// Render an orbital loading indicator with optional text and progress display.
 export default function LoadingSpinner({
   title,
   subtitle,
@@ -102,6 +64,7 @@ export default function LoadingSpinner({
 }: LoadingSpinnerProps) {
   const cfg = SIZE_CONFIGS[size] || SIZE_CONFIGS.md;
 
+  // --- UI ---
   return (
     <div
       className={`flex flex-col items-center justify-center text-center select-none animate-fade-in ${className}`}
