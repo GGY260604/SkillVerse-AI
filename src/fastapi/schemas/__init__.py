@@ -25,6 +25,17 @@ from .quiz import (
     PhaseQuizRequest,
     PhaseQuizResponse,
 )
+from .team import (
+    SkillMatchStatus,
+    SkillEvaluationItem,
+    TeamMemberInput,
+    TeamMemberAnalysis,
+    SkillDeficitMetric,
+    CohortTrainingRecommendation,
+    TeamMatrixCohortSummary,
+    TeamSkillMatrixRequest,
+    TeamSkillMatrixResponse,
+)
 
 __all__ = [
     # Profile schemas
@@ -51,4 +62,15 @@ __all__ = [
     "QuizQuestion",
     "PhaseQuizRequest",
     "PhaseQuizResponse",
+    # Team analysis schemas
+    "SkillMatchStatus",
+    "SkillEvaluationItem",
+    "TeamMemberInput",
+    "TeamMemberAnalysis",
+    "SkillDeficitMetric",
+    "CohortTrainingRecommendation",
+    "TeamMatrixCohortSummary",
+    "TeamSkillMatrixRequest",
+    "TeamSkillMatrixResponse",
 ]
+

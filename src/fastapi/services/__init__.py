@@ -8,7 +8,7 @@ Modularized by functional domain:
 - Shared core services: gemini_service and embedding_service
 """
 
-from .analyze import evaluate_roles, synthesize_pathway
+from .analyze import evaluate_roles, synthesize_pathway, evaluate_team_skill_matrix
 from .extract import extract_text_from_pdf, validate_and_prepare_image
 from .trends import sync_live_trend_signals_to_supabase
 from .quiz import generate_phase_quiz
@@ -29,6 +29,7 @@ __all__ = [
     # Analyze
     "evaluate_roles",
     "synthesize_pathway",
+    "evaluate_team_skill_matrix",
     # Extract
     "extract_text_from_pdf",
     "validate_and_prepare_image",

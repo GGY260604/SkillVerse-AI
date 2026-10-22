@@ -12,7 +12,11 @@ from schemas.analysis import (
     SynthesizeRoadmapResponse,
     MatchedRole,
 )
-from services.analyze import evaluate_roles, synthesize_pathway
+from schemas.team import (
+    TeamSkillMatrixRequest,
+    TeamSkillMatrixResponse,
+)
+from services.analyze import evaluate_roles, synthesize_pathway, evaluate_team_skill_matrix
 
 router = APIRouter()
 
@@ -192,3 +196,16 @@ async def synthesize_selected_role_roadmap(request: SynthesizeRoadmapRequest):
         topRoles=top_roles_to_save,
         selectedRoleRoadmap=roadmap,
     )
+
+
+@router.post("/analyze/team-matrix", response_model=TeamSkillMatrixResponse)
+async def analyze_team_skill_matrix(request: TeamSkillMatrixRequest):
+    """
+    Manager Workforce Analytics:
+    Evaluates and ranks a cohort of candidates against a target role benchmark.
+    Uses the 3-Tier Hybrid Matching Pipeline (Exact -> Token Overlap -> BGE-M3 Dense Cosine).
+    Returns ranked candidates (closest candidate = Rank 1), mastery vs deficit breakdown,
+    and HRD Corp claimable cohort reskilling recommendations.
+    """
+    return await evaluate_team_skill_matrix(request)
+
