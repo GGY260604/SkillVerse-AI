@@ -1,10 +1,14 @@
-/**
- * Profile intake & diagnostic normalization utilities.
- * Ensures consistent canonical data representation in PostgreSQL/Supabase and FastAPI,
- * regardless of whether input originated from multilingual CV semantic extraction,
- * legacy profile databases, or dynamic multi-lingual UI option selections.
- */
+// --- Profile Normalization Utilities ---
+// Normalize multilingual profile intake fields, taxonomies, and option dictionaries across database records.
 
+
+// Step 1: Locale Message Catalogs
+// Synchronously import localization catalogs to resolve option labels, descriptions, and subtitles.
+import enMessages from "../../messages/en.json";
+import zhMessages from "../../messages/zh.json";
+import msMessages from "../../messages/ms.json";
+
+// Type definitions for localized text attributes and option objects.
 export interface LocalizedText {
   en: string;
   zh: string;
@@ -18,624 +22,260 @@ export interface FixedOptionItem {
   sub?: LocalizedText;
 }
 
+const messageCatalogs: Record<string, typeof enMessages> = {
+  en: enMessages,
+  zh: zhMessages,
+  ms: msMessages,
+};
+
+// Helper function to build localized text dynamically from message catalogs.
+function createLocalizedOption(
+  category: keyof typeof enMessages.profile.options,
+  id: string
+): FixedOptionItem {
+  return {
+    id,
+    label: {
+      en: (enMessages.profile.options[category] as any)?.[id]?.label || id,
+      zh: (zhMessages.profile.options[category] as any)?.[id]?.label || (enMessages.profile.options[category] as any)?.[id]?.label || id,
+      ms: (msMessages.profile.options[category] as any)?.[id]?.label || (enMessages.profile.options[category] as any)?.[id]?.label || id,
+    },
+    desc: (enMessages.profile.options[category] as any)?.[id]?.desc
+      ? {
+          en: (enMessages.profile.options[category] as any)?.[id]?.desc,
+          zh: (zhMessages.profile.options[category] as any)?.[id]?.desc || (enMessages.profile.options[category] as any)?.[id]?.desc,
+          ms: (msMessages.profile.options[category] as any)?.[id]?.desc || (enMessages.profile.options[category] as any)?.[id]?.desc,
+        }
+      : undefined,
+    sub: (enMessages.profile.options[category] as any)?.[id]?.sub
+      ? {
+          en: (enMessages.profile.options[category] as any)?.[id]?.sub,
+          zh: (zhMessages.profile.options[category] as any)?.[id]?.sub || (enMessages.profile.options[category] as any)?.[id]?.sub,
+          ms: (msMessages.profile.options[category] as any)?.[id]?.sub || (enMessages.profile.options[category] as any)?.[id]?.sub,
+        }
+      : undefined,
+  };
+}
+
+// Step 2: Canonical Option Lists
+// Standard option arrays backed by message catalog entries.
 export const EMPLOYMENT_STATUS_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "employed_at_risk",
-    label: {
-      en: "Employed (At Risk)",
-      zh: "在职（受AI冲击风险）",
-      ms: "Bekerja (Berisiko)",
-    },
-    desc: {
-      en: "Routine workflows facing AI disruption",
-      zh: "日常工作面临AI自动化颠覆",
-      ms: "Aliran kerja rutin menghadapi gangguan AI",
-    },
-  },
-  {
-    id: "fresh_grad_student",
-    label: {
-      en: "Fresh Graduate / Student",
-      zh: "应届毕业生 / 学生",
-      ms: "Graduan Baharu / Pelajar",
-    },
-    desc: {
-      en: "Entering labor market & seeking placement",
-      zh: "初入劳动力市场寻找合适职位",
-      ms: "Memasuki pasaran buruh & mencari penempatan",
-    },
-  },
-  {
-    id: "career_switcher",
-    label: {
-      en: "Career Switcher",
-      zh: "职业转型者",
-      ms: "Penukar Kerjaya",
-    },
-    desc: {
-      en: "Pivoting across domains or industries",
-      zh: "跨领域或跨行业转型",
-      ms: "Beralih merentas domain atau industri",
-    },
-  },
-  {
-    id: "jobseeker",
-    label: {
-      en: "Jobseeker",
-      zh: "求职者",
-      ms: "Pencari Kerja",
-    },
-    desc: {
-      en: "Active candidate seeking opportunities",
-      zh: "积极寻找新的就业机会",
-      ms: "Calon aktif mencari peluang pekerjaan",
-    },
-  },
-];
+  "employed_at_risk",
+  "fresh_grad_student",
+  "career_switcher",
+  "jobseeker",
+].map((id) => createLocalizedOption("employmentStatus", id));
 
 export const WORK_ARRANGEMENT_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "any",
-    label: {
-      en: "Any",
-      zh: "任意",
-      ms: "Mana-mana",
-    },
-  },
-  {
-    id: "remote",
-    label: {
-      en: "Full Remote",
-      zh: "全远程",
-      ms: "Bekerja dari Rumah",
-    },
-  },
-  {
-    id: "hybrid",
-    label: {
-      en: "Hybrid",
-      zh: "混合办公",
-      ms: "Hibrid",
-    },
-  },
-  {
-    id: "onsite",
-    label: {
-      en: "On-site",
-      zh: "现场办公",
-      ms: "Di Tapak",
-    },
-  },
-];
+  "any",
+  "remote",
+  "hybrid",
+  "onsite",
+].map((id) => createLocalizedOption("workArrangement", id));
 
 export const CAREER_GOAL_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "upskill",
-    label: {
-      en: "Upskill",
-      zh: "技能提升",
-      ms: "Peningkatan Kemahiran",
-    },
-    desc: {
-      en: "Advance in Current Field",
-      zh: "在现有专业领域进阶深造",
-      ms: "Maju dalam bidang pekerjaan semasa",
-    },
-  },
-  {
-    id: "reskill",
-    label: {
-      en: "Reskill",
-      zh: "技能重塑",
-      ms: "Latihan Semula",
-    },
-    desc: {
-      en: "Pivot to AI / Tech",
-      zh: "全面转型至 AI 及前沿科技",
-      ms: "Beralih ke AI dan teknologi baharu",
-    },
-  },
-  {
-    id: "explore",
-    label: {
-      en: "Explore",
-      zh: "探索机会",
-      ms: "Meneroka Peluang",
-    },
-    desc: {
-      en: "High-Growth Opportunities",
-      zh: "探索高增长潜力新兴赛道",
-      ms: "Meneroka peluang berpertumbuhan tinggi",
-    },
-  },
-];
+  "upskill",
+  "reskill",
+  "explore",
+].map((id) => createLocalizedOption("careerGoal", id));
 
 export const YEARS_OF_EXPERIENCE_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "0-1",
-    label: {
-      en: "0 - 1 Year (Entry Level)",
-      zh: "0 - 1 年（初级 / 应届）",
-      ms: "0 - 1 Tahun (Tahap Permulaan)",
-    },
-  },
-  {
-    id: "1-3",
-    label: {
-      en: "1 - 3 Years (Associate)",
-      zh: "1 - 3 年（初中级）",
-      ms: "1 - 3 Tahun (Sekutu)",
-    },
-  },
-  {
-    id: "3-5",
-    label: {
-      en: "3 - 5 Years (Mid-Level)",
-      zh: "3 - 5 年（中级骨干）",
-      ms: "3 - 5 Tahun (Pertengahan)",
-    },
-  },
-  {
-    id: "5-10",
-    label: {
-      en: "5 - 10 Years (Senior)",
-      zh: "5 - 10 年（资深）",
-      ms: "5 - 10 Tahun (Kanan)",
-    },
-  },
-  {
-    id: "10+",
-    label: {
-      en: "10+ Years (Lead / Director)",
-      zh: "10+ 年（总监 / 专家）",
-      ms: "10+ Tahun (Ketua / Pengarah)",
-    },
-  },
-];
+  "0-1",
+  "1-3",
+  "3-5",
+  "5-10",
+  "10+",
+].map((id) => createLocalizedOption("yearsOfExperience", id));
 
 export const INDUSTRY_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "Software & Cloud Services",
-    label: {
-      en: "Software & Cloud Services",
-      zh: "软件与云服务",
-      ms: "Perisian & Perkhidmatan Awan",
-    },
-  },
-  {
-    id: "Banking & Financial Services",
-    label: {
-      en: "Banking & Financial Services",
-      zh: "银行与金融服务",
-      ms: "Perbankan & Perkhidmatan Kewangan",
-    },
-  },
-  {
-    id: "Clean Energy & ESG",
-    label: {
-      en: "Clean Energy & ESG",
-      zh: "清洁能源与 ESG",
-      ms: "Tenaga Bersih & ESG",
-    },
-  },
-  {
-    id: "Healthcare & BioTech",
-    label: {
-      en: "Healthcare & BioTech",
-      zh: "医疗健康与生物科技",
-      ms: "Penjagaan Kesihatan & Bioteknologi",
-    },
-  },
-  {
-    id: "Industrial Automation & Robotics",
-    label: {
-      en: "Industrial Automation & Robotics",
-      zh: "工业自动化与机器人",
-      ms: "Automasi Industri & Robotik",
-    },
-  },
-  {
-    id: "Smart Logistics & Supply Chain",
-    label: {
-      en: "Smart Logistics & Supply Chain",
-      zh: "智慧物流与供应链",
-      ms: "Logistik Pintar & Rantaian Bekalan",
-    },
-  },
-  {
-    id: "Clerical & Administrative",
-    label: {
-      en: "Clerical & Administrative",
-      zh: "行政文书与后台支持",
-      ms: "Perkeranian & Pentadbiran",
-    },
-  },
-  {
-    id: "Marketing & Creative Media",
-    label: {
-      en: "Marketing & Creative Media",
-      zh: "市场营销与创意媒体",
-      ms: "Pemasaran & Media Kreatif",
-    },
-  },
-  {
-    id: "Public Sector & Education",
-    label: {
-      en: "Public Sector & Education",
-      zh: "公共部门与教育培训",
-      ms: "Sektor Awam & Pendidikan",
-    },
-  },
-];
+  "Software & Cloud Services",
+  "Banking & Financial Services",
+  "Clean Energy & ESG",
+  "Healthcare & BioTech",
+  "Industrial Automation & Robotics",
+  "Smart Logistics & Supply Chain",
+  "Clerical & Administrative",
+  "Marketing & Creative Media",
+  "Public Sector & Education",
+].map((id) => createLocalizedOption("industry", id));
 
 export const EDUCATION_LEVEL_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "Secondary / High School",
-    label: {
-      en: "Secondary / High School",
-      zh: "中学 / 高中学历 (SPM/STPM)",
-      ms: "Sekolah Menengah / SPM",
-    },
-  },
-  {
-    id: "Diploma / Vocational (TVET)",
-    label: {
-      en: "Diploma / Vocational (TVET)",
-      zh: "大专 / 职业技术认证 (TVET)",
-      ms: "Diploma / Vokasional (TVET)",
-    },
-  },
-  {
-    id: "Bachelor's Degree",
-    label: {
-      en: "Bachelor's Degree",
-      zh: "学士学位 / 大学本科",
-      ms: "Ijazah Sarjana Muda",
-    },
-  },
-  {
-    id: "Master's / Postgraduate",
-    label: {
-      en: "Master's / Postgraduate",
-      zh: "硕士学位 / 研究生",
-      ms: "Ijazah Sarjana / Pascasiswazah",
-    },
-  },
-  {
-    id: "Doctorate / PhD",
-    label: {
-      en: "Doctorate / PhD",
-      zh: "博士学位 (PhD)",
-      ms: "Doktor Falsafah (PhD)",
-    },
-  },
-  {
-    id: "Self-Taught / Industry Certified",
-    label: {
-      en: "Self-Taught / Industry Certified",
-      zh: "自学成才 / 行业专业认证",
-      ms: "Belajar Sendiri / Pensijilan Industri",
-    },
-  },
-];
+  "Secondary / High School",
+  "Diploma / Vocational (TVET)",
+  "Bachelor's Degree",
+  "Master's / Postgraduate",
+  "Doctorate / PhD",
+  "Self-Taught / Industry Certified",
+].map((id) => createLocalizedOption("educationLevel", id));
 
 export const WEEKLY_COMMITMENT_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "1-3",
-    label: {
-      en: "1 - 3 Hours",
-      zh: "1 - 3 小时",
-      ms: "1 - 3 Jam",
-    },
-    sub: {
-      en: "Micro-learning",
-      zh: "碎片化学习",
-      ms: "Pembelajaran mikro",
-    },
-  },
-  {
-    id: "3-5",
-    label: {
-      en: "3 - 5 Hours",
-      zh: "3 - 5 小时",
-      ms: "3 - 5 Jam",
-    },
-    sub: {
-      en: "Recommended",
-      zh: "推荐进度",
-      ms: "Disyorkan",
-    },
-  },
-  {
-    id: "5-10",
-    label: {
-      en: "5 - 10 Hours",
-      zh: "5 - 10 小时",
-      ms: "5 - 10 Jam",
-    },
-    sub: {
-      en: "Accelerated",
-      zh: "加速突破",
-      ms: "Dipercepatkan",
-    },
-  },
-  {
-    id: "10+",
-    label: {
-      en: "10+ Hours",
-      zh: "10+ 小时",
-      ms: "10+ Jam",
-    },
-    sub: {
-      en: "Full Immersion",
-      zh: "沉浸式专精",
-      ms: "Penyerapan penuh",
-    },
-  },
-];
+  "1-3",
+  "3-5",
+  "5-10",
+  "10+",
+].map((id) => createLocalizedOption("weeklyCommitmentHours", id));
 
 export const LEARNING_PROVIDER_OPTIONS: FixedOptionItem[] = [
-  {
-    id: "free_open",
-    label: {
-      en: "Free & Open-Source",
-      zh: "免费与开源资源",
-      ms: "Percuma & Sumber Terbuka",
-    },
-    desc: {
-      en: "Coursera Audit, YouTube, edX, MIT OpenCourseWare",
-      zh: "Coursera 免费旁听、edX、MIT 公开课及优质开源教程",
-      ms: "Audit Coursera, YouTube, edX, MIT OpenCourseWare",
-    },
-  },
-  {
-    id: "hrd_corp",
-    label: {
-      en: "HRD Corp Claimable",
-      zh: "HRD Corp 可索赔培训",
-      ms: "Tuntutan HRD Corp",
-    },
-    desc: {
-      en: "Certified Malaysian enterprise training programs",
-      zh: "马来西亚人力资源发展机构（HRD Corp）认证企业培训",
-      ms: "Program latihan perusahaan Malaysia yang diperakui",
-    },
-  },
-  {
-    id: "industry_cert",
-    label: {
-      en: "Vendor Certifications",
-      zh: "行业与厂商专业认证",
-      ms: "Pensijilan Vendor",
-    },
-    desc: {
-      en: "AWS, Google Cloud, Microsoft, Cisco, NVIDIA",
-      zh: "AWS、Google Cloud、Microsoft、Cisco、NVIDIA 厂商认证",
-      ms: "AWS, Google Cloud, Microsoft, Cisco, NVIDIA",
-    },
-  },
-  {
-    id: "university",
-    label: {
-      en: "University Micro-Credentials",
-      zh: "大学微凭证课程",
-      ms: "Mikrokredensial Universiti",
-    },
-    desc: {
-      en: "Accredited modular higher-education credits",
-      zh: "高校正规认证模块化学分与专业微凭证",
-      ms: "Kredit pendidikan tinggi modular bertauliah",
-    },
-  },
-];
+  "free_open",
+  "hrd_corp",
+  "industry_cert",
+  "university",
+].map((id) => createLocalizedOption("learningProviders", id));
+
+// Step 3: Target Growth Sectors and Aliases
+// Taxonomy definition for career transition pathways and semantic matching aliases.
+const SECTOR_ALIASES_MAP: Record<string, string[]> = {
+  "Artificial Intelligence & Machine Learning": [
+    "artificial intelligence & machine learning",
+    "ai & machine learning",
+    "ai & ml",
+    "ai/ml",
+    "artificial intelligence",
+    "machine learning",
+    "ai",
+    "ml",
+    "deep learning",
+    "genai",
+    "generative ai",
+    "人工智能",
+    "机器学习",
+    "深度学习",
+    "kecerdasan buatan",
+    "pembelajaran mesin",
+  ],
+  "Clean Energy & ESG": [
+    "clean energy & esg",
+    "clean energy",
+    "esg",
+    "green energy",
+    "renewable energy",
+    "sustainability",
+    "清洁能源",
+    "绿色能源",
+    "可持续发展",
+    "tenaga bersih",
+    "tenaga boleh diperbaharui",
+  ],
+  "Cloud & Infrastructure": [
+    "cloud & infrastructure",
+    "cloud computing",
+    "cloud services",
+    "infrastructure",
+    "cloud",
+    "devops",
+    "aws",
+    "azure",
+    "gcp",
+    "云计算",
+    "云服务",
+    "基础设施",
+    "perkhidmatan awan",
+    "infrastruktur",
+  ],
+  "Cybersecurity & Zero Trust": [
+    "cybersecurity & zero trust",
+    "cybersecurity",
+    "cyber security",
+    "zero trust",
+    "infosec",
+    "information security",
+    "security",
+    "网络安全",
+    "信息安全",
+    "零信任",
+    "keselamatan siber",
+  ],
+  "Modern Finance & FinTech": [
+    "modern finance & fintech",
+    "modern finance",
+    "fintech",
+    "financial services",
+    "banking",
+    "finance",
+    "financial",
+    "金融科技",
+    "现代金融",
+    "金融服务",
+    "银行",
+    "kewangan moden",
+    "perbankan",
+  ],
+  "Software Engineering": [
+    "software engineering",
+    "software development",
+    "web development",
+    "software & cloud services",
+    "software",
+    "programming",
+    "full stack",
+    "软件工程",
+    "软件开发",
+    "系统开发",
+    "kejuruteraan perisian",
+    "pembangunan perisian",
+  ],
+  "Smart Logistics & Supply Chain": [
+    "smart logistics & supply chain",
+    "smart logistics",
+    "logistics",
+    "supply chain",
+    "procurement",
+    "智慧物流",
+    "智慧物流与供应链",
+    "物流",
+    "供应链",
+    "logistik pintar",
+    "rantaian bekalan",
+  ],
+  "Healthcare & BioTech": [
+    "healthcare & biotech",
+    "healthcare",
+    "biotech",
+    "healthtech",
+    "medical",
+    "health",
+    "医疗健康与生物科技",
+    "医疗健康",
+    "生物科技",
+    "医疗",
+    "penjagaan kesihatan",
+    "bioteknologi",
+  ],
+  "Industrial Automation": [
+    "industrial automation",
+    "industrial automation & robotics",
+    "robotics",
+    "automation",
+    "industry 4.0",
+    "iot",
+    "工业自动化与机器人",
+    "工业自动化",
+    "自动化",
+    "机器人",
+    "工业4.0",
+    "automasi industri",
+    "robotik",
+  ],
+};
 
 export const TARGET_SECTORS_DATA: { id: string; label: LocalizedText; aliases?: string[] }[] = [
-  {
-    id: "Artificial Intelligence & Machine Learning",
-    label: {
-      en: "Artificial Intelligence & Machine Learning",
-      zh: "人工智能与机器学习",
-      ms: "Kecerdasan Buatan & Pembelajaran Mesin",
-    },
-    aliases: [
-      "artificial intelligence & machine learning",
-      "ai & machine learning",
-      "ai & ml",
-      "ai/ml",
-      "artificial intelligence",
-      "machine learning",
-      "ai",
-      "ml",
-      "deep learning",
-      "genai",
-      "generative ai",
-      "人工智能",
-      "机器学习",
-      "深度学习",
-      "kecerdasan buatan",
-      "pembelajaran mesin",
-    ],
-  },
-  {
-    id: "Clean Energy & ESG",
-    label: {
-      en: "Clean Energy & ESG",
-      zh: "清洁能源与 ESG",
-      ms: "Tenaga Bersih & ESG",
-    },
-    aliases: [
-      "clean energy & esg",
-      "clean energy",
-      "esg",
-      "green energy",
-      "renewable energy",
-      "sustainability",
-      "清洁能源",
-      "绿色能源",
-      "可持续发展",
-      "tenaga bersih",
-      "tenaga boleh diperbaharui",
-    ],
-  },
-  {
-    id: "Cloud & Infrastructure",
-    label: {
-      en: "Cloud & Infrastructure",
-      zh: "云计算与基础设施",
-      ms: "Awan & Infrastruktur",
-    },
-    aliases: [
-      "cloud & infrastructure",
-      "cloud computing",
-      "cloud services",
-      "infrastructure",
-      "cloud",
-      "devops",
-      "aws",
-      "azure",
-      "gcp",
-      "云计算",
-      "云服务",
-      "基础设施",
-      "perkhidmatan awan",
-      "infrastruktur",
-    ],
-  },
-  {
-    id: "Cybersecurity & Zero Trust",
-    label: {
-      en: "Cybersecurity & Zero Trust",
-      zh: "网络安全与零信任架构",
-      ms: "Keselamatan Siber & Zero Trust",
-    },
-    aliases: [
-      "cybersecurity & zero trust",
-      "cybersecurity",
-      "cyber security",
-      "zero trust",
-      "infosec",
-      "information security",
-      "security",
-      "网络安全",
-      "信息安全",
-      "零信任",
-      "keselamatan siber",
-    ],
-  },
-  {
-    id: "Modern Finance & FinTech",
-    label: {
-      en: "Modern Finance & FinTech",
-      zh: "现代金融与金融科技 (FinTech)",
-      ms: "Kewangan Moden & FinTech",
-    },
-    aliases: [
-      "modern finance & fintech",
-      "modern finance",
-      "fintech",
-      "financial services",
-      "banking",
-      "finance",
-      "financial",
-      "金融科技",
-      "现代金融",
-      "金融服务",
-      "银行",
-      "kewangan moden",
-      "perbankan",
-    ],
-  },
-  {
-    id: "Software Engineering",
-    label: {
-      en: "Software Engineering",
-      zh: "软件工程与系统开发",
-      ms: "Kejuruteraan Perisian",
-    },
-    aliases: [
-      "software engineering",
-      "software development",
-      "web development",
-      "software & cloud services",
-      "software",
-      "programming",
-      "full stack",
-      "软件工程",
-      "软件开发",
-      "系统开发",
-      "kejuruteraan perisian",
-      "pembangunan perisian",
-    ],
-  },
-  {
-    id: "Smart Logistics & Supply Chain",
-    label: {
-      en: "Smart Logistics & Supply Chain",
-      zh: "智慧物流与供应链",
-      ms: "Logistik Pintar & Rantaian Bekalan",
-    },
-    aliases: [
-      "smart logistics & supply chain",
-      "smart logistics",
-      "logistics",
-      "supply chain",
-      "procurement",
-      "智慧物流",
-      "智慧物流与供应链",
-      "物流",
-      "供应链",
-      "logistik pintar",
-      "rantaian bekalan",
-    ],
-  },
-  {
-    id: "Healthcare & BioTech",
-    label: {
-      en: "Healthcare & BioTech",
-      zh: "医疗健康与生物科技",
-      ms: "Penjagaan Kesihatan & Bioteknologi",
-    },
-    aliases: [
-      "healthcare & biotech",
-      "healthcare",
-      "biotech",
-      "healthtech",
-      "medical",
-      "health",
-      "医疗健康与生物科技",
-      "医疗健康",
-      "生物科技",
-      "医疗",
-      "penjagaan kesihatan",
-      "bioteknologi",
-    ],
-  },
-  {
-    id: "Industrial Automation",
-    label: {
-      en: "Industrial Automation",
-      zh: "工业自动化与机器人",
-      ms: "Automasi Industri",
-    },
-    aliases: [
-      "industrial automation",
-      "industrial automation & robotics",
-      "robotics",
-      "automation",
-      "industry 4.0",
-      "iot",
-      "工业自动化与机器人",
-      "工业自动化",
-      "自动化",
-      "机器人",
-      "工业4.0",
-      "automasi industri",
-      "robotik",
-    ],
-  },
-];
+  "Artificial Intelligence & Machine Learning",
+  "Clean Energy & ESG",
+  "Cloud & Infrastructure",
+  "Cybersecurity & Zero Trust",
+  "Modern Finance & FinTech",
+  "Software Engineering",
+  "Smart Logistics & Supply Chain",
+  "Healthcare & BioTech",
+  "Industrial Automation",
+].map((id) => ({
+  id,
+  label: createLocalizedOption("targetSectors", id).label,
+  aliases: SECTOR_ALIASES_MAP[id] || [],
+}));
 
-// Helper to safely get localized text with fallback to English
+// Step 4: Locale Resolution Helpers
+// Safely retrieve localized string matching the active locale code, defaulting to English.
 export function getLocalized(textObj: LocalizedText | undefined, locale: string): string {
   if (!textObj) return "";
   if (locale === "zh") return textObj.zh || textObj.en;
@@ -643,7 +283,7 @@ export function getLocalized(textObj: LocalizedText | undefined, locale: string)
   return textObj.en;
 }
 
-// Find a matching standard sector by ID, label, or aliases
+// Find a matching standard sector definition by ID, multilingual label, or registered alias.
 export function findSectorDefinition(val?: string) {
   if (!val || typeof val !== "string") return null;
   const s = val.trim().toLowerCase();
@@ -669,7 +309,7 @@ export function findSectorDefinition(val?: string) {
   return null;
 }
 
-// Get localized label for any sector string (standard ID or alias)
+// Retrieve localized label for any sector string or return original identifier when unmatched.
 export function getSectorLocalizedLabel(sectorIdOrName: string, locale: string): string {
   const matched = findSectorDefinition(sectorIdOrName);
   if (matched) {
@@ -678,9 +318,10 @@ export function getSectorLocalizedLabel(sectorIdOrName: string, locale: string):
   return sectorIdOrName;
 }
 
-// ============================================================================
-// Normalization Parsers for Intake / Profile / Prefill
-// ============================================================================
+
+// --- Normalization Parsers ---
+// Standardize incoming profile form inputs to canonical database identifiers.
+
 
 export function normalizeWorkArrangement(val?: any): string {
   if (!val || typeof val !== "string") return "";
@@ -1091,11 +732,8 @@ export function normalizeTargetSectors(vals?: any[]): string[] {
   return result;
 }
 
-/**
- * Normalizes an entire incoming profile object (whether from semantic extraction,
- * DB fetch, or external payload) so that fixed options are converted to standard IDs
- * and non-fixed fields retain their exact values.
- */
+// Step 1: Normalize Intake Profile
+// Convert fixed dropdown options to canonical identifiers while preserving non-fixed fields.
 export function normalizeProfileForForm(raw: any): any {
   if (!raw) return raw;
   return {

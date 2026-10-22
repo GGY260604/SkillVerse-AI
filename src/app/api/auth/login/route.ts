@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Ensure user record exists in Prisma database for relation mapping.
     if (data.user?.id && data.user.email) {
       try {
-        const { prisma } = await import("@/lib/prisma");
+        const { prisma } = await import("@/lib/supabase/prisma");
         await prisma.user.upsert({
           where: { id: data.user.id },
           create: {

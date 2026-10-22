@@ -1,3 +1,5 @@
+// --- Roadmap Data Formatter ---
+// Transform database roadmap records into typed frontend PlanData structures.
 import { PlanData, PlanPhase, CourseItem } from "@/components/analysis/planCard/planData";
 
 export interface DatabaseRoadmap {
@@ -42,9 +44,8 @@ export interface DatabaseRoadmap {
   }>;
 }
 
-/**
- * Transforms a Prisma/Database Roadmap record into the frontend typed PlanData.
- */
+// Step 1: Format Database Roadmap to Plan Data
+// Convert database entity attributes and associated phases into typed frontend plan structures.
 export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
   const isCurrent = roadmap.status === "current";
   const createdDate = new Date(roadmap.createdAt);
@@ -54,17 +55,20 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
     : String(roadmap.createdAt || "").split("T")[0].split(" ")[0];
   const dateStr = formattedDate;
 
+  // Generate standardized plan code identifier based on year and target role suffix.
   const roleCodeSuffix = (roadmap.targetRoleId || "ROLE")
     .replace(/^role-|^custom-/, "")
     .slice(0, 6)
     .toUpperCase();
 
+  // Sort learning phases sequentially by designated phase index.
   const sortedPhases = (roadmap.phases || []).sort(
     (a, b) => a.phaseIndex - b.phaseIndex
   );
 
+  // Step 2: Phase Normalization and Recommended Course Parsing
   const phases: PlanPhase[] = sortedPhases.map((p) => {
-    // Parse recommended courses array
+    // Parse recommended courses array from JSON or direct object array.
     let courses: CourseItem[] = [];
     if (Array.isArray(p.recommendedCourses)) {
       courses = p.recommendedCourses;
@@ -75,6 +79,7 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
         courses = [];
       }
     }
+
 
     const courseDetails = courses
       .map((c) => `${c.title} (${c.platform})`)
@@ -105,9 +110,12 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
     };
   });
 
+  // Step 3: Assemble Plan Data
+  // Build and return final plan data object consumed by frontend components.
   return {
     id: roadmap.id,
     isCurrent,
+
     code: `SV-${createdDate.getFullYear()}-${roleCodeSuffix}`,
     date: dateStr,
     createdAt: formattedDate,

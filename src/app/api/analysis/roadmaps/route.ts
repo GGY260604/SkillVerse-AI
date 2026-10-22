@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/supabase/prisma";
 import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 
 /**
