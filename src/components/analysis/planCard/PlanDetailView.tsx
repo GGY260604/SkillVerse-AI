@@ -185,6 +185,47 @@ export default function PlanDetailView({
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
 
+  // Helper to resolve localized skill lists for active locale
+  const getSkillsForLocale = (
+    baseList: string[] = [],
+    msList?: string[],
+    zhList?: string[],
+    locMap?: { en?: string[]; ms?: string[]; zh?: string[]; [key: string]: string[] | undefined }
+  ): string[] => {
+    if (locale === "zh") {
+      if (Array.isArray(zhList) && zhList.length > 0) return zhList;
+      if (locMap?.zh && Array.isArray(locMap.zh) && locMap.zh.length > 0) return locMap.zh;
+    } else if (locale === "ms") {
+      if (Array.isArray(msList) && msList.length > 0) return msList;
+      if (locMap?.ms && Array.isArray(locMap.ms) && locMap.ms.length > 0) return locMap.ms;
+    }
+    if (locMap?.[locale] && Array.isArray(locMap[locale]) && locMap[locale]!.length > 0) {
+      return locMap[locale]!;
+    }
+    return baseList && baseList.length > 0 ? baseList : (locMap?.en || []);
+  };
+
+  const localizedMatchedStrengths = getSkillsForLocale(
+    plan.matchedStrengths,
+    plan.matchedStrengthsMs,
+    plan.matchedStrengthsZh,
+    plan.matchedStrengthsLocalized
+  );
+
+  const localizedSkillsGap = getSkillsForLocale(
+    plan.skillsGap,
+    plan.skillsGapMs,
+    plan.skillsGapZh,
+    plan.skillsGapLocalized
+  );
+
+  const localizedAtRiskSkills = getSkillsForLocale(
+    plan.atRiskSkills,
+    plan.atRiskSkillsMs,
+    plan.atRiskSkillsZh,
+    plan.atRiskSkillsLocalized
+  );
+
   // --- UI ---
   return (
     <div
@@ -315,11 +356,11 @@ export default function PlanDetailView({
               {tCurrent("matched_strengths")}
             </h3>
             <span className="text-xs font-mono text-emerald-400 font-semibold">
-              {plan.matchedStrengths.length}
+              {localizedMatchedStrengths.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.matchedStrengths.map((skill) => (
+            {localizedMatchedStrengths.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold shrink-0 mt-0.5">✓</span>
                 <span className="text-text-primary font-medium">{skill}</span>
@@ -335,11 +376,11 @@ export default function PlanDetailView({
               {tCurrent("skills_gap")}
             </h3>
             <span className="text-xs font-mono text-amber-400 font-semibold">
-              {plan.skillsGap.length}
+              {localizedSkillsGap.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.skillsGap.map((skill) => (
+            {localizedSkillsGap.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-amber-400 font-bold shrink-0 mt-0.5">▲</span>
                 <span className="text-text-primary font-medium">{skill}</span>
@@ -355,11 +396,11 @@ export default function PlanDetailView({
               {tCurrent("at_risk_skills")}
             </h3>
             <span className="text-xs font-mono text-rose-400 font-semibold">
-              {plan.atRiskSkills.length}
+              {localizedAtRiskSkills.length}
             </span>
           </div>
           <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {plan.atRiskSkills.map((skill) => (
+            {localizedAtRiskSkills.map((skill) => (
               <li key={skill} className="flex items-start gap-2">
                 <span className="text-rose-400 font-bold shrink-0 mt-0.5">✕</span>
                 <span className="text-text-primary font-medium">{skill}</span>

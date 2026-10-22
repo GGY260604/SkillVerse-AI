@@ -5,6 +5,7 @@ import httpx
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
 from config import settings
+from services.http_client import get_shared_client
 from schemas.profile import ProfileIntakePayload, UserSkillItem, EmploymentStatus, SkillProficiency
 
 
@@ -133,59 +134,59 @@ async def call_gemini_with_fallback(
         api_key = settings.GEMINI_API_KEYS[key_index]
 
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                for model in GEMINI_MODELS:
-                    url = API_URL_TEMPLATE.format(model=model, key=api_key)
-                    payload = {
-                        "system_instruction": {
-                            "parts": [{"text": sys_text}]
-                        },
-                        "contents": contents,
-                        "generationConfig": {
-                            "response_mime_type": "application/json",
-                            "temperature": 0.2,
-                            "maxOutputTokens": max_output_tokens,
-                        },
-                    }
+            client = get_shared_client(timeout=timeout)
+            for model in GEMINI_MODELS:
+                url = API_URL_TEMPLATE.format(model=model, key=api_key)
+                payload = {
+                    "system_instruction": {
+                        "parts": [{"text": sys_text}]
+                    },
+                    "contents": contents,
+                    "generationConfig": {
+                        "response_mime_type": "application/json",
+                        "temperature": 0.2,
+                        "maxOutputTokens": max_output_tokens,
+                    },
+                }
 
-                    try:
-                        response = await client.post(url, json=payload)
-                        if response.status_code == 200:
-                            result = response.json()
-                            candidates = result.get("candidates", [])
-                            if candidates and "content" in candidates[0]:
-                                parts = candidates[0]["content"].get("parts", [])
-                                if parts and "text" in parts[0]:
-                                    raw_text = parts[0]["text"].strip()
-                                    if raw_text.startswith("```json"):
-                                        raw_text = raw_text[7:]
-                                    if raw_text.startswith("```"):
-                                        raw_text = raw_text[3:]
-                                    if raw_text.endswith("```"):
-                                        raw_text = raw_text[:-3]
-                                    _active_key_index = key_index  # Remember this working key!
-                                    _last_used_key_identifier = f"GEMINI_API_KEY_{key_index + 1}"
-                                    return json.loads(raw_text.strip())
-                            raise ValueError("Empty or malformed candidate in Gemini response.")
+                try:
+                    response = await client.post(url, json=payload)
+                    if response.status_code == 200:
+                        result = response.json()
+                        candidates = result.get("candidates", [])
+                        if candidates and "content" in candidates[0]:
+                            parts = candidates[0]["content"].get("parts", [])
+                            if parts and "text" in parts[0]:
+                                raw_text = parts[0]["text"].strip()
+                                if raw_text.startswith("```json"):
+                                    raw_text = raw_text[7:]
+                                if raw_text.startswith("```"):
+                                    raw_text = raw_text[3:]
+                                if raw_text.endswith("```"):
+                                    raw_text = raw_text[:-3]
+                                _active_key_index = key_index  # Remember this working key!
+                                _last_used_key_identifier = f"GEMINI_API_KEY_{key_index + 1}"
+                                return json.loads(raw_text.strip())
+                        raise ValueError("Empty or malformed candidate in Gemini response.")
 
-                        last_error = f"API Key #{key_index + 1} ({model}) returned HTTP {response.status_code}: {response.text[:150]}"
+                    last_error = f"API Key #{key_index + 1} ({model}) returned HTTP {response.status_code}: {response.text[:150]}"
 
-                        if response.status_code == 402:
-                            # Billing depleted for this project, record to avoid hammering it
-                            _depleted_key_indices.add(key_index)
-                            break
-                        elif response.status_code in (400, 401, 403):
-                            # Key invalid or unauthorized, skip to next key
-                            break
-                        elif response.status_code in (404, 429, 500, 502, 503, 504):
-                            # Model not available, model rate limited, or transient 503 spike: try next model
-                            continue
-                        else:
-                            continue
-
-                    except Exception as e:
-                        last_error = f"{type(e).__name__} on Key #{key_index + 1} ({model}): {str(e)}"
+                    if response.status_code == 402:
+                        # Billing depleted for this project, record to avoid hammering it
+                        _depleted_key_indices.add(key_index)
+                        break
+                    elif response.status_code in (400, 401, 403):
+                        # Key invalid or unauthorized, skip to next key
+                        break
+                    elif response.status_code in (404, 429, 500, 502, 503, 504):
+                        # Model not available, model rate limited, or transient 503 spike: try next model
                         continue
+                    else:
+                        continue
+
+                except Exception as e:
+                    last_error = f"{type(e).__name__} on Key #{key_index + 1} ({model}): {str(e)}"
+                    continue
         except Exception as e:
             last_error = f"{type(e).__name__} on Key #{key_index + 1}: {str(e)}"
             continue

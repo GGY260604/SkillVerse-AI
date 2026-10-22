@@ -220,16 +220,31 @@ async def evaluate_team_skill_matrix(
             "Cross-functional Collaboration",
         ]
 
-    # Pre-generate embeddings for all required benchmark skills in parallel
-    if req_skills:
-        raw_r_vecs = await asyncio.gather(*(generate_embedding(r) for r in req_skills))
-        req_skill_vectors: Dict[str, List[float]] = {
-            r: v for r, v in zip(req_skills, raw_r_vecs) if v
+    # 2. Collect all candidate skills across all team members to perform a single unified parallel embedding gather
+    all_candidate_skill_names = set()
+    for member in request.teamMembers:
+        for s in member.skills:
+            clean_name = s.name.strip()
+            if clean_name:
+                all_candidate_skill_names.add(clean_name)
+        if member.matchedStrengths:
+            for ms in member.matchedStrengths:
+                clean_ms = ms.strip()
+                if clean_ms:
+                    all_candidate_skill_names.add(clean_ms)
+
+    all_distinct_skills = list(set(req_skills) | all_candidate_skill_names)
+    if all_distinct_skills:
+        all_vecs = await asyncio.gather(*(generate_embedding(s) for s in all_distinct_skills))
+        global_skill_vectors: Dict[str, List[float]] = {
+            s: v for s, v in zip(all_distinct_skills, all_vecs) if v
         }
     else:
-        req_skill_vectors = {}
+        global_skill_vectors = {}
 
-    # 2. Evaluate Each Candidate
+    req_skill_vectors = {r: global_skill_vectors.get(r) for r in req_skills if r in global_skill_vectors}
+
+    # 3. Evaluate Each Candidate synchronously with zero per-candidate network awaits
     evaluated_candidates: List[TeamMemberAnalysis] = []
 
     for member in request.teamMembers:
@@ -247,15 +262,10 @@ async def evaluate_team_skill_matrix(
                 if clean_ms and clean_ms not in user_skills_dict:
                     user_skills_dict[clean_ms] = "intermediate"
 
-        # Pre-compute candidate skill vectors in parallel
         cand_keys = list(user_skills_dict.keys())
-        if cand_keys:
-            raw_cand_vecs = await asyncio.gather(*(generate_embedding(k) for k in cand_keys))
-            user_skill_vectors: Dict[str, List[float]] = {
-                k: v for k, v in zip(cand_keys, raw_cand_vecs) if v
-            }
-        else:
-            user_skill_vectors = {}
+        user_skill_vectors: Dict[str, List[float]] = {
+            k: global_skill_vectors.get(k) for k in cand_keys if k in global_skill_vectors
+        }
 
 
         skills_status_map: Dict[str, SkillEvaluationItem] = {}

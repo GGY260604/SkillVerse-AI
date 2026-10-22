@@ -17,6 +17,7 @@ class PhaseQuizRequest(BaseModel):
     courseTopic: Optional[str] = Field(default=None, description="Course module or syllabus topic being assessed")
     targetRole: Optional[str] = Field(default=None, description="Target job title to contextualize questions")
     locale: str = Field(default="en", description="Target language: 'en', 'ms', or 'zh'")
+    forceRefresh: Optional[bool] = Field(default=False, description="Bypass cache and generate fresh questions")
 
 
 class PhaseQuizResponse(BaseModel):

@@ -1,9 +1,23 @@
-import httpx
+import time
+from typing import Dict, Any
 from fastapi import APIRouter
 from config import settings
 from services.trends import sync_live_trend_signals_to_supabase
+from services.http_client import get_shared_client
 
 router = APIRouter()
+
+# In-memory TTL cache for live trends responses (keyed by locale)
+_trends_cache: Dict[str, Dict[str, Any]] = {}
+_trends_cache_time: float = 0.0
+_TRENDS_CACHE_TTL = 60.0  # 60 seconds TTL
+
+
+def invalidate_trends_cache():
+    """Invalidates the in-memory trends cache when a fresh sync completes."""
+    global _trends_cache, _trends_cache_time
+    _trends_cache.clear()
+    _trends_cache_time = 0.0
 
 
 # Multilingual Category Mappings
@@ -68,6 +82,13 @@ async def get_live_trends(locale: str = "en"):
     Returns localized skill names, categories, statuses, and citations for Next.js.
     """
     loc = (locale or "en").lower().strip()
+    now = time.time()
+    global _trends_cache, _trends_cache_time
+
+    # Return cached response instantly (< 1ms) if within TTL
+    if loc in _trends_cache and (now - _trends_cache_time < _TRENDS_CACHE_TTL):
+        return _trends_cache[loc]
+
     if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
         return {"trends": [], "lastSynced": None, "totalCount": 0, "locale": loc}
 
@@ -82,53 +103,57 @@ async def get_live_trends(locale: str = "en"):
     }
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(endpoint, headers=headers)
-            if resp.status_code == 200:
-                rows = resp.json()
-                latest_timestamp = rows[0].get("updatedAt") if rows else None
+        client = get_shared_client(timeout=5.0)
+        resp = await client.get(endpoint, headers=headers)
+        if resp.status_code == 200:
+            rows = resp.json()
+            latest_timestamp = rows[0].get("updatedAt") if rows else None
 
-                localized_signals = []
-                for r in rows:
-                    raw_skill = r.get("skillName", "")
-                    raw_cat = r.get("category", "Technology")
-                    raw_status = r.get("status", "stable")
-                    sources = r.get("sources", [])
-                    first_source = sources[0] if (isinstance(sources, list) and len(sources) > 0 and isinstance(sources[0], dict)) else {}
+            localized_signals = []
+            for r in rows:
+                raw_skill = r.get("skillName", "")
+                raw_cat = r.get("category", "Technology")
+                raw_status = r.get("status", "stable")
+                sources = r.get("sources", [])
+                first_source = sources[0] if (isinstance(sources, list) and len(sources) > 0 and isinstance(sources[0], dict)) else {}
 
-                    # Localize skill name
-                    norm_skill = raw_skill.lower().strip()
-                    if loc == "zh":
-                        loc_skill = first_source.get("skillName_zh") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("zh") or raw_skill
-                        loc_cat = first_source.get("category_zh") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("zh") or raw_cat
-                        loc_citation = first_source.get("citation_zh") or first_source.get("citation", "")
-                    elif loc == "ms":
-                        loc_skill = first_source.get("skillName_ms") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("ms") or raw_skill
-                        loc_cat = first_source.get("category_ms") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("ms") or raw_cat
-                        loc_citation = first_source.get("citation_ms") or first_source.get("citation", "")
-                    else:
-                        loc_skill = raw_skill
-                        loc_cat = raw_cat
-                        loc_citation = first_source.get("citation", "")
+                # Localize skill name
+                norm_skill = raw_skill.lower().strip()
+                if loc == "zh":
+                    loc_skill = first_source.get("skillName_zh") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("zh") or raw_skill
+                    loc_cat = first_source.get("category_zh") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("zh") or raw_cat
+                    loc_citation = first_source.get("citation_zh") or first_source.get("citation", "")
+                elif loc == "ms":
+                    loc_skill = first_source.get("skillName_ms") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("ms") or raw_skill
+                    loc_cat = first_source.get("category_ms") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("ms") or raw_cat
+                    loc_citation = first_source.get("citation_ms") or first_source.get("citation", "")
+                else:
+                    loc_skill = raw_skill
+                    loc_cat = raw_cat
+                    loc_citation = first_source.get("citation", "")
 
-                    loc_status = STATUS_TRANSLATIONS.get(raw_status, {}).get(loc) or raw_status
+                loc_status = STATUS_TRANSLATIONS.get(raw_status, {}).get(loc) or raw_status
 
-                    localized_signals.append({
-                        **r,
-                        "skillNameLocalized": loc_skill,
-                        "categoryLocalized": loc_cat,
-                        "statusLocalized": loc_status,
-                        "citationLocalized": loc_citation,
-                    })
+                localized_signals.append({
+                    **r,
+                    "skillNameLocalized": loc_skill,
+                    "categoryLocalized": loc_cat,
+                    "statusLocalized": loc_status,
+                    "citationLocalized": loc_citation,
+                })
 
-                return {
-                    "locale": loc,
-                    "totalCount": len(localized_signals),
-                    "lastSynced": latest_timestamp,
-                    "emergingCount": len([s for s in localized_signals if s.get("status") == "emerging"]),
-                    "decliningCount": len([s for s in localized_signals if s.get("status") == "declining"]),
-                    "signals": localized_signals,
-                }
+            result = {
+                "locale": loc,
+                "totalCount": len(localized_signals),
+                "lastSynced": latest_timestamp,
+                "emergingCount": len([s for s in localized_signals if s.get("status") == "emerging"]),
+                "decliningCount": len([s for s in localized_signals if s.get("status") == "declining"]),
+                "signals": localized_signals,
+            }
+            # Cache successfully resolved payload
+            _trends_cache[loc] = result
+            _trends_cache_time = now
+            return result
     except Exception as e:
         return {"error": str(e), "signals": [], "lastSynced": None, "locale": loc}
 
@@ -146,4 +171,6 @@ async def trigger_live_trend_sync():
     Can be invoked manually or scheduled via Supabase pg_cron.
     """
     result = await sync_live_trend_signals_to_supabase()
+    # Invalidate cache so fresh signals appear immediately
+    invalidate_trends_cache()
     return result

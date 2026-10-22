@@ -102,12 +102,12 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
                 )
             )
 
-            # Keep-alive heartbeat: while evaluate_roles is computing, yield SSE comments every 2 seconds
-            # so reverse proxies, Next.js idle timer, and client sockets never time out
+            # Reactive keep-alive: returns immediately as soon as evaluation completes,
+            # or yields an SSE comment if evaluation takes longer than 2.0s
             hb_ticks = 0
             while not eval_task.done():
-                await asyncio.sleep(2.0)
-                if eval_task.done():
+                done, _ = await asyncio.wait([eval_task], timeout=2.0)
+                if done:
                     break
                 hb_ticks += 1
                 yield f": keep-alive {hb_ticks}\n\n"

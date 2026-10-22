@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -7,6 +8,7 @@ import httpx
 from config import settings
 from services.gemini_service import call_gemini_with_fallback
 from services.embedding_service import generate_embedding
+from services.http_client import get_shared_client
 
 
 ARXIV_API_URL = (
@@ -142,9 +144,11 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
     """
     capture_time = datetime.now(timezone.utc).isoformat()
 
-    async with httpx.AsyncClient() as client:
-        arxiv_items = await fetch_live_arxiv_signals(client)
-        remoteok_items = await fetch_live_remoteok_signals(client)
+    client = get_shared_client(timeout=15.0)
+    arxiv_items, remoteok_items = await asyncio.gather(
+        fetch_live_arxiv_signals(client),
+        fetch_live_remoteok_signals(client),
+    )
 
     all_items = arxiv_items + remoteok_items
     if not all_items:
@@ -205,93 +209,111 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
 
     synced_count = 0
     roles_synced_count = 0
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        # Pre-fetch existing trend signals from Supabase to obtain real historical baseline (pastWindowC)
-        existing_trends: Dict[str, float] = {}
-        try:
-            query_resp = await client.get(
-                f"{base_url}/rest/v1/trend_signals?select=skillName,currentWindowC",
-                headers={
-                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-                },
-                timeout=10.0,
-            )
-            if query_resp.status_code == 200:
-                for row in query_resp.json():
-                    name = (row.get("skillName") or "").lower().strip()
-                    if name and row.get("currentWindowC") is not None:
-                        existing_trends[name] = float(row["currentWindowC"])
-        except Exception as e:
-            print(f"[!] Warning: Could not pre-fetch historical trend signals: {e}")
+    client = get_shared_client(timeout=30.0)
 
-        for s in signals:
-            skill_name = s.get("skillName", "").lower().strip()
-            if not skill_name:
-                continue
+    # Pre-fetch existing trend signals from Supabase to obtain real historical baseline (pastWindowC)
+    existing_trends: Dict[str, float] = {}
+    try:
+        query_resp = await client.get(
+            f"{base_url}/rest/v1/trend_signals?select=skillName,currentWindowC",
+            headers={
+                "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+            },
+            timeout=10.0,
+        )
+        if query_resp.status_code == 200:
+            for row in query_resp.json():
+                name = (row.get("skillName") or "").lower().strip()
+                if name and row.get("currentWindowC") is not None:
+                    existing_trends[name] = float(row["currentWindowC"])
+    except Exception as e:
+        print(f"[!] Warning: Could not pre-fetch historical trend signals: {e}")
 
-            # 1. Real Frequency Calculation (Ct): Count actual occurrences across live ArXiv and RemoteOK items
-            mention_count = sum(
-                1 for item in all_items
-                if skill_name in item.get("title", "").lower() or skill_name in item.get("snippet", "").lower()
-            )
-            current_c = float(max(mention_count, 1))
+    # Deduplicate and build batch payload array for all trend signals
+    seen_skills = set()
+    signal_payloads: List[Dict[str, Any]] = []
 
-            # 2. Historical Baseline (Ct-1): Use existing Supabase value if present, or derive initial baseline
-            if skill_name in existing_trends:
-                past_c = max(existing_trends[skill_name], 1.0)
-                real_velocity = round((current_c - past_c) / past_c, 3)
+    for s in signals:
+        skill_name = s.get("skillName", "").lower().strip()
+        if not skill_name or skill_name in seen_skills:
+            continue
+        seen_skills.add(skill_name)
+
+        # 1. Real Frequency Calculation (Ct): Count actual occurrences across live ArXiv and RemoteOK items
+        mention_count = sum(
+            1 for item in all_items
+            if skill_name in item.get("title", "").lower() or skill_name in item.get("snippet", "").lower()
+        )
+        current_c = float(max(mention_count, 1))
+
+        # 2. Historical Baseline (Ct-1): Use existing Supabase value if present, or derive initial baseline
+        if skill_name in existing_trends:
+            past_c = max(existing_trends[skill_name], 1.0)
+            real_velocity = round((current_c - past_c) / past_c, 3)
+        else:
+            # Brand new skill: Derive initial baseline from Gemini's initial velocity estimation
+            llm_v = float(s.get("velocityVs", 0.35))
+            if llm_v > 0:
+                past_c = max(1.0, round(current_c / (1.0 + llm_v), 1))
             else:
-                # Brand new skill: Derive initial baseline from Gemini's initial velocity estimation
-                llm_v = float(s.get("velocityVs", 0.35))
-                if llm_v > 0:
-                    past_c = max(1.0, round(current_c / (1.0 + llm_v), 1))
-                else:
-                    past_c = max(1.0, round(current_c * (1.0 - llm_v), 1))
-                real_velocity = round((current_c - past_c) / past_c, 3)
+                past_c = max(1.0, round(current_c * (1.0 - llm_v), 1))
+            real_velocity = round((current_c - past_c) / past_c, 3)
 
-            # 3. Dynamic Status Classification according to mathematical specification (README 5.1)
-            # Emerging: Vs > +0.25 | Declining: Vs < -0.15 | Stable: -0.15 <= Vs <= +0.25
-            if real_velocity > 0.25:
-                calc_status = "emerging"
-            elif real_velocity < -0.15:
-                calc_status = "declining"
-            else:
-                calc_status = "stable"
+        # 3. Dynamic Status Classification according to mathematical specification (README 5.1)
+        # Emerging: Vs > +0.25 | Declining: Vs < -0.15 | Stable: -0.15 <= Vs <= +0.25
+        if real_velocity > 0.25:
+            calc_status = "emerging"
+        elif real_velocity < -0.15:
+            calc_status = "declining"
+        else:
+            calc_status = "stable"
 
-            payload = {
-                "id": str(uuid.uuid4()),
-                "skillName": skill_name,
-                "category": s.get("category", "Technology"),
-                "status": calc_status,
-                "velocityVs": real_velocity,
-                "currentWindowC": current_c,
-                "pastWindowC": past_c,
-                "sources": [
-                    {
-                        "sourceName": s.get("sourceName", "Live Open Labor Feed"),
-                        "url": s.get("sourceUrl", "https://export.arxiv.org"),
-                        "citation": s.get("citation", "Extracted from real-time market data feed."),
-                        "citation_ms": s.get("citation_ms", ""),
-                        "citation_zh": s.get("citation_zh", ""),
-                        "skillName_ms": s.get("skillName_ms", skill_name),
-                        "skillName_zh": s.get("skillName_zh", skill_name),
-                        "category_ms": s.get("category_ms", s.get("category", "Technology")),
-                        "category_zh": s.get("category_zh", s.get("category", "Technology")),
-                        "capturedAt": capture_time,
-                    }
-                ],
-                "updatedAt": capture_time,
-            }
+        signal_payloads.append({
+            "id": str(uuid.uuid4()),
+            "skillName": skill_name,
+            "category": s.get("category", "Technology"),
+            "status": calc_status,
+            "velocityVs": real_velocity,
+            "currentWindowC": current_c,
+            "pastWindowC": past_c,
+            "sources": [
+                {
+                    "sourceName": s.get("sourceName", "Live Open Labor Feed"),
+                    "url": s.get("sourceUrl", "https://export.arxiv.org"),
+                    "citation": s.get("citation", "Extracted from real-time market data feed."),
+                    "citation_ms": s.get("citation_ms", ""),
+                    "citation_zh": s.get("citation_zh", ""),
+                    "skillName_ms": s.get("skillName_ms", skill_name),
+                    "skillName_zh": s.get("skillName_zh", skill_name),
+                    "category_ms": s.get("category_ms", s.get("category", "Technology")),
+                    "category_zh": s.get("category_zh", s.get("category", "Technology")),
+                    "capturedAt": capture_time,
+                }
+            ],
+            "updatedAt": capture_time,
+        })
 
-            resp = await client.post(endpoint, json=payload, headers=headers)
-            if resp.status_code in [200, 201, 204]:
-                synced_count += 1
-            else:
-                print(f"[!] Supabase trend upsert failed for '{skill_name}': {resp.status_code} - {resp.text}")
+    # Execute single batch upsert for all trend signals
+    if signal_payloads:
+        resp = await client.post(endpoint, json=signal_payloads, headers=headers)
+        if resp.status_code in [200, 201, 204]:
+            synced_count = len(signal_payloads)
+        else:
+            # Fallback to individual rows if batch was partially rejected
+            print(f"[!] Batch upsert failed ({resp.status_code}), falling back to individual rows...")
+            for payload in signal_payloads:
+                ind_resp = await client.post(endpoint, json=payload, headers=headers)
+                if ind_resp.status_code in [200, 201, 204]:
+                    synced_count += 1
 
-        # Dynamically upsert newly discovered occupational roles into `esco_roles`
+    # Dynamically batch upsert newly discovered occupational roles into `esco_roles`
+    if emerging_roles:
         roles_endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
+        role_payloads: List[Dict[str, Any]] = []
+
+        # Prepare role metadata and batch embeddings concurrently
+        role_items_to_embed = []
         for role in emerging_roles:
             r_id = role.get("roleId") or f"emerging-{uuid.uuid4().hex[:8]}"
             title = role.get("title", "Emerging Professional Role")
@@ -314,25 +336,40 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
             }
             desc = role.get("description", "")
             industry = role.get("industry", "Responsible AI & Digital Transformation")
-
-            # Generate 1024-dim dense embedding
             embed_text = f"Role: {title}. Description: {desc}. Essential Skills: {', '.join(skills_en)}"
-            vector = await generate_embedding(embed_text)
 
-            role_payload = {
-                "id": str(uuid.uuid4()),
+            role_items_to_embed.append({
                 "role_id": r_id,
                 "title": title,
                 "title_ms": title_ms,
                 "title_zh": title_zh,
                 "industry": industry,
-                "required_skills": skills_en,
-                "required_skills_ms": skills_ms,
-                "required_skills_zh": skills_zh,
-                "required_skills_localized": localized_skills,
+                "skills_en": skills_en,
+                "skills_ms": skills_ms,
+                "skills_zh": skills_zh,
+                "localized_skills": localized_skills,
+                "sdg_alignments": [{"code": role.get("sdgAlignment", "SDG 8.2"), "title": role.get("sdgTitle", "Technological upgrading & productivity")}],
+                "embed_text": embed_text,
+            })
+
+        # Generate dense embeddings concurrently via asyncio.gather
+        role_vectors = await asyncio.gather(*(generate_embedding(item["embed_text"]) for item in role_items_to_embed))
+
+        for item, vector in zip(role_items_to_embed, role_vectors):
+            role_payloads.append({
+                "id": str(uuid.uuid4()),
+                "role_id": item["role_id"],
+                "title": item["title"],
+                "title_ms": item["title_ms"],
+                "title_zh": item["title_zh"],
+                "industry": item["industry"],
+                "required_skills": item["skills_en"],
+                "required_skills_ms": item["skills_ms"],
+                "required_skills_zh": item["skills_zh"],
+                "required_skills_localized": item["localized_skills"],
                 "embedding": vector,
                 "scenario_multipliers": {"conservative": 1.0, "moderate": 1.15, "disruptive": 1.30},
-                "sdg_alignments": [{"code": role.get("sdgAlignment", "SDG 8.2"), "title": role.get("sdgTitle", "Technological upgrading & productivity")}],
+                "sdg_alignments": item["sdg_alignments"],
                 "radar_requirements": {
                     "Technical Aptitude": 85,
                     "Domain Operations": 75,
@@ -342,13 +379,17 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 },
                 "created_at": capture_time,
                 "updated_at": capture_time,
-            }
+            })
 
-            r_resp = await client.post(roles_endpoint, json=role_payload, headers=headers)
-            if r_resp.status_code in [200, 201, 204]:
-                roles_synced_count += 1
-            else:
-                print(f"[!] Supabase emerging role upsert failed for '{title}': {r_resp.status_code} - {r_resp.text}")
+        # Execute single batch upsert for roles
+        r_resp = await client.post(roles_endpoint, json=role_payloads, headers=headers)
+        if r_resp.status_code in [200, 201, 204]:
+            roles_synced_count = len(role_payloads)
+        else:
+            for rp in role_payloads:
+                ind_r_resp = await client.post(roles_endpoint, json=rp, headers=headers)
+                if ind_r_resp.status_code in [200, 201, 204]:
+                    roles_synced_count += 1
 
     return {
         "success": True,

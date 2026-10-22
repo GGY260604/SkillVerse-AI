@@ -4,6 +4,7 @@ import time
 import httpx
 from typing import List, Dict, Any, Tuple, Optional
 from config import settings
+from services.http_client import get_shared_client
 from services.embedding_service import generate_embedding, cosine_similarity, persist_embedding_cache
 from schemas.analysis import (
     MacroScenario,
@@ -100,9 +101,9 @@ async def fetch_declining_skills_from_supabase() -> Dict[str, Dict[str, Any]]:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(endpoint, headers=headers)
-            if resp.status_code == 200:
+        client = get_shared_client(timeout=4.0)
+        resp = await client.get(endpoint, headers=headers)
+        if resp.status_code == 200:
                 rows = resp.json()
                 if isinstance(rows, list) and len(rows) > 0:
                     loaded: Dict[str, Dict[str, Any]] = {}
@@ -218,12 +219,12 @@ async def query_supabase_pgvector(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            response = await client.post(endpoint, json=payload, headers=headers)
-            if response.status_code == 200:
-                rows = response.json()
-                if isinstance(rows, list) and len(rows) > 0:
-                    return rows
+        client = get_shared_client(timeout=4.0)
+        response = await client.post(endpoint, json=payload, headers=headers)
+        if response.status_code == 200:
+            rows = response.json()
+            if isinstance(rows, list) and len(rows) > 0:
+                return rows
     except Exception:
         # Supabase migration not yet run or network offline -> seamlessly fallback
         pass
@@ -240,6 +241,7 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     """
     Fetches the active catalog of real ESCO occupational roles dynamically from Supabase.
     Caches in memory for 5 minutes for sub-millisecond retrieval.
+    Project only essential metadata columns to avoid transferring heavy 1024-dim embedding vectors.
     Falls back to FALLBACK_ROLES_CATALOG if offline.
     """
     global _cached_active_roles, _last_active_roles_fetch_time
@@ -254,16 +256,20 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     if base_url.endswith("/rest/v1"):
         base_url = base_url[:-8]
 
-    endpoint = f"{base_url}/rest/v1/esco_roles"
+    # Explicit column projection: Exclude heavy 1024-dim vector 'embedding' column from catalog queries
+    endpoint = (
+        f"{base_url}/rest/v1/esco_roles"
+        "?select=role_id,title,title_ms,title_zh,industry,required_skills,required_skills_localized,sdg_alignments,scenario_multipliers,radar_requirements"
+    )
     headers = {
         "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(endpoint, headers=headers)
-            if resp.status_code == 200:
+        client = get_shared_client(timeout=5.0)
+        resp = await client.get(endpoint, headers=headers)
+        if resp.status_code == 200:
                 rows = resp.json()
                 if isinstance(rows, list) and len(rows) > 0:
                     formatted = []
@@ -419,10 +425,10 @@ async def synthesize_on_demand_role(
                 "Content-Type": "application/json",
                 "Prefer": "resolution=merge-duplicates",
             }
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(endpoint, json=role_record, headers=headers)
+            client = get_shared_client(timeout=5.0)
+            await client.post(endpoint, json=role_record, headers=headers)
 
-        return {
+        new_role_entry = {
             "roleId": role_id,
             "title": parsed_title,
             "titleLocalized": {
@@ -431,12 +437,18 @@ async def synthesize_on_demand_role(
                 "zh": role_record["title_zh"],
             },
             "industry": industry_val,
-            "requiredSkills": skills,
+            "requiredSkills": skills_en,
             "requiredSkillsLocalized": localized_skills,
             "sdgAlignments": role_record["sdg_alignments"],
             "scenarioMultipliers": role_record["scenario_multipliers"],
             "radarRequirement": role_record["radar_requirements"],
         }
+
+        # Immediately register in-memory active roles cache for sub-millisecond retrieval
+        if _cached_active_roles:
+            _cached_active_roles.append(new_role_entry)
+
+        return new_role_entry
     except Exception:
         return None
 
