@@ -350,6 +350,10 @@
     "title": "Shared Plans",
     "subtitle": "Explore and benchmark career transformation roadmaps shared with you by peers and colleagues.",
     "active_connections": "Active Shared Roadmaps",
+    "heatmap": {
+      "select_users_hint": "Click user cards to select people for HeatMap.",
+      "view_heatmap": "View HeatMap"
+    },
     "search_placeholder": "Search by name, role, or department...",
     "view_roadmap": "View Analysis Roadmap",
     "remove_user": "Remove",

@@ -28,7 +28,7 @@ export default function Footer() {
           </div>
 
           {/* Embedded GitHub Action & License */}
-          <div className="ml-auto flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-2.5">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             <a
               href={GITHUB_REPO_URL}
               target="_blank"
@@ -57,9 +57,9 @@ export default function Footer() {
               href={LICENSE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 text-[11px] font-mono text-text-muted hover:text-text-primary transition-colors flex items-center justify-start sm:justify-end gap-1.5"
+              className="shrink-0 text-[11px] font-mono text-text-muted hover:text-text-primary transition-colors flex items-center justify-end gap-1.5"
             >
-              <span>License:</span>
+              <span className="hidden sm:inline">License:</span>
               <span className="text-text-secondary hover:text-accent underline decoration-border-subtle underline-offset-2">Apache-2.0</span>
             </a>
           </div>

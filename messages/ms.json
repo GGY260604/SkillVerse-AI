@@ -350,6 +350,10 @@
     "title": "Pelan Dikongsi",
     "subtitle": "Terokai dan buat penanda aras pelan laluan transformasi kerjaya yang dikongsi oleh rakan sekerja.",
     "active_connections": "Pelan Dikongsi Aktif",
+    "heatmap": {
+      "select_users_hint": "Klik kad pengguna untuk memilih pengguna bagi HeatMap.",
+      "view_heatmap": "Lihat HeatMap"
+    },
     "search_placeholder": "Cari mengikut nama, peranan atau jabatan...",
     "view_roadmap": "Lihat Analisis Pelan",
     "remove_user": "Keluarkan",

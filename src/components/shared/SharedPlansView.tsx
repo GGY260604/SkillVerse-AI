@@ -29,9 +29,13 @@ export interface SharedRoadmapItem {
   historyPlans: PlanData[];
 }
 
+interface SharedPlansViewProps {
+  onOpenHeatMap?: (selectedUserIds: string[], selectedItems: SharedRoadmapItem[]) => void;
+}
+
 // --- SharedPlansView Component ---
 // Manage received peer roadmaps, search through shared records, and inspect peer dashboards.
-export default function SharedPlansView() {
+export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps = {}) {
   // --- Multi-Language Setup ---
   const t = useTranslations("shared");
   const tModal = useTranslations("analysis.share_modal");
@@ -46,6 +50,8 @@ export default function SharedPlansView() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeSharedId, setActiveSharedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isHeatMapSelectionMode, setIsHeatMapSelectionMode] = useState(false);
+  const [selectedHeatMapUserIds, setSelectedHeatMapUserIds] = useState<string[]>([]);
   const [itemToDelete, setItemToDelete] = useState<SharedRoadmapItem | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -93,6 +99,14 @@ export default function SharedPlansView() {
     }
   }, [isLoggedIn, fetchSharedRoadmaps]);
 
+  // Reset HeatMap selection state when leaving the page or unmounting.
+  useEffect(() => {
+    return () => {
+      setIsHeatMapSelectionMode(false);
+      setSelectedHeatMapUserIds([]);
+    };
+  }, []);
+
   // 3. Search and Filter Computation
   // Filter shared roadmaps by owner name, email, user ID, role, and industry category.
   const filteredRoadmaps = useMemo(() => {
@@ -130,6 +144,14 @@ export default function SharedPlansView() {
     setTimeout(() => {
       setCopiedId(null);
     }, 2000);
+  };
+
+  const toggleHeatMapUser = (userId: string) => {
+    setSelectedHeatMapUserIds((selectedIds) =>
+      selectedIds.includes(userId)
+        ? selectedIds.filter((id) => id !== userId)
+        : [...selectedIds, userId]
+    );
   };
 
   // 6. Shared Roadmap Revocation
@@ -196,8 +218,8 @@ export default function SharedPlansView() {
   return (
     <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
       {/* Section Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6 sm:mb-8">
-        <div>
+      <div className="flex items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6 sm:mb-8">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
             {t("title")}
           </h1>
@@ -205,10 +227,55 @@ export default function SharedPlansView() {
             {t("subtitle")}
           </p>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsHeatMapSelectionMode((isEnabled) => !isEnabled)}
+            aria-label="HeatMap"
+            aria-pressed={isHeatMapSelectionMode}
+            title="HeatMap"
+            className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              isHeatMapSelectionMode
+                ? "border-accent bg-accent text-bg-primary"
+                : "border-border-subtle bg-bg-card text-text-primary hover:border-accent hover:text-accent"
+            }`}
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" strokeWidth="2" />
+              <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth="2" />
+              <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="2" />
+              <rect x="14" y="14" width="7" height="7" rx="1" strokeWidth="2" />
+            </svg>
+            <span className="hidden sm:inline">HeatMap</span>
+          </button>
+          {isHeatMapSelectionMode && (
+            <button
+              type="button"
+              onClick={() => {
+                const selectedItems = sharedRoadmaps.filter((item) =>
+                  selectedHeatMapUserIds.includes(item.owner.id)
+                );
+                onOpenHeatMap?.(selectedHeatMapUserIds, selectedItems);
+              }}
+              disabled={selectedHeatMapUserIds.length === 0}
+              aria-label={t("heatmap.view_heatmap")}
+              title={t("heatmap.view_heatmap")}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent bg-accent text-bg-primary transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search Bar Row */}
-      <div className="flex w-full min-w-0 flex-row items-center gap-2.5 mb-6 shrink-0">
+      <div
+        className={`flex w-full min-w-0 flex-row items-center gap-2.5 shrink-0 ${
+          isHeatMapSelectionMode ? "mb-0" : "mb-6"
+        }`}
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -256,6 +323,12 @@ export default function SharedPlansView() {
         </button>
       </div>
 
+      {isHeatMapSelectionMode && (
+        <p role="status" className="mt-6 mb-6 text-center text-xs text-text-primary">
+          {t("heatmap.select_users_hint")}
+        </p>
+      )}
+
       {/* Error Alert */}
       {errorMsg && (
         <div className="mb-6 p-4 rounded-xl bg-negative/10 border border-negative/30 text-negative text-xs font-mono flex items-center justify-between gap-3">
@@ -299,12 +372,33 @@ export default function SharedPlansView() {
             const displayName = item.owner.name || item.owner.email.split("@")[0] || tModal("user");
             const initial = (item.owner.name || item.owner.email || "U").charAt(0).toUpperCase();
             const userLevel = item.owner.level ?? 1;
+            const isHeatMapUserSelected = selectedHeatMapUserIds.includes(item.owner.id);
 
             return (
               <div
                 key={item.id}
-                onClick={() => setActiveSharedId(item.id)}
-                className="group relative rounded-xl border border-border-subtle hover:border-accent bg-bg-secondary/40 hover:bg-bg-secondary/70 p-4 transition-all duration-300 flex flex-col shadow-sm hover:shadow-[0_0_25px_var(--accent-glow)] cursor-pointer"
+                role={isHeatMapSelectionMode ? "checkbox" : undefined}
+                aria-checked={isHeatMapSelectionMode ? isHeatMapUserSelected : undefined}
+                aria-label={isHeatMapSelectionMode ? `Select ${displayName} for HeatMap` : undefined}
+                tabIndex={isHeatMapSelectionMode ? 0 : undefined}
+                onClick={() => {
+                  if (isHeatMapSelectionMode) {
+                    toggleHeatMapUser(item.owner.id);
+                  } else {
+                    setActiveSharedId(item.id);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (isHeatMapSelectionMode && (event.key === " " || event.key === "Enter")) {
+                    event.preventDefault();
+                    toggleHeatMapUser(item.owner.id);
+                  }
+                }}
+                className={`group relative flex cursor-pointer flex-col rounded-xl border p-4 shadow-sm transition-all duration-300 ${
+                  isHeatMapSelectionMode && isHeatMapUserSelected
+                    ? "border-accent bg-accent/15 ring-1 ring-accent shadow-[0_0_25px_var(--accent-glow)]"
+                    : "border-border-subtle bg-bg-secondary/40 hover:border-accent hover:bg-bg-secondary/70 hover:shadow-[0_0_25px_var(--accent-glow)]"
+                }`}
               >
                 {/* Top Row: User Identity (Avatar, Name, Email, UID) & Trash Can Action Button */}
                 <div className="flex items-start justify-between gap-3.5">
@@ -336,40 +430,43 @@ export default function SharedPlansView() {
                         <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
                           {item.owner.id}
                         </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyUid(item.owner.id);
-                          }}
-                          className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
-                          title={tModal("copy_uid")}
-                          aria-label={tModal("copy_uid")}
-                        >
-                          {copiedId === item.owner.id ? (
-                            <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
-                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        {!isHeatMapSelectionMode && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyUid(item.owner.id);
+                            }}
+                            className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
+                            title={tModal("copy_uid")}
+                            aria-label={tModal("copy_uid")}
+                          >
+                            {copiedId === item.owner.id ? (
+                              <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>{tModal("copied")}</span>
+                              </span>
+                            ) : (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
                               </svg>
-                              <span>{tModal("copied")}</span>
-                            </span>
-                          ) : (
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          )}
-                        </button>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Right Side Action Button: Trash Can aligned with User Info */}
-                  <div className="flex items-center shrink-0">
+                  {!isHeatMapSelectionMode && (
+                    <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -389,7 +486,8 @@ export default function SharedPlansView() {
                         />
                       </svg>
                     </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Divider Line (Inset from borders with mx-1) */}

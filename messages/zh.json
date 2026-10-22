@@ -350,6 +350,10 @@
     "title": "共享规划",
     "subtitle": "查看并对标由同行、团队成员或导师与您共享的职业转型路线图。",
     "active_connections": "份正在共享的路线图",
+    "heatmap": {
+      "select_users_hint": "点击用户卡片即可选择用于 HeatMap 的用户。",
+      "view_heatmap": "查看 HeatMap"
+    },
     "search_placeholder": "按姓名、目标岗位或部门搜索...",
     "view_roadmap": "查看规划分析",
     "remove_user": "移除",
