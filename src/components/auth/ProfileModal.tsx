@@ -6,6 +6,7 @@ import { useAuth } from "@/context/auth/AuthContext";
 import { useProfileModal } from "@/context/auth/ProfileModalContext";
 import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
+import { getAvatarInitials } from "@/lib/avatar";
 
 // --- Profile Overlay Modal ---
 // Load the latest profile, save display-name edits, and synchronize the authenticated user state.
@@ -148,7 +149,7 @@ export default function ProfileModal() {
   };
 
   const currentDisplayName = name.trim() || initialName.trim() || user?.email || "User";
-  const avatarLetter = (name.trim() || initialName.trim() || user?.email || "U").charAt(0).toUpperCase();
+  const avatarLetter = getAvatarInitials(name.trim() || initialName.trim() || user?.email);
 
   // --- UI ---
   return (

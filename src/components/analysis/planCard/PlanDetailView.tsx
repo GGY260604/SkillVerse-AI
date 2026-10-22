@@ -417,7 +417,7 @@ export default function PlanDetailView({
             {tCurrent("roadmap_timeline")}
           </h3>
           <p className="text-xs sm:text-sm text-text-secondary mt-1">
-            Follow this phased curriculum. Complete the 10-question AI competency assessment for each phase (10/10 required) to verify your skill mastery and earn level EXP.
+            {tCurrent("roadmap_timeline_subtitle")}
           </p>
         </div>
 
