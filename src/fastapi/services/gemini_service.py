@@ -88,7 +88,7 @@ JSON Structure Required:
 """
 
 
-_active_key_index = 4  # Start with active verified key (Key #5)
+_active_key_index = 0
 _depleted_key_indices = set()  # Track keys with exhausted billing (HTTP 402)
 _last_used_key_identifier: Optional[str] = f"GEMINI_API_KEY_{_active_key_index + 1}"
 
