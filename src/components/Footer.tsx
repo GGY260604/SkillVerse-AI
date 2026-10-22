@@ -3,14 +3,14 @@ import { useTranslations } from "next-intl";
 import { GITHUB_REPO_URL, LICENSE_URL } from "@/constants/footer";
 import Logo from "@/components/Logo";
 
-// Footer Navigation & Copyright Component
+// --- Footer Navigation and Copyright Component ---
 // Render platform brand identity, author attribution, open-source links, and legal notice.
 export default function Footer() {
   // Load localized footer strings for copyright, hackathon, and attribution.
   const t = useTranslations("other.footer");
 
+  // --- UI ---
   return (
-
     <footer className="border-t border-border-subtle bg-bg-secondary mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Main Footer Block */}

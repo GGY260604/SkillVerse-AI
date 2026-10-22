@@ -5,7 +5,7 @@ import { ACCESS_TOKEN_COOKIE } from "@/lib/supabase/cookies";
 
 const intlMiddleware = createMiddleware(routing);
 
-// Authentication and Localization Edge Middleware
+// --- Authentication and Localization Edge Middleware ---
 // Enforce unauthenticated user restrictions across protected routes while handling locale routing.
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -31,7 +31,7 @@ export default async function middleware(request: NextRequest) {
   return intlMiddleware(request);
 }
 
-// Middleware Route Matcher Configuration
+// --- Middleware Route Matcher Configuration ---
 export const config = {
   // Match the root URL and all supported locale path segments.
   matcher: ["/", "/(en|ms|zh)/:path*"],

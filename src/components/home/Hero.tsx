@@ -2,14 +2,15 @@
 
 import { useTranslations } from "next-intl";
 
-// Hero Showcase Component
+// --- Hero Component ---
 // Highlight platform value proposition with background atmosphere, CTA, and real-time statistics.
 export default function Hero() {
-  // Load localized content for hero banner and statistical metrics.
+  // --- Multi-Language Setup ---
   const t = useTranslations("home.hero");
   const ts = useTranslations("home.stats");
 
-  // Smoothly scroll down to the transformation plan section.
+  // --- Helper Function ---
+  // Auto scroll to the transformation plan section after 2 second.
   const handleScrollToPlan = () => {
     const section = document.getElementById("transformation-plan");
     if (section) {
@@ -17,6 +18,7 @@ export default function Hero() {
     }
   };
 
+  // --- UI ---
   return (
     <section className="relative overflow-hidden">
       {/* Background Image Layer with Atmospheric Overlays */}
@@ -26,9 +28,9 @@ export default function Hero() {
           alt="Hero Background"
           className="w-full h-full object-cover object-center opacity-70 scale-105"
         />
-        {/* Top & Bottom gradient fades to seamlessly blend into pure black bg-primary */}
+        {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-linear-to-b from-bg-primary/75 via-bg-primary/80 to-bg-primary" />
-        {/* Subtle radial accent glow centered over the hero */}
+        {/* Glow Centered Over the Hero */}
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[120%] bg-[radial-gradient(ellipse_at_center,var(--accent-glow)_0%,transparent_70%)]" />
       </div>
 
@@ -53,7 +55,7 @@ export default function Hero() {
         {/* Subtitle */}
         <p className="animate-fade-in-up-delay-1 text-sm sm:text-base leading-relaxed text-text-secondary max-w-2xl mx-auto mb-8 sm:mb-10">{t("subtitle")}</p>
 
-        {/* CTA Button */}
+        {/* Start Button */}
         <div className="animate-fade-in-up-delay-2 flex justify-center">
           <button
             type="button"

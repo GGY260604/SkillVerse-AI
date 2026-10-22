@@ -1,54 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFastApiConfig } from "@/lib/fastapi/client";
+import { fetchWithFastApiFallback } from "@/lib/fastapi/client";
 
-/**
- * GET /api/home/trend
- * Proxies request to FastAPI /trends using the dynamic connection resolver in lib/fastapi/client.ts.
- * Supports trilingual localization via ?locale=en | ms | zh.
- */
+// --- Route Handler ---
+// Endpoint: GET /api/home/trend
+// Target Service: Proxies requests to the FastAPI backend service (/trends or /api/v1/trends).
+// Data Source: Retrieves labor market telemetry stored in Supabase from ArXiv and RemoteOK.
+// Parameters: Accepts locale query parameter for trilingual localization (?locale=en | ms | zh).
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const locale = searchParams.get("locale") || "en";
+    // 1. Locale Parameter Extraction
+    // Extract target language locale from query parameters, falling back to English.
+    const locale = request.nextUrl.searchParams.get("locale") || "en";
 
-    const config = getFastApiConfig();
-    const baseUrl = config.baseUrl.replace(/\/+$/, "");
-
-    const targetUrl = baseUrl.endsWith("/api/v1")
-      ? `${baseUrl}/trends?locale=${encodeURIComponent(locale)}`
-      : `${baseUrl}/api/v1/trends?locale=${encodeURIComponent(locale)}`;
-
-    let lastError: any = null;
-    let data = null;
+    // 2. Telemetry Ingestion from Upstream Service with Multi-Tier Failover
+    // Attempt local Python service first, then seamlessly fall back to RunPod and Render.
+    let lastError: Error | null = null;
+    let data: Record<string, unknown> | null = null;
 
     try {
-      const response = await fetch(targetUrl, {
-        method: "GET",
-        headers: {
-          ...config.headers,
-          Accept: "application/json",
-        },
-        // Cache trends for 30s in Next.js data cache for snappy responsiveness
-        next: { revalidate: 30 },
-      });
+      const response = await fetchWithFastApiFallback(
+        `/api/v1/trends?locale=${encodeURIComponent(locale)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          next: { revalidate: 30 },
+        }
+      );
 
       if (response.ok) {
         data = await response.json();
       } else {
-        lastError = new Error(
-          `FastAPI returned HTTP ${response.status} from ${targetUrl}`
-        );
+        lastError = new Error(`FastAPI returned HTTP ${response.status}.`);
       }
-    } catch (err: any) {
-      lastError = err;
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
 
+    // 4. Upstream Failure Fallback
+    // Return a structured error response with empty telemetry arrays when upstream is unavailable.
     if (!data) {
       console.warn("[/api/home/trend] Backend fetch failed:", lastError?.message);
       return NextResponse.json(
         {
           success: false,
-          error: lastError?.message || "Failed to reach FastAPI backend",
+          error: lastError?.message || "Failed to reach FastAPI backend.",
           signals: [],
           totalCount: 0,
           locale,
@@ -57,16 +54,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 5. Successful Response Dispatch
+    // Return unified telemetry payload directly to the client application.
     return NextResponse.json({
       success: true,
       ...data,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    // 6. Internal Route Error Handling
+    // Catch unhandled exceptions and return an internal server error response.
+    const errorMessage = error instanceof Error ? error.message : "Internal server error.";
     console.error("[/api/home/trend] Internal route error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Internal server error",
+        error: errorMessage,
         signals: [],
         totalCount: 0,
       },

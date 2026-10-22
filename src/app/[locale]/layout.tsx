@@ -16,7 +16,7 @@ import { UserLevelProvider } from "@/context/UserLevelContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
-// Platform Metadata Configuration
+// --- Platform Metadata Configuration ---
 // Define global SEO title and description tags for the application.
 export const metadata: Metadata = {
   title: "SkillVerse AI | Future-Ready Workforce & SDG Navigation Platform",
@@ -24,16 +24,17 @@ export const metadata: Metadata = {
     "AI-powered workforce intelligence platform. Navigate from who you are to where you will lead in the AI era. Powered by real-time labor market signals, cross-lingual skill matching, and UN SDG alignment.",
 };
 
-// Static Locale Route Generation
+// --- Static Locale Route Generation ---
 // Pre-render pages for all supported language locales at build time.
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// --- Route Rendering Configuration ---
 // Disable instant app shell prerendering to allow direct dynamic route parameter access.
 export const instant = false;
 
-// Localized Shell Layout
+// --- Localized Shell Layout ---
 // Provide internationalization context, global header, footer, and font styles.
 export default async function LocaleLayout({
   children,
@@ -56,6 +57,7 @@ export default async function LocaleLayout({
   // Load message catalog for client provider.
   const messages = await getMessages();
 
+  // --- UI ---
   return (
     <html lang={locale} className="dark scheme-dark">
       <head>
@@ -102,4 +104,3 @@ export default async function LocaleLayout({
     </html>
   );
 }
-

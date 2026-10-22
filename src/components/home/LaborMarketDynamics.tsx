@@ -3,6 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
+// --- Schema ---
+
+// Used by TrendResponse schema below.
 interface TrendSignal {
   skillName: string;
   category: string;
@@ -16,6 +19,7 @@ interface TrendSignal {
   citationLocalized?: string;
 }
 
+// Used to store the trend response from the backend database.
 interface TrendResponse {
   success: boolean;
   locale: string;
@@ -26,21 +30,24 @@ interface TrendResponse {
   signals: TrendSignal[];
 }
 
+// --- LaborMarketDynamics Component ---
+// Analyze and display labor market telemetry for emerging and declining skills.
 export default function LaborMarketDynamics() {
+  // --- Multi-Language Setup ---
   const t = useTranslations("home.market");
+  const tDate = useTranslations("other.helper.date");
   const locale = useLocale();
 
+  // --- State ---
   const [data, setData] = useState<TrendResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [skillFilter, setSkillFilter] = useState<"emerging" | "declining">(
-    "emerging"
-  );
+  const [skillFilter, setSkillFilter] = useState<"emerging" | "declining">("emerging");
 
-  // Fetch trend signals from Next.js API route (/api/trend) which proxies FastAPI /trends
+  // --- Data Fetching ---
+  // Fetch trend signals from Next.js API route (/api/home/trend).
   useEffect(() => {
     let isCancelled = false;
-
     async function fetchTrends() {
       setLoading(true);
       setError(null);
@@ -53,7 +60,7 @@ export default function LaborMarketDynamics() {
         }
         const json: TrendResponse = await res.json();
         if (!isCancelled) {
-          setData(json);
+          setData(json); // Store the fetched trend response data into state.
         }
       } catch (err: any) {
         if (!isCancelled) {
@@ -74,45 +81,54 @@ export default function LaborMarketDynamics() {
     };
   }, [locale]);
 
-  // ─────────────────────────────────────────────────────────────
-  // 1. Total Market Signals
-  // ─────────────────────────────────────────────────────────────
-  // Represents the total count of distinct skill telemetry records loaded from the backend database.
-  // Computed directly from the total length of the signals array returned by the API.
+  // --- Helper Function ---
+
+  // 1. Total Market Signals Extraction
+  // - Extract all telemetry signal records from the API response payload.
+  // - Fall back to an empty array when telemetry data is not yet loaded.
   const signals = useMemo(() => data?.signals || [], [data]);
 
-  // ─────────────────────────────────────────────────────────────
-  // 2. High-Demand Emerging and Automation Risk Skills Ranking
-  // ─────────────────────────────────────────────────────────────
-  // Filtered skills categorized under the "emerging" or "declining" status badges.
-  // Emerging skills reflect rapid hiring surges with positive demand velocity (Vs >= 0.25).
-  // Declining competencies reflect routine workflows at automation risk with negative velocity (Vs <= -0.30).
-  // Calculated using the World Economic Forum (WEF) empirical telemetry formula.
-  // Formula: Vs = (Ct - Ct_prev) / max(Ct, Ct_prev), where Ct is current window and Ct_prev is past window frequency.
-  // The value ranges from -1.0 (complete obsolescence) to +1.0 (exponential expansion).
-  // Display percentage is formatted as (Vs * 100).toFixed(1)%.
-  // Horizontal progress bar visualizer scales dynamically between 18% minimum width and 100% full width.
-  // Formula: Math.min(100, Math.max(18, Math.round(Math.abs(skill.velocityVs) * 100)))%.
+  // 2. Emerging and Declining Skills Ranking
+  // - Filter active telemetry signals based on the selected skill status tab (emerging or declining).
+  // - Velocity Metric Definition (Vs):
+  //   - Velocity measures the proportional change in skill job postings across comparative sampling windows.
+  //   - Weekly Velocity Formula: Vs = (Current_Week_Signals - Previous_Week_Signals) / Previous_Week_Signals.
+  //   - Monthly Velocity Formula: Vs = (Current_Month_Signals - Previous_Month_Signals) / Previous_Month_Signals.
+  // - Status Classification Thresholds:
+  //   - Emerging skills reflect rapid market expansion with high positive velocity (Vs >= +0.25).
+  //   - Declining skills reflect automation risk and obsolescence with negative velocity (Vs <= -0.30).
+  // - Sorting and Display Logic:
+  //   - Sort emerging skills in descending order of velocity (highest positive expansion first).
+  //   - Sort declining skills in ascending order of velocity (steepest negative decline first).
+  // - Slice to retain only the top six ranked records for leaderboard presentation.
   const rankedSkills = useMemo(() => {
-    const filtered = signals.filter((s) => s.status === skillFilter);
-    return filtered
+    return signals
+      .filter((s) => s.status === skillFilter)
       .sort((a, b) =>
+        // If viewing emerging skills (Vs >= +0.25), sort descending (b - a) so the highest positive growth ranks first.
+        // If viewing declining skills (Vs <= -0.30), sort ascending (a - b) so the most negative velocity (steepest decline) ranks first.
         skillFilter === "emerging"
           ? b.velocityVs - a.velocityVs
           : a.velocityVs - b.velocityVs
       )
-      .slice(0, 6);
+      .slice(0, 6); // Retain only the top six ranked records for leaderboard presentation.
   }, [signals, skillFilter]);
 
-  // ─────────────────────────────────────────────────────────────
-  // 3. Job Category Telemetry Share and Momentum
-  // ─────────────────────────────────────────────────────────────
-  // All active skill signals are aggregated by their canonical industry category.
-  // Signal count per category represents the total volume of tracked competencies in that domain.
-  // Average velocity is calculated by dividing total velocity by signal count: Avg_Vs = Sum(Vs) / Count.
-  // Relative bar width represents domain telemetry share relative to the highest-volume category.
-  // Formula: Math.min(100, Math.max(20, Math.round((count / maxCategoryCount) * 100)))%.
-  // Trend momentum is marked as Surging when Avg_Vs >= 0, and Restructuring when Avg_Vs < 0.
+  // 3. Category Volume and Average Momentum
+  // - Filter active signals matching the selected skill status (emerging or declining) to align with skills ranking.
+  // - Canonical Industry Grouping:
+  //   - Group signals under their localized or canonical category name (e.g., "Artificial Intelligence", "Cloud Computing").
+  // - Telemetry Volume and Velocity Aggregation:
+  //   - Aggregate total signal count (`count`) for each category to represent overall domain job volume.
+  //   - Accumulate velocity sum (`totalVelocity`) to measure the net momentum across all skills in that domain.
+  // - Average Velocity Metric Formula:
+  //   - Avg_Vs = Total_Velocity / Signal_Count.
+  //   - Positive Avg_Vs (>= 0) indicates a surging industry domain.
+  //   - Negative Avg_Vs (< 0) indicates an industry domain undergoing structural automation or contraction.
+  // - Sorting and Display Logic:
+  //   - Primary sort: Highest signal volume first (`b.count - a.count`).
+  //   - Secondary sort: Average velocity according to status (descending for emerging, ascending for declining).
+  // - Slice to retain only the top six category records for leaderboard presentation.
   const rankedCategories = useMemo(() => {
     const map = new Map<
       string,
@@ -124,80 +140,116 @@ export default function LaborMarketDynamics() {
       }
     >();
 
-    signals.forEach((s) => {
+    // Filter active signals matching the selected status tab (emerging vs declining).
+    const filteredSignals = signals.filter((s) => s.status === skillFilter);
+
+    filteredSignals.forEach((s) => {
       const displayName = s.categoryLocalized || s.category || "General";
       const existing = map.get(displayName);
       if (existing) {
-        existing.count += 1;
-        existing.totalVelocity += s.velocityVs;
+        existing.count += 1; // Increment total signal volume for this industry category.
+        existing.totalVelocity += s.velocityVs; // Add velocity score to cumulative category momentum.
       } else {
         map.set(displayName, {
           categoryName: displayName,
           categoryNameRaw: s.category,
-          count: 1,
-          totalVelocity: s.velocityVs,
+          count: 1, // Initialize category signal volume.
+          totalVelocity: s.velocityVs, // Initialize cumulative velocity score.
         });
       }
     });
 
-    const list = Array.from(map.values()).map((c) => ({
-      ...c,
-      avgVelocity: c.count > 0 ? c.totalVelocity / c.count : 0,
-    }));
+    return Array.from(map.values())
+      .map((c) => ({
+        ...c,
+        avgVelocity: c.count > 0 ? c.totalVelocity / c.count : 0, // Compute mean velocity per category: Avg_Vs = Sum(Vs) / Count.
+      }))
+      .sort((a, b) =>
+        // Sort primarily by highest signal volume, breaking ties with average momentum.
+        b.count - a.count ||
+        (skillFilter === "emerging"
+          ? b.avgVelocity - a.avgVelocity
+          : a.avgVelocity - b.avgVelocity)
+      )
+      .slice(0, 6); // Retain only the top six ranked categories for presentation.
+  }, [signals, skillFilter]);
 
-    // Sort by count descending, then avg velocity descending
-    return list
-      .sort((a, b) => b.count - a.count || b.avgVelocity - a.avgVelocity)
-      .slice(0, 6);
-  }, [signals]);
-
+  // 4. Maximum Category Signal Volume
+  // - Normalization Base Calculation:
+  //   - Determine the largest signal count (`max(count)`) among all ranked categories.
+  // - Visual Scaling Purpose:
+  //   - Used as the reference denominator to compute relative percentage widths for horizontal progress bars.
+  // - Boundary Fallback:
+  //   - Fall back to 1 if no categories exist to prevent division by zero in UI rendering.
   const maxCategoryCount = useMemo(() => {
-    if (rankedCategories.length === 0) return 1;
-    return Math.max(...rankedCategories.map((c) => c.count));
+    return rankedCategories.length > 0
+      ? Math.max(...rankedCategories.map((c) => c.count)) // Find maximum signal volume across categories.
+      : 1; // Fall back to 1 to avoid division by zero.
   }, [rankedCategories]);
 
-  // ─────────────────────────────────────────────────────────────
-  // 4. Telemetry Ingestion Timestamp
-  // ─────────────────────────────────────────────────────────────
-  // Extracted from the latest updatedAt ISO timestamp in the signal records.
-  // Localized dynamically into regional calendar date formats across English, Chinese, and Malay.
+  // 5. Telemetry Synchronization Timestamp Localization
+  // - Timestamp Extraction:
+  //   - Parse the ISO-8601 string (`lastSynced`) indicating the latest database synchronization run.
+  // - Multi-Language Regional Formatting:
+  //   - Retrieve localized month name and date template from `other.helper.date`.
+  //   - Format date string using `{year}`, `{month}`, and `{day}` tokens without hardcoding locale branches.
+  // - Graceful Fallback:
+  //   - Return ellipsis (`"..."`) when data is loading or undefined.
+  //   - Return raw string if Date parsing fails.
   const formattedSyncDate = useMemo(() => {
-    if (!data?.lastSynced) return "...";
+    if (!data?.lastSynced) return "..."; // Return placeholder while synchronization timestamp is loading.
     try {
       const d = new Date(data.lastSynced);
-      if (locale === "zh") {
-        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-      } else if (locale === "ms") {
-        return d.toLocaleDateString("ms-MY", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      } else {
-        return d.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      }
+      if (isNaN(d.getTime())) return data.lastSynced; // Fall back to raw string if timestamp is invalid.
+      const year = d.getFullYear();
+      const month = tDate(`month_${d.getMonth() + 1}` as any); // Retrieve localized month representation.
+      const day = d.getDate();
+      return tDate("format", { year, month, day }); // Format into localized date string template.
     } catch {
-      return data.lastSynced;
+      return data.lastSynced; // Fall back to raw timestamp string if parsing encounters an error.
     }
-  }, [data?.lastSynced, locale]);
+  }, [data?.lastSynced, tDate]);
 
+  // --- UI ---
   return (
     <section className="animate-fade-in-up-delay-2 max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full">
-      {/* ── Section Header ── */}
-      <div className="mb-8">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mb-2">
-          {t("title")}
-        </h2>
-        <p className="text-sm text-text-secondary max-w-2xl leading-relaxed">
-          {t("description")}
-        </p>
+      {/* Section Header with Global Filter Switcher */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight mb-2">
+            {t("title")}
+          </h2>
+          <p className="text-sm text-text-secondary max-w-2xl leading-relaxed">
+            {t("description")}
+          </p>
+        </div>
+
+        {/* Global Filter Switcher */}
+        <div className="flex items-center p-1 rounded-xl bg-bg-elevated border border-border-subtle shrink-0 self-start sm:self-auto shadow-sm">
+          <button
+            type="button"
+            onClick={() => setSkillFilter("emerging")}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              skillFilter === "emerging"
+                ? "bg-accent/20 text-accent shadow-sm border border-accent/30"
+                : "text-text-muted hover:text-text-primary border border-transparent"
+            }`}
+          >
+            {t("tab_emerging")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSkillFilter("declining")}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              skillFilter === "declining"
+                ? "bg-rose-500/20 text-rose-400 shadow-sm border border-rose-500/30"
+                : "text-text-muted hover:text-text-primary border border-transparent"
+            }`}
+          >
+            {t("tab_declining")}
+          </button>
+        </div>
       </div>
-
-
 
       {/* Mobile Horizontal Scroll Hint */}
       <div className="flex lg:hidden items-center justify-end gap-1.5 text-xs text-text-muted mb-2 font-mono">
@@ -217,50 +269,27 @@ export default function LaborMarketDynamics() {
         </svg>
       </div>
 
-      {/* ── Bottom Level: Bar Chart | Bar Chart (Horizontal Side-by-Side) ── */}
-      {/* Container is horizontally scrollable on mobile/tablet to ensure barchart | barchart never stacks vertically */}
+      {/* Charts Container */}
       <div className="w-full overflow-x-auto pb-4 pt-1">
         <div className="min-w-[760px] lg:min-w-0 grid grid-cols-2 gap-6 items-stretch">
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* BAR CHART 1: Ranking of Most Popular / In-Demand Skills */}
-          {/* ══════════════════════════════════════════════════════════ */}
-          <div className="glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border border-border-subtle hover:border-border-accent/40 transition-all duration-300 shadow-lg">
+          {/* Chart 1: Ranking of Most Popular and In-Demand Skills */}
+          <div className={`glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg ${
+            skillFilter === "emerging"
+              ? "border-border-subtle hover:border-accent/40"
+              : "border-border-subtle hover:border-rose-500/40"
+          }`}>
             <div>
-              {/* Header with Title and Tab Switcher */}
-              <div className="flex items-center justify-between gap-2 min-h-8 mb-2">
+              {/* Chart Header */}
+              <div className="flex items-center min-h-8 mb-2">
                 <h4 className="text-base sm:text-lg font-bold text-text-primary flex items-center gap-2">
                   {t("skills_ranking_title")}
                 </h4>
-
-                {/* Filter Tabs (Emerging vs Declining) */}
-                <div className="flex items-center p-0.5 rounded-lg bg-bg-elevated border border-border-subtle shrink-0">
-                  <button
-                    onClick={() => setSkillFilter("emerging")}
-                    className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
-                      skillFilter === "emerging"
-                        ? "bg-accent/20 text-accent font-semibold shadow-sm"
-                        : "text-text-muted hover:text-text-primary"
-                    }`}
-                  >
-                    {t("tab_emerging")}
-                  </button>
-                  <button
-                    onClick={() => setSkillFilter("declining")}
-                    className={`px-2 py-0.5 text-[11px] font-medium rounded-md transition-all ${
-                      skillFilter === "declining"
-                        ? "bg-rose-500/20 text-rose-400 font-semibold shadow-sm"
-                        : "text-text-muted hover:text-text-primary"
-                    }`}
-                  >
-                    {t("tab_declining")}
-                  </button>
-                </div>
               </div>
 
               {/* Skills Bar Chart Rows */}
               <div className="mt-6 space-y-4">
                 {loading ? (
-                  // Skeleton loader
+                  // Skeleton Loader
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="space-y-1.5 animate-pulse">
                       <div className="flex justify-between h-4 bg-bg-elevated rounded w-3/4" />
@@ -273,6 +302,9 @@ export default function LaborMarketDynamics() {
                   </div>
                 ) : (
                   rankedSkills.map((skill, index) => {
+                    // 1. Skill Velocity Magnitude and Bar Width
+                    // Convert velocity to an absolute value and scale into a percentage.
+                    // Clamp the progress bar width between a minimum of 18% and a maximum of 100%.
                     const absScore = Math.abs(skill.velocityVs);
                     const percentage = Math.min(
                       100,
@@ -281,15 +313,15 @@ export default function LaborMarketDynamics() {
                     const isPositive = skill.velocityVs >= 0;
 
                     return (
-                      <div key={skill.skillName || index} className="group">
-                        {/* Skill Label & Category Tag */}
-                        <div className="flex items-center justify-between text-xs mb-1.5 gap-2">
+                      <div key={skill.skillName || index} className="group py-0.5">
+                        {/* Skill Label and Category */}
+                        <div className="flex items-center justify-between text-xs mb-1.5 gap-2 h-5">
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Rank Badge */}
                             <span
                               className={`font-mono text-xs font-bold shrink-0 ${
                                 index === 0
-                                  ? "text-accent"
+                                  ? (skillFilter === "emerging" ? "text-accent" : "text-rose-400")
                                   : index === 1
                                   ? "text-text-primary"
                                   : index === 2
@@ -329,19 +361,19 @@ export default function LaborMarketDynamics() {
                           <div
                             className={`h-full rounded-full transition-all duration-700 ease-out ${
                               isPositive
-                                ? "bg-gradient-to-r from-accent/70 via-accent to-emerald-400 shadow-[0_0_12px_rgba(0,229,195,0.4)]"
-                                : "bg-gradient-to-r from-rose-500/70 via-rose-500 to-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
+                                ? "bg-linear-to-r from-accent/70 via-accent to-emerald-400 shadow-[0_0_12px_rgba(0,229,195,0.4)]"
+                                : "bg-linear-to-r from-rose-500/70 via-rose-500 to-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]"
                             }`}
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
 
-                        {/* Citation evidence tooltip / subtext on hover */}
-                        {skill.citationLocalized && (
-                          <p className="text-[10px] text-text-muted mt-1 truncate group-hover:text-text-secondary transition-colors">
-                            {skill.citationLocalized}
+                        {/* Citation Evidence */}
+                        <div className="h-4 mt-1.5 flex items-center">
+                          <p className="text-[10px] text-text-muted truncate group-hover:text-text-secondary transition-colors">
+                            {skill.citationLocalized || "—"}
                           </p>
-                        )}
+                        </div>
                       </div>
                     );
                   })
@@ -350,12 +382,14 @@ export default function LaborMarketDynamics() {
             </div>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════ */}
-          {/* BAR CHART 2: Most Popular Job Categories by Telemetry Share */}
-          {/* ══════════════════════════════════════════════════════════ */}
-          <div className="glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border border-border-subtle hover:border-border-accent/40 transition-all duration-300 shadow-lg">
+          {/* Chart 2: Most Popular Job Categories by Telemetry Share */}
+          <div className={`glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg ${
+            skillFilter === "emerging"
+              ? "border-border-subtle hover:border-accent/40"
+              : "border-border-subtle hover:border-rose-500/40"
+          }`}>
             <div>
-              {/* Header */}
+              {/* Chart Header */}
               <div className="flex items-center min-h-8 mb-2">
                 <h4 className="text-base sm:text-lg font-bold text-text-primary flex items-center gap-2">
                   {t("categories_ranking_title")}
@@ -365,7 +399,7 @@ export default function LaborMarketDynamics() {
               {/* Categories Bar Chart Rows */}
               <div className="mt-6 space-y-4">
                 {loading ? (
-                  // Skeleton loader
+                  // Skeleton Loader
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="space-y-1.5 animate-pulse">
                       <div className="flex justify-between h-4 bg-bg-elevated rounded w-3/4" />
@@ -378,6 +412,9 @@ export default function LaborMarketDynamics() {
                   </div>
                 ) : (
                   rankedCategories.map((cat, index) => {
+                    // 1. Category Telemetry Share Bar Width
+                    // Scale the category count relative to the highest category signal count.
+                    // Clamp the progress bar width between a minimum of 20% and a maximum of 100%.
                     const relativePercent = Math.min(
                       100,
                       Math.max(
@@ -388,15 +425,15 @@ export default function LaborMarketDynamics() {
                     const avgVelocityPos = cat.avgVelocity >= 0;
 
                     return (
-                      <div key={cat.categoryName || index} className="group">
-                        {/* Category Label & Meta */}
-                        <div className="flex items-center justify-between text-xs mb-1.5 gap-2">
+                      <div key={cat.categoryName || index} className="group py-0.5">
+                        {/* Category Label and Metric */}
+                        <div className="flex items-center justify-between text-xs mb-1.5 gap-2 h-5">
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Rank Badge */}
                             <span
                               className={`font-mono text-xs font-bold shrink-0 ${
                                 index === 0
-                                  ? "text-teal-300"
+                                  ? (skillFilter === "emerging" ? "text-teal-300" : "text-rose-400")
                                   : index === 1
                                   ? "text-text-primary"
                                   : index === 2
@@ -412,17 +449,13 @@ export default function LaborMarketDynamics() {
                             </span>
                           </div>
 
-                          {/* Velocity Metric Badge */}
+                          {/* Category Signal Count Metric Badge (Highlighted) */}
                           <div className="font-mono text-[11px] font-bold shrink-0">
-                            <span
-                              className={
-                                avgVelocityPos
-                                  ? "text-emerald-400"
-                                  : "text-rose-400"
-                              }
-                            >
-                              {avgVelocityPos ? "+" : ""}
-                              {(cat.avgVelocity * 100).toFixed(0)}%
+                            <span className={skillFilter === "emerging" ? "text-accent" : "text-rose-400"}>
+                              {cat.count}
+                            </span>
+                            <span className="text-text-muted font-normal text-[10px] ml-1">
+                              {t("signals_unit")}
                             </span>
                           </div>
                         </div>
@@ -430,17 +463,29 @@ export default function LaborMarketDynamics() {
                         {/* Horizontal Bar Visualizer */}
                         <div className="w-full h-2.5 rounded-full bg-bg-elevated/90 overflow-hidden relative border border-border-subtle/50">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-teal-500/70 via-teal-400 to-accent transition-all duration-700 ease-out shadow-[0_0_12px_rgba(45,212,191,0.35)]"
+                            className={`h-full rounded-full transition-all duration-700 ease-out ${
+                              skillFilter === "emerging"
+                                ? "bg-linear-to-r from-teal-500/70 via-teal-400 to-accent shadow-[0_0_12px_rgba(45,212,191,0.35)]"
+                                : "bg-linear-to-r from-rose-500/70 via-rose-500 to-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.35)]"
+                            }`}
                             style={{ width: `${relativePercent}%` }}
                           />
                         </div>
 
-                        <div className="flex justify-between items-center text-[10px] text-text-muted mt-1 font-mono">
+                        {/* Category Signals Velocity Metric and Trend State */}
+                        <div className="h-4 mt-1.5 flex items-center justify-between text-[10px] text-text-muted font-mono">
                           <span>
-                            {cat.count} {t("signals_unit")}
+                            {t("velocity_label")}:{" "}
+                            <span className={avgVelocityPos ? "text-emerald-400" : "text-rose-400"}>
+                              {avgVelocityPos ? "+" : ""}
+                              {(cat.avgVelocity * 100).toFixed(0)}%
+                            </span>
                           </span>
                           <span>
-                            {t("trend_label")}: {avgVelocityPos ? t("trend_surging") : t("trend_restructuring")}
+                            {t("trend_label")}:{" "}
+                            <span className={avgVelocityPos ? "text-emerald-400" : "text-rose-400"}>
+                              {avgVelocityPos ? t("trend_surging") : t("trend_restructuring")}
+                            </span>
                           </span>
                         </div>
                       </div>

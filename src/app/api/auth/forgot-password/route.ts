@@ -3,10 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateLocalizedEmail } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/sender";
 
-// Password Recovery and Verification Email Dispatch
-// Initiate recovery process and dispatch localized email containing verification code.
+// --- Route Handler ---
+// Endpoint: POST /api/auth/forgot-password
+// Purpose: Initiate password recovery and dispatch localized email verification codes.
+// Target Service: Supabase Auth Admin & Upstream SMTP Provider
 export async function POST(request: NextRequest) {
   try {
+    // 1. Request Body Parsing and Validation
+    // Parse incoming payload and verify email presence.
     const body = await request.json();
     const { email, locale } = body;
 
@@ -20,7 +24,8 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.trim().toLowerCase();
     const userLocale = locale || "en";
 
-    // Use admin link generator to generate recovery code and bypass built-in email templates.
+    // 2. Recovery Link Generation via Admin Client
+    // Generate recovery link and one-time password while bypassing built-in email templates.
     const admin = createAdminClient();
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -31,11 +36,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // 3. Localized Recovery Email Dispatch
+    // Format custom localized template and send the recovery code via transactional email.
     const otp = data.properties?.email_otp;
-
-    // Dispatch localized email in code based on user preferred locale.
     if (otp) {
-      const localizedEmail = generateLocalizedEmail({
+      const localizedEmail = await generateLocalizedEmail({
         actionType: "recovery",
         token: otp,
         email: normalizedEmail,
@@ -48,12 +53,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // 4. Successful Response Dispatch
+    // Return delivery confirmation for user interface display.
     return NextResponse.json({
       success: true,
       message: "6-digit recovery code has been dispatched to your email.",
       email: normalizedEmail,
     });
   } catch (err: unknown) {
+    // 5. Internal Error Handling
+    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
