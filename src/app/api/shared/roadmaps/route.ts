@@ -8,6 +8,9 @@ import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
  * GET /api/shared/roadmaps
  * Retrieves all roadmaps shared WITH the currently authenticated user (targetUserId = currentUserId).
  * Joins owner details and roadmap data including phases.
+ *
+ * The received-share directory uses each grant's roadmap as the current plan, then adds
+ * the owner's history plans so the client can render a complete read-only peer dashboard.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Query all shared_roadmaps where targetUserId is the current user
+    // 1. Read grants received by the signed-in user with owner identity and ordered roadmap phases.
     const sharedRecords = await (prisma.sharedRoadmap as any).findMany({
       where: {
         targetUserId: currentUserId,
@@ -59,7 +62,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Query historical roadmaps for the owners so peer analysis can show history if available
+    // 2. Load each owner's archived plans once and group them for the directory response.
     const ownerIds: string[] = [
       ...new Set(sharedRecords.map((s: any) => s.ownerId).filter(Boolean)),
     ] as string[];

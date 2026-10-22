@@ -2,24 +2,25 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { useSharedModal } from "@/context/analysis/SharedModalContext";
 import Logo from "@/components/Logo";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
+// --- Shared Plans Modal ---
+// Search users, display their roadmap access and level, and update sharing permissions.
 export interface SharedCollaborator {
   id: string;
   name: string | null;
   email: string;
+  level: number;
   accessLevel: "no_access" | "viewable" | "editable";
 }
 
-// SharedPlansModal Component
-// Global overlay modal managed via PlanModalContext (matching UploadOptionModal, WizardOptionModal, RoleSelectorModal).
-// Allows searching users by UID/Email and managing viewable/editable access to a roadmap.
 export default function SharedPlansModal() {
   const t = useTranslations("analysis.share_modal");
-  const { activeModal, shareRoadmapData, closeModals } = usePlanModal();
+  const { isSharedPlansModalOpen, shareRoadmapData, closeSharedPlansModal } = useSharedModal();
 
-  const isOpen = activeModal === "share";
+  const isOpen = isSharedPlansModalOpen;
   const roadmapId = shareRoadmapData?.id;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,9 +33,9 @@ export default function SharedPlansModal() {
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch users:
-  // If queryText is empty, defaults to fetching all shared users ("filter=all").
-  // If queryText is provided, searches across users in database ("search=queryText").
+  // --- Collaborator Data ---
+  // 1. Load current shares on open; search requests matching users and their existing access.
+  // 2. The API resolves the active roadmap, reads users and permissions, and returns level data.
   const fetchUsers = useCallback(
     async (queryText: string) => {
       setIsLoading(true);
@@ -56,23 +57,23 @@ export default function SharedPlansModal() {
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          setErrorMsg(data.error || "Failed to load collaborators.");
+          setErrorMsg(data.error || t("error_load"));
           setCollaborators([]);
           return;
         }
 
         setCollaborators(data.users || []);
       } catch {
-        setErrorMsg("Network error occurred while fetching users.");
+        setErrorMsg(t("network_error_load"));
         setCollaborators([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [roadmapId]
+    [roadmapId, t]
   );
 
-  // Reset modal state on open: default load all shared users
+  // Reset to the roadmap's existing shared users each time the modal opens.
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
@@ -83,24 +84,25 @@ export default function SharedPlansModal() {
     }
   }, [isOpen, fetchUsers]);
 
-  // Handle Escape key to dismiss modal
+  // --- Modal Actions ---
+  // Close on Escape unless a collaborator request is still in progress.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen && !isLoading) {
-        closeModals();
+        closeSharedPlansModal();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isLoading, closeModals]);
+  }, [isOpen, isLoading, closeSharedPlansModal]);
 
-  // Handle Search Submission
+  // Submit an explicit UID/email search through the sharing API.
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     fetchUsers(searchQuery);
   };
 
-  // Handle Access Level Change
+  // Persist a permission change, then mirror the result in the local list.
   const handleAccessChange = async (targetUserId: string, newAccessLevel: "no_access" | "viewable") => {
     setUpdatingUserId(targetUserId);
     setErrorMsg(null);
@@ -119,23 +121,23 @@ export default function SharedPlansModal() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMsg(data.error || "Failed to update permission.");
+        setErrorMsg(data.error || t("error_save"));
         return;
       }
 
-      // Update local state immediately:
-      // If we are showing the default shared users list (!searchQuery.trim()), revoking access removes them from view.
-      // If in search results mode, update the card's access level.
-      setCollaborators((prev) =>
-        prev
-          .map((c) => (c.id === targetUserId ? { ...c, accessLevel: newAccessLevel } : c))
-          .filter((c) => {
-            if (!searchQuery.trim() && newAccessLevel === "no_access") return false;
-            return true;
-          })
-      );
+      setCollaborators((prev) => {
+        if (!searchQuery.trim() && newAccessLevel === "no_access") {
+          return prev.filter((collaborator) => collaborator.id !== targetUserId);
+        }
+
+        return prev.map((collaborator) =>
+          collaborator.id === targetUserId
+            ? { ...collaborator, accessLevel: newAccessLevel }
+            : collaborator
+        );
+      });
     } catch {
-      setErrorMsg("Network error occurred while saving permission.");
+      setErrorMsg(t("network_error_save"));
     } finally {
       setUpdatingUserId(null);
     }
@@ -151,13 +153,14 @@ export default function SharedPlansModal() {
 
   if (!isOpen) return null;
 
+  // --- UI ---
   return (
     <div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isLoading) closeModals();
+        if (e.target === e.currentTarget && !isLoading) closeSharedPlansModal();
       }}
     >
       {/* Modal Container */}
@@ -173,7 +176,7 @@ export default function SharedPlansModal() {
 
           <button
             type="button"
-            onClick={closeModals}
+            onClick={closeSharedPlansModal}
             disabled={isLoading}
             className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors disabled:opacity-50"
             aria-label={t("btn_close")}
@@ -216,7 +219,7 @@ export default function SharedPlansModal() {
                   fetchUsers("");
                 }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary p-0.5 border-none bg-transparent cursor-pointer"
-                title="Clear search"
+                title={t("clear_search")}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -231,8 +234,8 @@ export default function SharedPlansModal() {
             onClick={() => handleSearchSubmit()}
             disabled={!searchQuery.trim() || isLoading}
             className="w-10 h-10 flex items-center justify-center bg-accent text-bg-primary rounded-xl border-none cursor-pointer hover:opacity-90 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            title="Search"
-            aria-label="Search"
+            title={t("search")}
+            aria-label={t("search")}
           >
             {isLoading ? (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -273,24 +276,15 @@ export default function SharedPlansModal() {
 
         {/* Collaborators List Area */}
         <div className="flex-1 overflow-y-auto space-y-3 pr-1 focus:outline-none min-h-36">
-          {/* Loading Skeleton */}
+          {/* Loading state */}
           {isLoading && (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 flex items-center justify-between gap-4 animate-pulse"
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-bg-card shrink-0" />
-                    <div className="space-y-2 flex-1">
-                      <div className="h-3 w-32 bg-bg-card rounded" />
-                      <div className="h-2.5 w-48 bg-bg-card/60 rounded" />
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 bg-bg-card rounded-xl" />
-                </div>
-              ))}
+            <div className="flex min-h-52 items-center justify-center">
+              <LoadingSpinner
+                title={t("loading_title")}
+                subtitle={t("loading_description")}
+                showProgressBar={false}
+                size="sm"
+              />
             </div>
           )}
 
@@ -299,8 +293,8 @@ export default function SharedPlansModal() {
             <div className="flex-1 flex items-center justify-center py-16 text-center">
               <p className="text-xs sm:text-sm text-text-muted font-mono">
                 {searchQuery.trim()
-                  ? "No users found matching your search."
-                  : "No members currently shared with this roadmap."}
+                  ? t("no_users_found")
+                  : t("no_shared_members")}
               </p>
             </div>
           )}
@@ -308,7 +302,7 @@ export default function SharedPlansModal() {
           {/* Collaborator User Cards List */}
           {!isLoading &&
             collaborators.map((user) => {
-              const displayName = user.name || user.email.split("@")[0] || "User";
+              const displayName = user.name || user.email.split("@")[0] || t("user");
               const initial = (user.name || user.email || "U").charAt(0).toUpperCase();
               const isUpdating = updatingUserId === user.id;
               const isShared = user.accessLevel === "viewable" || (user.accessLevel as string) === "editable";
@@ -320,8 +314,13 @@ export default function SharedPlansModal() {
                 >
                   {/* Left Identity Card (Styled like Profile user identity card) */}
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                      {initial}
+                    <div className="relative w-10 h-10 shrink-0 group-hover:scale-105 transition-transform">
+                      <div className="w-full h-full rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-sm font-bold text-bg-primary shadow-sm">
+                        {initial}
+                      </div>
+                              <span className="absolute -right-2 -bottom-1 rounded-full border border-bg-card bg-bg-primary px-1 py-0.5 text-[8px] font-mono font-bold leading-none text-accent shadow-sm">
+                        Lv.{user.level}
+                      </span>
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -334,14 +333,14 @@ export default function SharedPlansModal() {
                         </span>
                         {isShared && (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold bg-accent/15 text-accent border-accent/40">
-                            Shared
+                            {t("shared")}
                           </span>
                         )}
                       </div>
 
                       {/* User UID with 1-Click Copy Button */}
                       <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono text-text-muted">
-                        <span className="font-semibold text-text-secondary">UID:</span>
+                        <span className="font-semibold text-text-secondary">{t("uid")}</span>
                         <span className="text-text-muted select-all truncate max-w-45 sm:max-w-none">
                           {user.id}
                         </span>
@@ -349,15 +348,15 @@ export default function SharedPlansModal() {
                           type="button"
                           onClick={() => handleCopyUid(user.id)}
                           className="p-1 text-text-muted hover:text-accent transition-colors bg-bg-card hover:bg-bg-card-hover border border-border-subtle rounded cursor-pointer shrink-0 inline-flex items-center gap-1"
-                          title="Copy UID"
-                          aria-label="Copy UID"
+                          title={t("copy_uid")}
+                          aria-label={t("copy_uid")}
                         >
                           {copiedId === user.id ? (
                             <span className="text-[10px] text-accent font-semibold inline-flex items-center gap-0.5">
                               <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                               </svg>
-                              <span>Copied</span>
+                              <span>{t("copied")}</span>
                             </span>
                           ) : (
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,8 +386,8 @@ export default function SharedPlansModal() {
                           ? "bg-accent text-bg-primary border-accent hover:opacity-90 shadow-sm shadow-accent/20"
                           : "bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-accent border-border-subtle hover:border-accent"
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={isShared ? "Shared (Click to revoke)" : "Share roadmap"}
-                      aria-label={isShared ? "Shared" : "Share roadmap"}
+                      title={isShared ? t("shared_revoke") : t("share_roadmap")}
+                      aria-label={isShared ? t("shared") : t("share_roadmap")}
                     >
                       {isUpdating ? (
                         <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -6,7 +6,7 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 // --- Localized 404 Not Found Screen ---
 // Display futuristic celestial 404 message with interactive navigation options.
 export default function NotFound() {
-  const t = useTranslations("status.not_found");
+  const t = useTranslations("other.status.not_found");
   const router = useRouter();
 
   // --- UI ---

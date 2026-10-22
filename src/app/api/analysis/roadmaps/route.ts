@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/prisma";
@@ -7,9 +7,15 @@ import { formatRoadmapToPlanData } from "@/lib/roadmapFormat";
 /**
  * GET /api/analysis/roadmaps
  * Returns the authenticated user's current roadmap and archived history roadmaps
- * queried directly from Supabase via Prisma.
+ * queried from PostgreSQL via Prisma.
+ *
+ * Data flow:
+ * 1. Resolve the user from the Supabase session cookie; unauthenticated requests get empty results.
+ * 2. Read that user's roadmaps with phases, newest first, then pick the current record.
+ * 3. If no record is marked current, repair the status by promoting the newest roadmap.
+ * 4. Format the selected roadmap and remaining records for the analysis dashboard.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const { accessToken } = await getAuthTokensFromCookies();
     if (!accessToken) {
@@ -31,7 +37,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Query user roadmaps with their respective phases
+    // 1. Query this user's roadmaps and ordered phases from PostgreSQL.
     const roadmaps = await prisma.roadmap.findMany({
       where: {
         userId,
@@ -56,9 +62,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Locate active current roadmap. If no record has status='current', self-heal by setting latest to 'current'
+    // 2. Keep the newest current record, or promote the newest roadmap if none is current.
     let currentRoadmapRecord = roadmaps.find((r) => r.status === "current");
-    if (!currentRoadmapRecord && roadmaps.length > 0) {
+    if (!currentRoadmapRecord) {
       currentRoadmapRecord = roadmaps[0];
       try {
         await prisma.roadmap.update({
@@ -71,17 +77,42 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Separate historical roadmaps
+    // 3. Repair duplicate current statuses by keeping only the newest current roadmap active.
+    const duplicateCurrentIds = roadmaps
+      .filter((roadmap) => roadmap.status === "current" && roadmap.id !== currentRoadmapRecord.id)
+      .map((roadmap) => roadmap.id);
+
+    if (duplicateCurrentIds.length > 0) {
+      try {
+        await prisma.roadmap.updateMany({
+          where: {
+            id: { in: duplicateCurrentIds },
+            userId,
+            status: "current",
+          },
+          data: { status: "history" },
+        });
+        for (const roadmap of roadmaps) {
+          if (duplicateCurrentIds.includes(roadmap.id)) {
+            roadmap.status = "history";
+          }
+        }
+      } catch (err) {
+        console.warn("[/api/analysis/roadmaps] Duplicate current roadmap repair failed:", err);
+      }
+    }
+
+    // 4. Treat every roadmap except the active record as archived history.
     const historyRoadmapRecords = currentRoadmapRecord
-      ? roadmaps.filter((r) => r.id !== currentRoadmapRecord!.id)
+      ? roadmaps.filter((roadmap) => roadmap.id !== currentRoadmapRecord.id)
       : [];
 
     const currentPlan = currentRoadmapRecord
-      ? { ...formatRoadmapToPlanData(currentRoadmapRecord as any), isCurrent: true }
+      ? { ...formatRoadmapToPlanData(currentRoadmapRecord), isCurrent: true }
       : null;
 
     const historyPlans = historyRoadmapRecords.map((r) => ({
-      ...formatRoadmapToPlanData(r as any),
+      ...formatRoadmapToPlanData(r),
       isCurrent: false,
     }));
 
@@ -90,12 +121,12 @@ export async function GET(request: NextRequest) {
       currentPlan,
       historyPlans,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[/api/analysis/roadmaps] Failed to fetch roadmaps:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to load roadmaps from database.",
+        error: error instanceof Error ? error.message : "Failed to load roadmaps from database.",
         currentPlan: null,
         historyPlans: [],
       },

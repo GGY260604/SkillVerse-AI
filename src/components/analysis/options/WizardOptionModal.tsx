@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import type { ProfileIntakePayload } from "@/lib/analysis/types";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -35,10 +36,11 @@ const getDefaultLanguageForLocale = (loc: string) => {
   return "English";
 };
 
-// Option 2: Interactive Assessment Wizard Modal
-// Styled in complete visual harmony with Option 1 (UploadOptionModal)
+// --- Assessment Wizard ---
+// Load the saved profile, collect required career inputs, save them, and start role matching.
 export default function WizardOptionModal() {
   const t = useTranslations("home.plan");
+  const tw = useTranslations("analysis.wizard");
   const locale = useLocale();
   const { activeModal, openPathwaySelect, openRoleSelect, closeModals, targetUserId, targetUserName } =
     usePlanModal();
@@ -78,8 +80,22 @@ export default function WizardOptionModal() {
 
   const modalRef = useRef<HTMLDivElement>(null);
   const isOpen = activeModal === "wizard";
+  const stepTitles = [
+    tw("step_1_title"),
+    tw("step_2_title"),
+    tw("step_3_title"),
+    tw("step_4_title"),
+  ];
+  const stepDescriptions = [
+    tw("step_1_description"),
+    tw("step_2_description"),
+    tw("step_3_description"),
+    tw("step_4_description"),
+  ];
 
-  // Helper function to populate form state from an incoming profile object
+  // --- Profile Hydration ---
+  // Normalize the profile API response into the four wizard steps, preserving saved values
+  // and defaulting the spoken language only when the database has none.
   const applyProfileToForm = useCallback((rawProfile: any) => {
     if (!rawProfile) return;
     const profile = normalizeProfileForForm(rawProfile);
@@ -130,9 +146,10 @@ export default function WizardOptionModal() {
     if (Array.isArray(profile.learningProviders) && profile.learningProviders.length > 0) {
       setLearningProviders(profile.learningProviders);
     }
-  }, []);
+  }, [locale]);
 
-  // When modal opens: always load latest saved user profile directly from database
+  // 1. On open, fetch the latest profile from /api/profile (including a selected target user
+  //    in shared-plan flows) and prefill the form; the API is the source of truth.
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
@@ -151,14 +168,16 @@ export default function WizardOptionModal() {
       try {
         const queryParam = targetUserId ? `?userId=${encodeURIComponent(targetUserId)}` : "";
         const res = await fetch(`/api/profile${queryParam}`, { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.profile && !isCancelled) {
-            applyProfileToForm(data.profile);
-            return;
-          }
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || tw("profile_load_failed"));
         }
-        // If user profile data cannot be read from DB (new user or empty):
+
+        if (data.profile && !isCancelled) {
+          applyProfileToForm(data.profile);
+          return;
+        }
+
         if (!isCancelled) {
           setLanguages([getDefaultLanguageForLocale(locale)]);
         }
@@ -166,6 +185,9 @@ export default function WizardOptionModal() {
         console.warn("[WizardOptionModal] Failed to prefill from database:", err);
         if (!isCancelled) {
           setLanguages([getDefaultLanguageForLocale(locale)]);
+          setErrorMessage(
+            err instanceof Error ? err.message : tw("profile_load_failed")
+          );
         }
       } finally {
         if (!isCancelled) {
@@ -179,7 +201,7 @@ export default function WizardOptionModal() {
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, targetUserId, locale, applyProfileToForm]);
+  }, [isOpen, targetUserId, locale, applyProfileToForm, tw]);
 
   // Handle Escape key to dismiss modal
   useEffect(() => {
@@ -302,21 +324,6 @@ export default function WizardOptionModal() {
     learningProviders.length > 0
   );
 
-  const isStepComplete = (stepIdx: number): boolean => {
-    switch (stepIdx) {
-      case 1:
-        return isStep1Complete;
-      case 2:
-        return isStep2Complete;
-      case 3:
-        return isStep3Complete;
-      case 4:
-        return isStep4Complete;
-      default:
-        return false;
-    }
-  };
-
   // Step transition handlers (User is permitted to navigate freely between pages even if incomplete)
   const handleNextStep = () => {
     setErrorMessage(null);
@@ -328,58 +335,35 @@ export default function WizardOptionModal() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  // Final submit handler: strictly validates all 4 steps before permitting submission
+  // --- Form Submission ---
+  // 2. Validate every required step, then persist the normalized form through /api/profile.
+  // 3. Only after a successful save, hand the same profile to RoleSelectorModal for matching.
   const handleFinalSubmit = async () => {
     if (!isStep1Complete) {
       setCurrentStep(1);
-      setErrorMessage(
-        locale === "zh"
-          ? "第 1 部分尚未填写完整。请完成所有必填项 (*)。"
-          : locale === "ms"
-          ? "Langkah 1 tidak lengkap. Sila lengkapkan semua medan yang diperlukan (*)."
-          : "Step 1 is incomplete. Please complete all required fields (*)."
-      );
+      setErrorMessage(tw("incomplete_step", { step: 1 }));
       return;
     }
     if (!isStep2Complete) {
       setCurrentStep(2);
-      setErrorMessage(
-        locale === "zh"
-          ? "第 2 部分尚未填写完整。请完成所有必填项 (*)。"
-          : locale === "ms"
-          ? "Langkah 2 tidak lengkap. Sila lengkapkan semua medan yang diperlukan (*)."
-          : "Step 2 is incomplete. Please complete all required fields (*)."
-      );
+      setErrorMessage(tw("incomplete_step", { step: 2 }));
       return;
     }
     if (!isStep3Complete) {
       setCurrentStep(3);
-      setErrorMessage(
-        locale === "zh"
-          ? "第 3 部分尚未填写完整。请完成所有必填项 (*)。"
-          : locale === "ms"
-          ? "Langkah 3 tidak lengkap. Sila lengkapkan semua medan yang diperlukan (*)."
-          : "Step 3 is incomplete. Please complete all required fields (*)."
-      );
+      setErrorMessage(tw("incomplete_step", { step: 3 }));
       return;
     }
     if (!isStep4Complete) {
       setCurrentStep(4);
-      setErrorMessage(
-        locale === "zh"
-          ? "第 4 部分尚未填写完整。请完成所有必填项 (*)。"
-          : locale === "ms"
-          ? "Langkah 4 tidak lengkap. Sila lengkapkan semua medan yang diperlukan (*)."
-          : "Step 4 is incomplete. Please complete all required fields (*)."
-      );
+      setErrorMessage(tw("incomplete_step", { step: 4 }));
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const payload = {
-      targetUserId: targetUserId || undefined,
+    const profilePayload: ProfileIntakePayload = {
       employmentStatus,
       currentJobTitle: currentJobTitle.trim() || null,
       industry: industry || null,
@@ -397,25 +381,29 @@ export default function WizardOptionModal() {
       learningProviders,
       outputLanguage: locale || "en",
     };
+    const requestPayload = {
+      ...profilePayload,
+      targetUserId: targetUserId || undefined,
+    };
 
     try {
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestPayload),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update user profile in database.");
+        throw new Error(data.error || tw("profile_update_failed"));
       }
 
       setSaveSuccess(true);
       setIsSubmitting(false);
-      openRoleSelect(payload as any, { targetUserId: targetUserId || undefined });
-    } catch (err: any) {
+      openRoleSelect(profilePayload, { targetUserId: targetUserId || undefined });
+    } catch (err: unknown) {
       setIsSubmitting(false);
-      setErrorMessage(err.message || "An unexpected error occurred while saving profile.");
+      setErrorMessage(err instanceof Error ? err.message : tw("unexpected_profile_error"));
     }
   };
 
@@ -470,20 +458,8 @@ export default function WizardOptionModal() {
         {isLoadingProfile ? (
           <div className="flex-1 flex items-center justify-center py-16 sm:py-20 px-4">
             <LoadingSpinner
-              title={
-                locale === "zh"
-                  ? "正在读取档案数据..."
-                  : locale === "ms"
-                  ? "Memuatkan Data Profil..."
-                  : "Loading Profile Data..."
-              }
-              subtitle={
-                locale === "zh"
-                  ? "正在从数据库同步您的个人技能与职业基准偏好..."
-                  : locale === "ms"
-                  ? "Menyegerakkan kecekapan kemahiran dan garis dasar kerjaya anda dari pangkalan data..."
-                  : "Synchronizing your skills, competencies, and career baseline from database..."
-              }
+              title={tw("loading_profile_title")}
+              subtitle={tw("loading_profile_description")}
               showProgressBar={true}
               size="md"
             />
@@ -494,22 +470,16 @@ export default function WizardOptionModal() {
             <div className="mb-6 shrink-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="text-lg font-bold text-text-primary tracking-tight">
-                {currentStep === 1 && (locale === "zh" ? "1. 职业基础档案" : locale === "ms" ? "1. Garis Dasar Profesional" : "1. Professional Baseline")}
-                {currentStep === 2 && (locale === "zh" ? "2. 技能与技术工具栈" : locale === "ms" ? "2. Kemahiran & Rantaian Alat" : "2. Skills & Technical Toolchain")}
-                {currentStep === 3 && (locale === "zh" ? "3. 转型目标与职业抱负" : locale === "ms" ? "3. Aspirasi & Matlamat Kerjaya" : "3. Future Horizons & Career Goals")}
-                {currentStep === 4 && (locale === "zh" ? "4. 学习与培训规划" : locale === "ms" ? "4. Logistik Pembelajaran" : "4. Learning Logistics")}
+                {stepTitles[currentStep - 1]}
               </h3>
               {targetUserName && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-accent/15 text-accent border border-accent/30 font-semibold">
-                  Profile: {targetUserName}
+                  {tw("profile_name", { name: targetUserName })}
                 </span>
               )}
             </div>
           <p className="text-xs text-text-secondary leading-relaxed">
-            {currentStep === 1 && (locale === "zh" ? "明确您当前的职业状态、所在行业与资历背景。" : locale === "ms" ? "Tentukan kedudukan pekerjaan semasa, domain dan latar belakang pengalaman anda." : "Define your current occupational standing, domain, and experience background.")}
-            {currentStep === 2 && (locale === "zh" ? "输入您的核心专业能力、技术工具、日常职责与语言掌握。" : locale === "ms" ? "Masukkan kecekapan teras, alatan teknikal, rutin harian dan bahasa anda." : "Input your core competencies, technical tools, daily routines, and languages.")}
-            {currentStep === 3 && (locale === "zh" ? "选择您的转型意向、目标岗位与偏好的高增长发展领域。" : locale === "ms" ? "Pilih objektif transformasi, jawatan sasaran dan sektor pertumbuhan pilihan anda." : "Select your transformation objective, dream job target, and preferred growth sectors.")}
-            {currentStep === 4 && (locale === "zh" ? "设定每周可投入的提升时间与受认可的培训课程提供商。" : locale === "ms" ? "Tetapkan komitmen masa pengajian mingguan dan penyedia latihan bertauliah pilihan." : "Set your weekly available study commitment and preferred certified course providers.")}
+            {stepDescriptions[currentStep - 1]}
           </p>
         </div>
 
@@ -530,7 +500,7 @@ export default function WizardOptionModal() {
               {/* Box 1: Employment Status */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "职业状态" : locale === "ms" ? "Status Pekerjaan" : "Employment Status"}{" "}
+                  {tw("employment_status")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -576,18 +546,12 @@ export default function WizardOptionModal() {
               {/* Box 2: Current Job Title */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "当前 / 最近从事的岗位名称" : locale === "ms" ? "Jawatan Pekerjaan Semasa / Terkini" : "Current / Most Recent Occupational Title"}{" "}
+                  {tw("current_job_title")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder={
-                    locale === "zh"
-                      ? "例如：软件工程师、财务文员、数据分析师"
-                      : locale === "ms"
-                      ? "cth. Jurutera Perisian, Kerani Kewangan, Penganalisis Data"
-                      : "e.g. Software Engineer, Financial Clerk, Data Analyst"
-                  }
+                  placeholder={tw("current_job_title_placeholder")}
                   value={currentJobTitle}
                   onChange={(e) => {
                     setCurrentJobTitle(e.target.value);
@@ -601,7 +565,7 @@ export default function WizardOptionModal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                   <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "所属行业领域" : locale === "ms" ? "Domain Industri" : "Industry Domain"}{" "}
+                    {tw("industry_domain")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <select
@@ -613,7 +577,7 @@ export default function WizardOptionModal() {
                     className="w-full py-2.5 px-3.5 rounded-lg bg-bg-secondary/60 border border-border-subtle text-xs text-text-primary font-mono focus:border-accent focus:bg-bg-secondary focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="" disabled className="bg-bg-card text-text-muted">
-                      {locale === "zh" ? "选择行业领域..." : locale === "ms" ? "Pilih Domain Industri..." : "Select Industry Domain..."}
+                      {tw("select_industry")}
                     </option>
                     {industry && !INDUSTRY_OPTIONS.some((i) => i.id === industry) && (
                       <option value={industry} className="bg-bg-card text-text-primary">
@@ -630,7 +594,7 @@ export default function WizardOptionModal() {
 
                 <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                   <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "工作经验年限" : locale === "ms" ? "Tahun Pengalaman" : "Years of Experience"}{" "}
+                    {tw("years_experience")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <select
@@ -642,7 +606,7 @@ export default function WizardOptionModal() {
                     className="w-full py-2.5 px-3.5 rounded-lg bg-bg-secondary/60 border border-border-subtle text-xs text-text-primary font-mono focus:border-accent focus:bg-bg-secondary focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="" disabled className="bg-bg-card text-text-muted">
-                      {locale === "zh" ? "选择经验年限..." : locale === "ms" ? "Pilih Tahap Pengalaman..." : "Select Experience Level..."}
+                      {tw("select_experience")}
                     </option>
                     {yearsOfExperience && !YEARS_OF_EXPERIENCE_OPTIONS.some((exp) => exp.id === yearsOfExperience) && (
                       <option value={yearsOfExperience} className="bg-bg-card text-text-primary">
@@ -661,7 +625,7 @@ export default function WizardOptionModal() {
               {/* Box 4: Education Level */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "最高学历资质" : locale === "ms" ? "Kelayakan Tertinggi" : "Highest Qualification"}{" "}
+                  {tw("highest_qualification")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <select
@@ -673,7 +637,7 @@ export default function WizardOptionModal() {
                   className="w-full py-2.5 px-3.5 rounded-lg bg-bg-secondary/60 border border-border-subtle text-xs text-text-primary font-mono focus:border-accent focus:bg-bg-secondary focus:outline-none transition-all cursor-pointer"
                 >
                   <option value="" disabled className="bg-bg-card text-text-muted">
-                    {locale === "zh" ? "选择学历层级..." : locale === "ms" ? "Pilih Tahap Kelayakan..." : "Select Qualification Level..."}
+                    {tw("select_qualification")}
                   </option>
                   {educationLevel && !EDUCATION_LEVEL_OPTIONS.some((edu) => edu.id === educationLevel) && (
                     <option value={educationLevel} className="bg-bg-card text-text-primary">
@@ -699,17 +663,17 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "专业技能与核心能力" : locale === "ms" ? "Kemahiran & Kecekapan" : "Skills & Competencies"}{" "}
+                    {tw("skills_and_competencies")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <span className="text-[11px] font-mono text-text-muted">
-                    {skills.length} {locale === "zh" ? "个已添加" : locale === "ms" ? "ditambah" : "added"}
+                    {tw("items_added", { count: skills.length })}
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder={locale === "zh" ? "输入技能（如 Python, SQL, 云架构）并按回车" : locale === "ms" ? "Taip kemahiran (cth. Python, SQL, Senibina Awan) & tekan Enter" : "Type skill (e.g. Python, SQL, Cloud Architecture) & press Enter"}
+                    placeholder={tw("skill_placeholder")}
                     value={newSkillName}
                     onChange={(e) => setNewSkillName(e.target.value)}
                     onKeyDown={handleAddSkill}
@@ -719,8 +683,8 @@ export default function WizardOptionModal() {
                     type="button"
                     onClick={handleAddSkill}
                     className="w-10 sm:w-12 py-2.5 flex items-center justify-center text-base font-bold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_15px_var(--accent-glow)] transition-all shrink-0"
-                    title={locale === "zh" ? "添加技能" : locale === "ms" ? "Tambah kemahiran" : "Add skill"}
-                    aria-label={locale === "zh" ? "添加技能" : locale === "ms" ? "Tambah kemahiran" : "Add skill"}
+                    title={tw("add_skill")}
+                    aria-label={tw("add_skill")}
                   >
                     +
                   </button>
@@ -747,20 +711,20 @@ export default function WizardOptionModal() {
                           className="text-[11px] bg-transparent border-none text-text-secondary hover:text-accent focus:outline-none cursor-pointer font-mono font-medium"
                         >
                           <option value="beginner" className="bg-bg-card text-text-primary">
-                            {locale === "zh" ? "初级" : locale === "ms" ? "Asas" : "Beg"}
+                            {tw("proficiency_beginner")}
                           </option>
                           <option value="intermediate" className="bg-bg-card text-text-primary">
-                            {locale === "zh" ? "中级" : locale === "ms" ? "Sederhana" : "Mid"}
+                            {tw("proficiency_intermediate")}
                           </option>
                           <option value="advanced" className="bg-bg-card text-text-primary">
-                            {locale === "zh" ? "精通" : locale === "ms" ? "Lanjutan" : "Adv"}
+                            {tw("proficiency_advanced")}
                           </option>
                         </select>
                         <button
                           type="button"
                           onClick={() => handleRemoveSkill(skill.id)}
                           className="text-text-muted hover:text-rose-400 bg-transparent border-none cursor-pointer text-xs ml-0.5 transition-colors"
-                          title="Remove skill"
+                          title={tw("remove_skill")}
                         >
                           ✕
                         </button>
@@ -774,17 +738,17 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "工具、软件与技术栈" : locale === "ms" ? "Alatan, Perisian & Tindanan" : "Tools, Software & Stack"}{" "}
+                    {tw("tools_and_software")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <span className="text-[11px] font-mono text-text-muted">
-                    {toolsAndSoftware.length} {locale === "zh" ? "个已添加" : locale === "ms" ? "ditambah" : "added"}
+                    {tw("items_added", { count: toolsAndSoftware.length })}
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder={locale === "zh" ? "例如 Git, Docker, Excel, Figma, SAP" : locale === "ms" ? "cth. Git, Docker, Excel, Figma, SAP" : "e.g. Git, Docker, Excel, Figma, SAP"}
+                    placeholder={tw("tool_placeholder")}
                     value={newToolName}
                     onChange={(e) => setNewToolName(e.target.value)}
                     onKeyDown={handleAddTool}
@@ -794,8 +758,8 @@ export default function WizardOptionModal() {
                     type="button"
                     onClick={handleAddTool}
                     className="w-10 sm:w-12 py-2.5 flex items-center justify-center text-base font-bold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_15px_var(--accent-glow)] transition-all shrink-0"
-                    title={locale === "zh" ? "添加工具" : locale === "ms" ? "Tambah alatan" : "Add tool"}
-                    aria-label={locale === "zh" ? "添加工具" : locale === "ms" ? "Tambah alatan" : "Add tool"}
+                    title={tw("add_tool")}
+                    aria-label={tw("add_tool")}
                   >
                     +
                   </button>
@@ -814,7 +778,7 @@ export default function WizardOptionModal() {
                           type="button"
                           onClick={() => handleRemoveTool(tool)}
                           className="text-text-muted hover:text-rose-400 bg-transparent border-none cursor-pointer text-xs ml-0.5 transition-colors"
-                          title="Remove tool"
+                          title={tw("remove_tool")}
                         >
                           ✕
                         </button>
@@ -828,17 +792,17 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-3 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "掌握与交流语言" : locale === "ms" ? "Bahasa Ditutur / Ditulis" : "Languages Spoken / Written"}{" "}
+                    {tw("languages_spoken_written")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <span className="text-[11px] font-mono text-text-muted">
-                    {languages.length} {locale === "zh" ? "种已添加" : locale === "ms" ? "ditambah" : "added"}
+                    {tw("items_added", { count: languages.length })}
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder={locale === "zh" ? "例如 英语, 马来语, 华语, 泰米尔语" : locale === "ms" ? "cth. English, Bahasa Melayu, Mandarin, Tamil" : "e.g. English, Bahasa Melayu, Mandarin, Tamil"}
+                    placeholder={tw("language_placeholder")}
                     value={newLanguageName}
                     onChange={(e) => setNewLanguageName(e.target.value)}
                     onKeyDown={handleAddLanguage}
@@ -848,8 +812,8 @@ export default function WizardOptionModal() {
                     type="button"
                     onClick={handleAddLanguage}
                     className="w-10 sm:w-12 py-2.5 flex items-center justify-center text-base font-bold font-mono bg-accent text-bg-primary rounded-lg border-none cursor-pointer tracking-wide hover:opacity-90 shadow-[0_0_15px_var(--accent-glow)] transition-all shrink-0"
-                    title={locale === "zh" ? "添加语言" : locale === "ms" ? "Tambah bahasa" : "Add language"}
-                    aria-label={locale === "zh" ? "添加语言" : locale === "ms" ? "Tambah bahasa" : "Add language"}
+                    title={tw("add_language")}
+                    aria-label={tw("add_language")}
                   >
                     +
                   </button>
@@ -868,7 +832,7 @@ export default function WizardOptionModal() {
                           type="button"
                           onClick={() => handleRemoveLanguage(lang)}
                           className="text-text-muted hover:text-rose-400 bg-transparent border-none cursor-pointer text-xs ml-0.5 transition-colors"
-                          title="Remove language"
+                          title={tw("remove_language")}
                         >
                           ✕
                         </button>
@@ -882,15 +846,15 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "日常工作职责与业务描述" : locale === "ms" ? "Tanggungjawab & Rutin Kerja Harian" : "Daily Work Responsibilities & Routines"}
+                    {tw("daily_work_description")}
                   </label>
                   <span className="text-[11px] font-mono text-text-muted italic">
-                    {locale === "zh" ? "选填" : locale === "ms" ? "Pilihan" : "Optional"}
+                    {tw("optional")}
                   </span>
                 </div>
                 <textarea
                   rows={2}
-                  placeholder={locale === "zh" ? "用您自己的话描述日常工作任务（例如：撰写报告、分析客户数据、处理客服工单）..." : locale === "ms" ? "Terangkan tugasan harian anda (cth. menyediakan laporan, menganalisis data pelanggan, menjawab panggilan sokongan)..." : "Describe your day-to-day tasks in your own words (e.g. drafting reports, analyzing customer datasets, answering support calls)..."}
+                  placeholder={tw("daily_work_placeholder")}
                   value={casualDescription}
                   onChange={(e) => setCasualDescription(e.target.value)}
                   className="w-full py-2.5 px-3.5 rounded-lg bg-bg-secondary/60 border border-border-subtle text-xs text-text-primary placeholder:text-text-muted font-mono focus:border-accent focus:bg-bg-secondary focus:outline-none resize-none transition-all"
@@ -907,7 +871,7 @@ export default function WizardOptionModal() {
               {/* Box 1: Career Goal Objective */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "转型与进阶目标" : locale === "ms" ? "Objektif Transformasi" : "Transformation Objective"}{" "}
+                  {tw("transformation_objective")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -953,18 +917,12 @@ export default function WizardOptionModal() {
               {/* Box 2: Target Job Title */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "目标期望岗位名称" : locale === "ms" ? "Jawatan Sasaran Prospektif" : "Target Prospective Role Title"}{" "}
+                  {tw("target_job_title")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder={
-                    locale === "zh"
-                      ? "例如：AI 系统架构师、ESG 数据审计师、云 DevOps 主管"
-                      : locale === "ms"
-                      ? "cth. Arkitek Sistem AI, Juruaudit Data ESG, Ketua DevOps Awan"
-                      : "e.g. AI Systems Architect, ESG Data Auditor, Cloud DevOps Lead"
-                  }
+                  placeholder={tw("target_job_placeholder")}
                   value={targetJobTitle}
                   onChange={(e) => {
                     setTargetJobTitle(e.target.value);
@@ -978,11 +936,11 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "目标高增长赛道" : locale === "ms" ? "Sektor Pertumbuhan Sasaran" : "Target Growth Sectors"}{" "}
+                    {tw("target_growth_sectors")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <span className="text-[11px] font-mono text-text-muted">
-                    {targetSectors.length} {locale === "zh" ? "已选" : locale === "ms" ? "dipilih" : "selected"}
+                    {tw("items_selected", { count: targetSectors.length })}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1024,7 +982,7 @@ export default function WizardOptionModal() {
               {/* Box 4: Work Arrangement Preference */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "工作模式偏好" : locale === "ms" ? "Keutamaan Susunan Kerja" : "Work Arrangement Preference"}{" "}
+                  {tw("work_arrangement")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -1062,7 +1020,7 @@ export default function WizardOptionModal() {
               {/* Box 1: Weekly Commitment Hours */}
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <label className="block text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                  {locale === "zh" ? "每周学习投入时间" : locale === "ms" ? "Komitmen Masa Pengajian Mingguan" : "Weekly Learning Time Commitment"}{" "}
+                  {tw("weekly_learning_commitment")}{" "}
                   <span className="text-rose-400 font-bold ml-0.5">*</span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -1101,11 +1059,11 @@ export default function WizardOptionModal() {
               <div className="rounded-xl border border-border-subtle bg-bg-secondary/40 p-4 sm:p-5 space-y-2.5 transition-all duration-300 hover:border-accent/40">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-text-primary font-mono uppercase tracking-wide">
-                    {locale === "zh" ? "偏好的学习与课程提供方" : locale === "ms" ? "Penyedia Kursus & Sumber Pilihan" : "Preferred Course & Resource Types"}{" "}
+                    {tw("preferred_learning_providers")}{" "}
                     <span className="text-rose-400 font-bold ml-0.5">*</span>
                   </label>
                   <span className="text-[11px] font-mono text-text-muted">
-                    {learningProviders.length} {locale === "zh" ? "已选" : locale === "ms" ? "dipilih" : "selected"}
+                    {tw("items_selected", { count: learningProviders.length })}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1191,12 +1149,12 @@ export default function WizardOptionModal() {
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
                         <span>
-                          {locale === "zh" ? "正在保存个人档案..." : locale === "ms" ? "Menyimpan Profil..." : "Saving Profile..."}
+                          {tw("saving_profile")}
                         </span>
                       </span>
                     ) : saveSuccess ? (
                       <span>
-                        {locale === "zh" ? "✓ 个人档案已保存" : locale === "ms" ? "✓ Profil Disimpan" : "✓ Profile Saved"}
+                        {tw("profile_saved")}
                       </span>
                     ) : (
                       <span>{t("btn_submit")}</span>

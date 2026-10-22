@@ -1,5 +1,4 @@
 import { PlanData, PlanPhase } from "@/components/analysis/planCard/planData";
-import { fetchWithFastApiFallback, getFastApiTargets } from "@/lib/fastapi/client";
 import {
   AnalyzeRequestPayload,
   AnalyzeResponsePayload,
@@ -14,12 +13,12 @@ import {
 // Purpose: Orchestrate CV document extraction, workforce evaluation, and roadmap synthesis.
 
 // 1. Document Profile Extraction
-// Upload CV documents for OCR parsing and competency normalization with failover.
+// Upload a CV through the server-side extraction route.
 export async function extractProfileDocument(file: File): Promise<ExtractionResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetchWithFastApiFallback("/api/v1/extract", {
+  const response = await fetch("/api/analysis/extract", {
     method: "POST",
     body: formData,
   });
@@ -33,13 +32,14 @@ export async function extractProfileDocument(file: File): Promise<ExtractionResp
 }
 
 // 2. Workforce Profile Evaluation
-// Execute synchronous workforce profile evaluation across compute tiers.
+// Execute synchronous workforce profile evaluation through the server-side route.
 export async function analyzeWorkforceProfile(
   payload: AnalyzeRequestPayload
 ): Promise<AnalyzeResponsePayload> {
-  const response = await fetchWithFastApiFallback("/api/v1/analyze", {
+  const response = await fetch("/api/analysis/analyze", {
     method: "POST",
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "analyze", ...payload }),
   });
 
   if (!response.ok) {
@@ -51,115 +51,104 @@ export async function analyzeWorkforceProfile(
 }
 
 // 3. Streaming Profile Evaluation
-// Stream real-time progress events for the computational phases of role evaluation.
+// Stream progress events from the server-side role evaluation route.
 export async function analyzeWorkforceProfileStream(
   payload: AnalyzeRequestPayload,
-  onProgress: (event: StreamProgressEvent) => void
+  onProgress: (event: StreamProgressEvent) => void,
+  requestSignal?: AbortSignal
 ): Promise<AnalyzeResponsePayload> {
-  const isClient = typeof window !== "undefined";
+  const controller = new AbortController();
+  const abortFromCaller = () => controller.abort();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
 
-  if (isClient) {
+  if (requestSignal?.aborted) {
+    controller.abort();
+  } else {
+    requestSignal?.addEventListener("abort", abortFromCaller, { once: true });
+  }
+
+  try {
     const response = await fetch("/api/analysis/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "stream", ...payload }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
-      return analyzeWorkforceProfile(payload);
+      const errorBody = await response.text();
+      throw new Error(`Role matching failed (${response.status}): ${errorBody}`);
+    }
+    if (!response.body) {
+      throw new Error("Role matching response did not include a progress stream.");
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      return analyzeWorkforceProfile(payload);
-    }
-
+    const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
     let finalResult: AnalyzeResponsePayload | null = null;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    const processEvent = (chunk: string) => {
+      const eventData = chunk
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+      if (!eventData.trim() || eventData.trim() === "[DONE]") return;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() || "";
-
-      for (const chunk of lines) {
-        const match = chunk.match(/^data:\s*(.*)$/m);
-        if (match && match[1]) {
-          try {
-            const parsed = JSON.parse(match[1]);
-            onProgress(parsed);
-            if (parsed.result) {
-              finalResult = parsed.result;
-            }
-          } catch {
-            // Ignore malformed SSE chunk
-          }
-        }
+      let parsed: StreamProgressEvent & {
+        result?: AnalyzeResponsePayload;
+        errorCode?: string;
+      };
+      try {
+        parsed = JSON.parse(eventData);
+      } catch {
+        throw new Error("Received invalid analysis progress data.");
       }
-    }
 
-    if (finalResult) {
-      return finalResult;
-    }
+      onProgress(parsed);
+      if (parsed.error) {
+        throw new Error(parsed.errorCode || parsed.error);
+      }
+      if (parsed.result) finalResult = parsed.result;
+    };
 
-    return analyzeWorkforceProfile(payload);
-  }
-
-  // Server-side direct call: try streaming with failover
-  const targets = getFastApiTargets();
-  for (const target of targets) {
     try {
-      const streamUrl = `${target.baseUrl}/api/v1/analyze/stream`;
-      const response = await fetch(streamUrl, {
-        method: "POST",
-        headers: {
-          ...target.headers,
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
-        body: JSON.stringify(payload),
-      });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      if (response.ok && response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let buffer = "";
-        let finalResult: AnalyzeResponsePayload | null = null;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || "";
-
-          for (const chunk of lines) {
-            const match = chunk.match(/^data:\s*(.*)$/m);
-            if (match && match[1]) {
-              try {
-                const parsed = JSON.parse(match[1]);
-                onProgress(parsed);
-                if (parsed.result) finalResult = parsed.result;
-              } catch {
-                // Ignore malformed SSE chunk
-              }
-            }
-          }
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split(/\r?\n\r?\n/);
+        buffer = events.pop() || "";
+        for (const event of events) {
+          processEvent(event);
         }
-
-        if (finalResult) return finalResult;
       }
-    } catch {
-      // Continue to next tier
-    }
-  }
 
-  return analyzeWorkforceProfile(payload);
+      buffer += decoder.decode();
+      if (buffer.trim()) processEvent(buffer);
+    } catch (error) {
+      await reader.cancel().catch(() => {});
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (!finalResult) {
+      throw new Error("Role matching stream ended without a result.");
+    }
+
+    return finalResult;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("MATCHING_TIMEOUT");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    requestSignal?.removeEventListener("abort", abortFromCaller);
+  }
 }
 
 // 4. Role Roadmap Synthesis
@@ -167,27 +156,11 @@ export async function analyzeWorkforceProfileStream(
 export async function synthesizeSelectedRoadmap(
   payload: SynthesizeRoadmapRequest
 ): Promise<SynthesizeRoadmapResponse> {
-  const isClient = typeof window !== "undefined";
-
-  if (isClient) {
-    const response = await fetch("/api/analysis/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "synthesize", ...payload }),
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Roadmap synthesis failed (${response.status}): ${errText}`);
-    }
-
-    return response.json();
-  }
-
-  const response = await fetchWithFastApiFallback("/api/v1/analyze/synthesize-roadmap", {
+  const response = await fetch("/api/analysis/analyze", {
     method: "POST",
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "synthesize", ...payload }),
+    credentials: "include",
   });
 
   if (!response.ok) {

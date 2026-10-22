@@ -1,21 +1,16 @@
 import type { QuizResponseData } from "@/components/analysis/quiz/PhaseQuizModal";
 
-/**
- * ============================================================================
- * Quiz Mock Data Control Constant
- * ============================================================================
- * Set to `true` to make the quiz use Next.js local mock data directly,
- * bypassing all backend API calls.
- * Set to `false` to make the quiz call the backend FastAPI engine.
- */
+// -------------------------------------------------------------
+// Debugging / Testing Only (Quiz)
+// -------------------------------------------------------------
+
+// Keep this constant false for live deployments.
 export const USE_QUIZ_MOCK_DATA = true;
+
+// -------------------------------------------------------------
 
 // --- Mock Quiz Data ---
 // Every mock quiz question uses option A as the correct answer.
-/**
- * High-quality, production-ready 10-question technical competency mock quizzes
- * partitioned by application locale (English, Chinese, Malay).
- */
 export const MOCK_QUIZ_BY_LOCALE: Record<string, QuizResponseData> = {
   en: {
     phaseIndex: 1,
@@ -409,9 +404,8 @@ export const MOCK_QUIZ_BY_LOCALE: Record<string, QuizResponseData> = {
   }
 };
 
-/**
- * Helper to retrieve tailored mock quiz data for a given request.
- */
+// --- Mock Quiz Data Lookup ---
+// Return locale-specific mock quiz data with phase-specific EXP rewards.
 export function getMockQuizData(params?: {
   phaseIndex?: number;
   phaseTitle?: string;

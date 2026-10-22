@@ -13,7 +13,7 @@ interface ErrorProps {
 // --- Localized Error Boundary Component ---
 // Catch unhandled exceptions and render high-tech diagnostic dashboard with retry action.
 export default function ErrorBoundary({ error, reset }: ErrorProps) {
-  const t = useTranslations("status.error");
+  const t = useTranslations("other.status.error");
   const [showDetails, setShowDetails] = useState(false);
 
   // --- Error Logging ---

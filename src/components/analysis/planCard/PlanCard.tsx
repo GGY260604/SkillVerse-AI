@@ -4,6 +4,8 @@ import React from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { PlanData } from "./planData";
 
+// --- Roadmap Overview Card ---
+// Render a localized current or archived roadmap summary and its progress.
 interface PlanCardProps {
   plan: PlanData;
   variant?: "current" | "history";
@@ -27,9 +29,8 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
 
-  // ---------------------------------------------------------------------------
-  // History Plan Overview Card (Compact & Monochromatic Grey Aesthetic)
-  // ---------------------------------------------------------------------------
+  // --- History Card ---
+  // Archived records are visually sealed and provide a compact read-only summary.
   if (!isCurrent) {
     return (
       <div
@@ -124,9 +125,8 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Current Plan Overview Card (Prominent & High Contrast Accent Aesthetic)
-  // ---------------------------------------------------------------------------
+  // --- Current Card ---
+  // The active roadmap uses the prominent summary treatment.
   return (
     <div
       onClick={() => onSelect?.(plan)}

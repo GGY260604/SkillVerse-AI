@@ -1,7 +1,12 @@
 "use client";
 
+// --- Available State Actions ---
+// addExp(amount, phaseTitle): add EXP, persist it, and open the reward modal.
+// dismissExpModal(): close the EXP reward modal.
+// EXP totals and reward events are updated internally; raw setters are not exposed.
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth/AuthContext";
 
 export interface ExpGainEvent {
   expGained: number;
@@ -13,7 +18,7 @@ export interface ExpGainEvent {
   phaseTitle?: string;
 }
 
-interface UserLevelContextType {
+interface ExpGainContextType {
   totalExp: number;
   level: number;
   currentLevelExp: number;
@@ -23,16 +28,18 @@ interface UserLevelContextType {
   dismissExpModal: () => void;
 }
 
-const UserLevelContext = createContext<UserLevelContextType | undefined>(undefined);
+const ExpGainContext = createContext<ExpGainContextType | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = "skillverse_user_total_exp";
 
-export function UserLevelProvider({ children }: { children: React.ReactNode }) {
+// --- Context Provider ---
+export function ExpGainProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn } = useAuth();
   const userId = user?.id || "guest";
   const storageKey = `${STORAGE_KEY_PREFIX}_${userId}`;
 
-  // Initial EXP load from localStorage or user metadata
+  // --- Initial EXP State ---
+  // Load cached EXP without changing the server-rendered initial state.
   const [totalExp, setTotalExp] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     try {
@@ -48,7 +55,8 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
 
   const [expGainEvent, setExpGainEvent] = useState<ExpGainEvent | null>(null);
 
-  // Sync with storage and database when user changes
+  // --- EXP Synchronization ---
+  // Sync local storage and the authoritative database value when the user changes.
   useEffect(() => {
     let resolvedExp = 0;
     try {
@@ -89,16 +97,18 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
           }
         })
         .catch((err) => {
-          console.warn("[UserLevelContext] Failed to fetch exp from server:", err);
+          console.warn("[ExpGainContext] Failed to fetch exp from server:", err);
         });
     }
   }, [storageKey, user, isLoggedIn]);
 
-  // Derived level stats: 100 EXP per level
+  // --- Derived Level Stats ---
+  // Each level requires 100 EXP.
   const level = Math.floor(totalExp / 100) + 1;
   const currentLevelExp = totalExp % 100;
   const progressPercent = currentLevelExp; // 0% to 99%
 
+  // --- EXP Awarding ---
   const addExp = useCallback(
     (amount: number, phaseTitle?: string): ExpGainEvent => {
       // Ensure positive multiple of 5
@@ -112,21 +122,21 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
 
       setTotalExp(newExp);
 
-      // 1. Immediately cache in localStorage for instant responsiveness
+      // Cache EXP immediately for a responsive UI.
       try {
         localStorage.setItem(storageKey, newExp.toString());
       } catch {
         // Ignore
       }
 
-      // 2. Persist to database (Supabase auth.users user_metadata)
+      // Persist the updated total for authenticated users.
       if (isLoggedIn) {
         fetch("/api/user/exp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ totalExp: newExp, level: newLevel }),
         }).catch((err) => {
-          console.warn("[UserLevelContext] Failed to sync EXP to database:", err);
+          console.warn("[ExpGainContext] Failed to sync EXP to database:", err);
         });
       }
 
@@ -146,12 +156,14 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
     [totalExp, storageKey, isLoggedIn]
   );
 
+  // --- Modal Actions ---
   const dismissExpModal = useCallback(() => {
     setExpGainEvent(null);
   }, []);
 
+  // --- Context Value ---
   return (
-    <UserLevelContext.Provider
+    <ExpGainContext.Provider
       value={{
         totalExp,
         level,
@@ -163,14 +175,15 @@ export function UserLevelProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </UserLevelContext.Provider>
+    </ExpGainContext.Provider>
   );
 }
 
-export function useUserLevel(): UserLevelContextType {
-  const context = useContext(UserLevelContext);
+// --- Context Hook ---
+export function useExpGain(): ExpGainContextType {
+  const context = useContext(ExpGainContext);
   if (!context) {
-    throw new Error("useUserLevel must be used within a UserLevelProvider");
+    throw new Error("useExpGain must be used within an ExpGainProvider");
   }
   return context;
 }

@@ -3,7 +3,7 @@ import {
   getFastApiConfig,
   getFastApiTargets,
   fetchWithFastApiFallback,
-} from "@/lib/fastapi/client";
+} from "@/app/api/_lib/fastapi/client";
 import { supabase } from "@/lib/supabase/client";
 import { getAuthTokensFromCookies } from "@/lib/supabase/cookies";
 import { prisma } from "@/lib/prisma";
@@ -17,23 +17,27 @@ import { prisma } from "@/lib/prisma";
  * - action === "synthesize": Generates multi-phase reskilling roadmap via FastAPI,
  *   archives any prior 'current' roadmap to 'history', and persists new 'current' roadmap to database.
  * - default: Standard deterministic role analysis from /api/v1/analyze
+ *
+ * Synthesis flow:
+ * 1. Resolve the session user, then request a roadmap for the selected role from FastAPI.
+ * 2. Normalize generated milestones, role metrics, and localized content for database fields.
+ * 3. In one transaction, archive every existing current roadmap and insert the new current
+ *    roadmap with its phases, so a failed write cannot leave a half-switched plan state.
+ * 4. Return the created roadmap to the client, which refreshes the analysis page from storage.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const action = body.action || "stream";
 
-    // 1. Resolve authenticated user ID if session exists
+    // 1. Resolve the authenticated user ID for service requests and database ownership.
     let authenticatedUserId: string | undefined = body.userId;
-    console.log("[analyze] incoming body.userId:", body.userId, "| action:", body.action);
     try {
       const { accessToken } = await getAuthTokensFromCookies();
-      console.log("[analyze] accessToken present:", !!accessToken);
       if (accessToken) {
         const { data: userData } = await supabase.auth.getUser(accessToken);
         if (userData?.user?.id) {
           authenticatedUserId = userData.user.id;
-          console.log("[analyze] resolved authenticatedUserId from cookie:", authenticatedUserId);
         }
       }
     } catch {
@@ -43,7 +47,7 @@ export async function POST(request: NextRequest) {
     const config = getFastApiConfig();
     const baseUrl = config.baseUrl.replace(/\/+$/, "");
 
-    // 2. Action: Stream role discovery (/api/v1/analyze/stream) with Multi-Tier Failover
+    // 2. Stream role discovery results to the client for progressive progress updates.
     if (action === "stream") {
       const forwardPayload = {
         sessionId: body.sessionId,
@@ -103,7 +107,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Action: Synthesize roadmap & persist roadmap/phases to database with Multi-Tier Failover
+    // 3. Synthesize the selected role's roadmap, then persist the roadmap and phases.
     if (action === "synthesize") {
       const forwardPayload = {
         assessmentId: body.assessmentId,
@@ -154,7 +158,6 @@ export async function POST(request: NextRequest) {
       }
 
       if (effectiveUserId) {
-        console.log("[analyze] Starting DB transaction for userId:", effectiveUserId);
         try {
           const selectedRole =
             (data.topRoles || []).find((r: any) => r.roleId === data.targetRoleId) ||
@@ -273,7 +276,7 @@ export async function POST(request: NextRequest) {
           const roleTitleLoc =
             selectedRole.titleLocalized || selectedRole.title || data.targetRoleTitle || roleTitle;
 
-          // Atomic transaction: archive previous current roadmap & insert new current roadmap
+          // 4. Atomically archive the existing current roadmap(s) and create the new current plan.
           const createdRoadmap = await prisma.$transaction(async (tx) => {
             // Archive any currently active roadmaps for this user
             await tx.roadmap.updateMany({

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { USE_QUIZ_MOCK_DATA, getMockQuizData } from "@/constants/quiz";
 
 export interface QuizQuestion {
@@ -22,6 +22,8 @@ export interface QuizResponseData {
   questions: QuizQuestion[];
 }
 
+// --- Phase Mastery Quiz ---
+// Load a localized quiz for the selected phase and report completion only after passing.
 interface PhaseQuizModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,6 +46,7 @@ export default function PhaseQuizModal({
   onPassed,
 }: PhaseQuizModalProps) {
   const locale = useLocale();
+  const t = useTranslations("analysis.quiz");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +105,7 @@ export default function PhaseQuizModal({
         });
 
         if (!res.ok) {
-          throw new Error("Failed to generate quiz. Please retry.");
+          throw new Error(t("generate_failed"));
         }
 
         const data: QuizResponseData = await res.json();
@@ -111,7 +114,7 @@ export default function PhaseQuizModal({
         }
       } catch (err: unknown) {
         if (isMounted) {
-          const msg = err instanceof Error ? err.message : "Error generating quiz";
+          const msg = err instanceof Error ? err.message : t("unexpected_error");
           setError(msg);
         }
       } finally {
@@ -126,7 +129,7 @@ export default function PhaseQuizModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale]);
+  }, [isOpen, phaseIndex, phaseTitle, phaseDescription, skills, targetRole, locale, t]);
 
   if (!isOpen) return null;
 
@@ -189,13 +192,13 @@ export default function PhaseQuizModal({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
               <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/30">
-                Phase {phaseIndex} Mastery Exam
+                {t("phase_exam", { phase: phaseIndex })}
               </span>
               <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                ⚡ +{expReward} EXP Bounty
+                ⚡ {t("exp_bounty", { exp: expReward })}
               </span>
               <span className="text-[11px] font-mono text-text-muted">
-                (Strict 10/10 Mastery Gate)
+                {t("strict_mastery_gate")}
               </span>
             </div>
 
@@ -204,7 +207,7 @@ export default function PhaseQuizModal({
             </h3>
             {targetRole && (
               <p className="text-xs font-mono text-text-muted mt-0.5">
-                Target Role: <span className="text-text-secondary">{targetRole}</span>
+                {t("target_role")}: <span className="text-text-secondary">{targetRole}</span>
               </p>
             )}
           </div>
@@ -213,7 +216,7 @@ export default function PhaseQuizModal({
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-bg-secondary hover:bg-bg-elevated border border-border-subtle flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer shrink-0"
-            aria-label="Close Quiz"
+            aria-label={t("close_quiz")}
           >
             ✕
           </button>
@@ -229,10 +232,10 @@ export default function PhaseQuizModal({
               </div>
               <div>
                 <h4 className="text-base font-bold text-text-primary">
-                  Gemini Evaluating Skill Competencies...
+                  {t("evaluating_title")}
                 </h4>
                 <p className="text-xs text-text-muted mt-1 max-w-md">
-                  Synthesizing 10 targeted multiple-choice challenges based on your planned learning objectives and evaluating modular EXP difficulty.
+                  {t("evaluating_description")}
                 </p>
               </div>
             </div>
@@ -247,7 +250,7 @@ export default function PhaseQuizModal({
                 onClick={() => onClose()}
                 className="mt-2 px-4 py-2 rounded-lg bg-bg-secondary text-xs font-mono border border-border-subtle hover:border-accent text-text-primary cursor-pointer"
               >
-                Close & Try Later
+                {t("close_try_later")}
               </button>
             </div>
           ) : isSubmitted ? (
@@ -274,13 +277,13 @@ export default function PhaseQuizModal({
                   <div>
                     <h4 className="text-base font-bold text-text-primary">
                       {score === 10
-                        ? "Verified Skill Mastery! 10/10 Perfect Score"
-                        : "Mastery Gate Not Passed (10/10 Required)"}
+                        ? t("verified_mastery_title")
+                        : t("mastery_not_passed_title")}
                     </h4>
                     <p className="text-xs text-text-muted mt-0.5">
                       {score === 10
-                        ? `Congratulations! You mastered this milestone. Awarding +${expReward} EXP now...`
-                        : `You scored ${score} out of 10. Every challenge must be answered correctly to certify this skill.`}
+                        ? t("verified_mastery_description", { exp: expReward })
+                        : t("mastery_not_passed_description", { score })}
                     </p>
                   </div>
                 </div>
@@ -291,7 +294,7 @@ export default function PhaseQuizModal({
                     onClick={handleRetry}
                     className="px-5 py-2.5 rounded-xl bg-accent text-bg-primary text-xs font-mono font-bold uppercase tracking-wider hover:opacity-90 shadow-sm cursor-pointer shrink-0"
                   >
-                    Retry Assessment
+                    {t("retry_assessment")}
                   </button>
                 )}
               </div>
@@ -299,7 +302,7 @@ export default function PhaseQuizModal({
               {/* Review All 10 Questions with Gemini Explanations */}
               <div className="flex flex-col gap-4">
                 <h5 className="text-xs font-mono uppercase tracking-wider text-text-muted font-bold">
-                  Question Review & Technical Rationales
+                  {t("question_review")}
                 </h5>
 
                 {questions.map((q, qIdx) => {
@@ -360,7 +363,7 @@ export default function PhaseQuizModal({
                       {/* AI Technical Explanation */}
                       <div className="p-3 rounded-lg bg-bg-secondary/70 border border-border-subtle/80 text-xs text-text-secondary leading-relaxed">
                         <span className="font-mono font-bold text-accent text-[11px] block mb-0.5">
-                          RATIONALE:
+                          {t("rationale")}:
                         </span>
                         {q.explanation}
                       </div>
@@ -391,7 +394,7 @@ export default function PhaseQuizModal({
                             ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
                             : "bg-bg-secondary text-text-muted border-border-subtle hover:text-text-primary"
                         }`}
-                        aria-label={`Go to question ${idx + 1}`}
+                        aria-label={t("go_to_question", { question: idx + 1 })}
                       >
                         {idx + 1}
                       </button>
@@ -400,7 +403,7 @@ export default function PhaseQuizModal({
                 </div>
 
                 <span className="text-xs font-mono text-text-muted shrink-0">
-                  {answeredCount} / {totalQuestions} Answered
+                  {t("answered_count", { answered: answeredCount, total: totalQuestions })}
                 </span>
               </div>
 
@@ -408,7 +411,10 @@ export default function PhaseQuizModal({
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono uppercase text-accent font-bold tracking-wider">
-                    Question {currentQIndex + 1} of {totalQuestions}
+                    {t("question_progress", {
+                      current: currentQIndex + 1,
+                      total: totalQuestions,
+                    })}
                   </span>
                 </div>
 
@@ -462,7 +468,7 @@ export default function PhaseQuizModal({
               onClick={() => setCurrentQIndex((prev) => Math.max(0, prev - 1))}
               className="px-4 py-2 rounded-xl bg-bg-secondary hover:bg-bg-card border border-border-subtle text-xs font-mono text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
-              ← Previous
+              {t("previous")}
             </button>
 
             <div className="flex items-center gap-2">
@@ -472,7 +478,7 @@ export default function PhaseQuizModal({
                   onClick={() => setCurrentQIndex((prev) => Math.min(totalQuestions - 1, prev + 1))}
                   className="px-5 py-2 rounded-xl bg-bg-card hover:bg-bg-card-hover border border-border-subtle hover:border-accent text-xs font-mono text-text-primary cursor-pointer transition-colors"
                 >
-                  Next Question →
+                  {t("next_question")}
                 </button>
               ) : (
                 <button
@@ -485,7 +491,7 @@ export default function PhaseQuizModal({
                       : "bg-bg-secondary text-text-muted border border-border-subtle opacity-50 cursor-not-allowed"
                   }`}
                 >
-                  Submit & Verify Mastery
+                  {t("submit_verify")}
                 </button>
               )}
             </div>

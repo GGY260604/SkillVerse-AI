@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchWithFastApiFallback } from "@/lib/fastapi/client";
+import { fetchWithFastApiFallback } from "@/app/api/_lib/fastapi/client";
 
 // --- Route Handler ---
 // Endpoint: GET /api/home/trend

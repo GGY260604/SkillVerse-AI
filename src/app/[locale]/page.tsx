@@ -27,7 +27,10 @@ export default async function HomePage({
   // Bind locale for static generation.
   setRequestLocale(locale);
 
-  // --- Debugging / Testing Only ---
+  // -------------------------------------------------------------
+  // Debugging / Testing Only (Loading & Error)
+  // -------------------------------------------------------------
+
   // Keep these scenarios commented out for live deployments.
 
   // Simulate a network delay (30 seconds) for testing the loading state. (Uncomment to test.)
@@ -35,6 +38,8 @@ export default async function HomePage({
 
   // Simulate an error for testing the error state. (Uncomment to test.)
   // throw new Error("Test Error");
+
+  // -------------------------------------------------------------
 
   // --- UI ---
   return (

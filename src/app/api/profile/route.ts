@@ -17,8 +17,10 @@ import {
 
 /**
  * GET /api/profile
- * Retrieves user profile from the users table.
- * If ?userId=... is provided, verifies that target user has shared a roadmap with the current user.
+ * Data flow:
+ * 1. Authenticate the requester and use their own ID by default.
+ * 2. For a requested peer profile, verify that the peer shared a roadmap with the requester.
+ * 3. Read and return the selected users-table record for the wizard/profile UI.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -203,7 +205,8 @@ export async function PATCH(request: NextRequest) {
 /**
  * POST /api/profile
  * Updates the user's unified profile record in the users table.
- * Ensures strictly 1 record per user via onConflict: "id".
+ * The assessment wizard calls this after validating all steps. Shared-user edits require an
+ * editable grant; an upsert preserves identity fields and writes the normalized intake values.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -249,8 +252,7 @@ export async function POST(request: NextRequest) {
       .eq("id", effectiveUserId)
       .maybeSingle();
 
-    // Single upsert directly into users table with onConflict: "id"
-    // Guarantees strictly 1 record per user
+    // Upsert the validated profile under the effective owner ID while retaining existing identity fields.
     const { data: updatedUser, error: updateError } = await admin
       .from("users")
       .upsert(

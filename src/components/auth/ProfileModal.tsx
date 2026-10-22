@@ -2,18 +2,21 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { useAuth } from "@/context/AuthContext";
-import { useUserLevel } from "@/context/UserLevelContext";
+import { useAuth } from "@/context/auth/AuthContext";
+import { useProfileModal } from "@/context/auth/ProfileModalContext";
+import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
 
-// Profile Overlay Modal Component
-// Displays read-only user email and editable display name with immediate database and session sync.
+// --- Profile Overlay Modal ---
+// Load the latest profile, save display-name edits, and synchronize the authenticated user state.
 export default function ProfileModal() {
-  const tNav = useTranslations("other.nav");
-  const tProfile = useTranslations("other.profile");
-  const { isProfileModalOpen, closeProfileModal, logout, user, setUser, checkAuth } = useAuth();
-  const { level, currentLevelExp, totalExp, progressPercent } = useUserLevel();
+  const tNav = useTranslations("layout.nav");
+  const tProfile = useTranslations("auth.profile");
+  const { isProfileModalOpen, closeProfileModal } = useProfileModal();
+  const { logout, user, setUser, checkAuth } = useAuth();
+  const { level, currentLevelExp, progressPercent } = useExpGain();
 
+  // --- Form State ---
   const [name, setName] = useState("");
   const [initialName, setInitialName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -23,7 +26,8 @@ export default function ProfileModal() {
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync initial name when modal opens or user updates
+  // --- Profile Hydration ---
+  // 1. Prefill from AuthContext immediately, then replace it with the latest /api/profile value.
   useEffect(() => {
     if (isProfileModalOpen) {
       const currentName =
@@ -35,7 +39,7 @@ export default function ProfileModal() {
       setInitialName(currentName);
       setStatus(null);
 
-      // Fetch latest profile from API to ensure accurate DB state
+      // The API reads the database profile; ignore late responses after closing or switching users.
       let isMounted = true;
       fetch("/api/profile", { cache: "no-store" })
         .then((res) => res.json())
@@ -71,6 +75,7 @@ export default function ProfileModal() {
 
   if (!isProfileModalOpen) return null;
 
+  // --- Profile Update ---
   const isDirty = name.trim() !== initialName.trim();
   const canSave = isDirty && name.trim().length > 0 && !isSaving;
 
@@ -101,7 +106,7 @@ export default function ProfileModal() {
       const updatedName = name.trim();
       setInitialName(updatedName);
 
-      // Instantly update AuthContext global user state
+      // 2. Reflect the saved name immediately, then refresh the authenticated session from the API.
       if (user) {
         setUser({
           ...user,
@@ -138,29 +143,24 @@ export default function ProfileModal() {
   const currentDisplayName = name.trim() || initialName.trim() || user?.email || "User";
   const avatarLetter = (name.trim() || initialName.trim() || user?.email || "U").charAt(0).toUpperCase();
 
+  // --- UI ---
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fade-in"
+      className="fixed inset-0 z-70 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeProfileModal();
       }}
     >
-      {/* Dynamic & Flexible Responsive Modal Container */}
+      {/* Modal Container */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-[95vw] sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[90vh] sm:max-h-[85vh] flex flex-col bg-bg-card/95 border border-border-subtle rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up"
+        className="relative w-full max-w-2xl bg-bg-card/95 border border-border-subtle rounded-2xl p-6 sm:p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col"
       >
-        {/* Pinned Top Bar: Brand & Actions */}
-        <div className="shrink-0 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-border-subtle bg-bg-secondary/40">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" />
-            <div className="h-4 w-px bg-border-subtle hidden sm:block" />
-            <span className="text-xs font-mono uppercase tracking-wider text-text-muted hidden sm:inline">
-              {tProfile("title")}
-            </span>
-          </div>
+        {/* Modal Header */}
+        <div className="shrink-0 flex items-center justify-between mb-6">
+          <Logo size="md" />
 
           <div className="flex items-center gap-2">
             <button
@@ -200,7 +200,7 @@ export default function ProfileModal() {
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-7 space-y-6 overscroll-contain">
+        <div className="flex-1 overflow-y-auto space-y-6 overscroll-contain">
           {/* Header Title & Subtitle */}
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1">
@@ -211,101 +211,83 @@ export default function ProfileModal() {
             </p>
           </div>
 
-          {/* Responsive 2-Column Grid on Medium/Large screens: User Identity & EXP Progress */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-            {/* Column 1: User Identity Hero Card */}
-            <div className="rounded-2xl border border-border-subtle bg-bg-secondary/60 p-4 sm:p-5 flex flex-col justify-between gap-3">
-              <div className="flex items-center gap-3.5">
-                <div className="relative shrink-0">
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-lg sm:text-xl font-bold text-bg-primary shadow-[0_0_20px_var(--accent-glow-strong)]">
-                    {avatarLetter}
-                  </div>
-                  <span
-                    className="absolute -top-1.5 -right-2 px-1.5 py-0.5 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
-                    title={`Level ${level} (${currentLevelExp}/100 EXP)`}
-                  >
-                    Lv.{level}
-                  </span>
+          {/* User Identity Card */}
+          <div className="rounded-2xl border border-border-subtle bg-bg-secondary/60 p-4 sm:p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="relative shrink-0">
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-linear-to-br from-accent to-accent-gradient-end flex items-center justify-center text-lg sm:text-xl font-bold text-bg-primary shadow-[0_0_20px_var(--accent-glow-strong)]">
+                  {avatarLetter}
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-sm sm:text-base font-bold text-text-primary truncate">
-                    {currentDisplayName}
-                  </h3>
-                  <p className="text-xs font-mono text-text-muted truncate mt-0.5">
-                    {user?.email || "No email linked"}
-                  </p>
-                </div>
-              </div>
-
-              {/* UID badge */}
-              {user?.id && (
-                <div className="pt-2 border-t border-border-subtle/50 flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="uppercase text-[10px] tracking-wider text-zinc-500 font-semibold shrink-0">UID:</span>
-                    <span className="text-zinc-400 select-all truncate">{user.id}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(user.id);
-                      setCopiedUid(true);
-                      setTimeout(() => setCopiedUid(false), 2000);
-                    }}
-                    className="p-1 text-zinc-400 hover:text-accent transition-colors bg-transparent border-none cursor-pointer rounded flex items-center justify-center shrink-0"
-                    title="Copy UID"
-                    aria-label="Copy UID"
-                  >
-                    {copiedUid ? (
-                      <span className="text-[10px] text-accent font-semibold">Copied!</span>
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Column 2: Level & EXP Progress Card */}
-            <div className="rounded-2xl border border-accent/30 bg-linear-to-br from-accent/10 via-bg-secondary/90 to-bg-secondary/50 p-4 sm:p-5 flex flex-col justify-between gap-3 shadow-inner">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-extrabold uppercase tracking-wider bg-accent/20 text-accent border border-accent/40 shadow-[0_0_10px_var(--accent-glow)]">
-                    {tProfile("level_label", { level })}
-                  </span>
-                  <span className="text-xs font-bold text-text-primary">
-                    {tProfile("exp_progress_title")}
-                  </span>
-                </div>
-
-                <span className="text-xs font-mono font-extrabold text-emerald-400">
-                  {currentLevelExp} <span className="text-text-muted font-normal">/ 100 EXP</span>
+                <span
+                  className="absolute -bottom-1 -right-1 px-1.5 py-0.5 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none tracking-tight flex items-center justify-center"
+                  title={`Level ${level} (${currentLevelExp}/100 EXP)`}
+                >
+                  Lv.{level}
                 </span>
               </div>
 
-              {/* Progress Bar towards next level */}
-              <div className="w-full bg-bg-primary/90 rounded-full h-2.5 overflow-hidden border border-border-subtle p-0.5 my-0.5">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm sm:text-base font-bold text-text-primary truncate">
+                  {currentDisplayName}
+                </h3>
+                <p className="text-xs font-mono text-text-muted truncate mt-0.5">
+                  {user?.email || "No email linked"}
+                </p>
+              </div>
+            </div>
+
+            {/* UID Badge */}
+            {user?.id && (
+              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="uppercase text-[10px] tracking-wider text-zinc-500 font-semibold shrink-0">UID:</span>
+                  <span className="text-zinc-400 select-all truncate">{user.id}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.id);
+                    setCopiedUid(true);
+                    setTimeout(() => setCopiedUid(false), 2000);
+                  }}
+                  className="p-1 text-zinc-400 hover:text-accent transition-colors bg-transparent border-none cursor-pointer rounded flex items-center justify-center shrink-0"
+                  title="Copy UID"
+                  aria-label="Copy UID"
+                >
+                  {copiedUid ? (
+                    <span className="text-[10px] text-accent font-semibold">Copied!</span>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* EXP Progress */}
+            <div className="flex items-center gap-3">
+              <div
+                role="progressbar"
+                aria-label={tProfile("exp_progress_title")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={currentLevelExp}
+                className="flex-1 bg-bg-primary/90 rounded-full h-2.5 overflow-hidden border border-border-subtle p-0.5"
+              >
                 <div
                   className="h-full bg-linear-to-r from-accent to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_12px_var(--accent-glow)]"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-
-              <div className="flex items-center justify-between text-[11px] font-mono text-text-muted">
-                <span>
-                  {tProfile("total_exp")}: <strong className="text-text-secondary">{totalExp} EXP</strong>
-                </span>
-                <span className="text-emerald-400/90 font-medium">
-                  {tProfile("exp_to_next", { remaining: 100 - currentLevelExp, nextLevel: level + 1 })}
-                </span>
-              </div>
+              <span className="shrink-0 text-xs font-mono font-extrabold text-emerald-400">
+                {currentLevelExp}/100
+              </span>
             </div>
           </div>
 
@@ -374,16 +356,8 @@ export default function ProfileModal() {
           </form>
         </div>
 
-        {/* Pinned Bottom Action Controls (Always visible, never overflows) */}
-        <div className="shrink-0 p-4 sm:p-5 border-t border-border-subtle bg-bg-secondary/40 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={closeProfileModal}
-            className="px-4 py-2.5 text-xs font-semibold font-mono text-text-secondary hover:text-text-primary bg-bg-secondary hover:bg-bg-card-hover border border-border-subtle rounded-xl transition-all cursor-pointer"
-          >
-            {tProfile("btn_close")}
-          </button>
-
+        {/* Modal Actions */}
+        <div className="shrink-0 pt-5 mt-5 border-t border-border-subtle flex items-center justify-end">
           <button
             type="submit"
             form="profile-edit-form"
@@ -411,4 +385,3 @@ export default function ProfileModal() {
     </div>
   );
 }
-

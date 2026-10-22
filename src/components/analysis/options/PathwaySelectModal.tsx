@@ -2,11 +2,11 @@
 
 import React, { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/PlanModalContext";
+import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import Logo from "@/components/Logo";
 
-// Pathway Selection Overlay Modal Component
-// Enable user to select between CV Document Upload and Guided Diagnostic Wizard modes.
+// --- Assessment Pathway Selector ---
+// Route the authenticated user to resume extraction or the manual profile wizard.
 export default function PathwaySelectModal() {
   const t = useTranslations("home.plan");
   const { activeModal, openUploadOption, openWizardOption, closeModals } = usePlanModal();
@@ -14,7 +14,7 @@ export default function PathwaySelectModal() {
 
   const isOpen = activeModal === "pathway_select";
 
-  // Handle Escape key to dismiss modal.
+  // Close the selector on Escape.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -26,9 +26,6 @@ export default function PathwaySelectModal() {
   }, [isOpen, closeModals]);
 
   if (!isOpen) return null;
-
-  const [opt1Prefix, opt1Label] = t("option_1_tag").split(" • ");
-  const [opt2Prefix, opt2Label] = t("option_2_tag").split(" • ");
 
   return (
     <div
@@ -53,7 +50,7 @@ export default function PathwaySelectModal() {
             type="button"
             onClick={closeModals}
             className="text-text-muted hover:text-text-primary p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
-            aria-label="Close"
+            aria-label={t("btn_close")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -80,7 +77,7 @@ export default function PathwaySelectModal() {
           >
             {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
             <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted group-hover:text-accent transition-colors duration-200 mb-2 pl-0.5 block">
-              {opt1Prefix} • {opt1Label}
+              {t("option_1_tag")}
             </span>
 
             {/* Option 1: CV Upload Card Box */}
@@ -117,7 +114,7 @@ export default function PathwaySelectModal() {
           >
             {/* Tag Label: Displayed Outside the Box (Top-Left) with hover highlight */}
             <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted group-hover:text-accent transition-colors duration-200 mb-2 pl-0.5 block">
-              {opt2Prefix} • {opt2Label}
+              {t("option_2_tag")}
             </span>
 
             {/* Option 2: Wizard Card Box */}
