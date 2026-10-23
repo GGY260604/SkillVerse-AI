@@ -37,6 +37,14 @@ from .team import (
     TeamSkillMatrixResponse,
 )
 
+from .trends import (
+    SkillSearchRequest,
+    TrendTimeSeriesPoint,
+    SkillTrendVisualization,
+    EscoRoleSuggested,
+    SkillSearchResponse,
+)
+
 __all__ = [
     # Profile schemas
     "EmploymentStatus",
@@ -72,5 +80,11 @@ __all__ = [
     "TeamMatrixCohortSummary",
     "TeamSkillMatrixRequest",
     "TeamSkillMatrixResponse",
+    # Trend search schemas
+    "SkillSearchRequest",
+    "TrendTimeSeriesPoint",
+    "SkillTrendVisualization",
+    "EscoRoleSuggested",
+    "SkillSearchResponse",
 ]
 

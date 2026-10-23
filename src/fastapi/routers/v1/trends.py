@@ -1,9 +1,10 @@
 import time
 from typing import Dict, Any
-from fastapi import APIRouter
+from fastapi import APIRouter, Query, HTTPException
 from config import settings
-from services.trends import sync_live_trend_signals_to_supabase
+from services.trends import sync_live_trend_signals_to_supabase, search_and_analyze_skill
 from services.http_client import get_shared_client
+from schemas.trends import SkillSearchRequest, SkillSearchResponse
 
 router = APIRouter()
 
@@ -55,23 +56,6 @@ STATUS_TRANSLATIONS = {
     },
 }
 
-# Common Baseline Skill Translations
-COMMON_SKILL_TRANSLATIONS = {
-    "manual data entry": {"ms": "Kemasukan data manual", "zh": "手动数据录入"},
-    "manual tier-1 support triaging": {"ms": "Pengasingan sokongan tahap-1 manual", "zh": "手动一线客服分流"},
-    "routine document filing": {"ms": "Pemfailan dokumen rutin", "zh": "常规文档归档与整理"},
-    "basic switchboard routing": {"ms": "Penghalaan papan suis asas", "zh": "基础总机电话转接"},
-    "generic copywriting": {"ms": "Penulisan salinan generik", "zh": "通用文案撰写"},
-    "simple bookkeeping reconciliation": {"ms": "Penyesuaian simpan kira mudah", "zh": "基础账目核对与对账"},
-    "telemarketing outbound calling": {"ms": "Panggilan keluar pemasaran tele", "zh": "电话推销外呼"},
-    "ai agents": {"ms": "Ejen AI Autonomi", "zh": "自主 AI 智能体系统"},
-    "ai agentic systems": {"ms": "Sistem Ejen AI Berautonomi", "zh": "自主 AI 智能体系统架构"},
-    "llm orchestration": {"ms": "Orkestrasi Model Bahasa Besar (LLM)", "zh": "大语言模型编排架构"},
-    "vector database engineering": {"ms": "Kejuruteraan Pangkalan Data Vektor", "zh": "向量数据库工程"},
-    "retrieval augmented generation (rag)": {"ms": "Penjanaan Terimbuh Dapatan (RAG)", "zh": "检索增强生成 (RAG)"},
-    "prompt engineering": {"ms": "Kejuruteraan Prompt", "zh": "提示词工程与调优"},
-    "esg carbon accounting": {"ms": "Perakaunan Karbon ESG", "zh": "ESG 碳足迹审计与核算"},
-}
 
 
 @router.get("/trends")
@@ -148,11 +132,11 @@ async def get_live_trends(locale: str = "en"):
                 # Localize skill name
                 norm_skill = raw_skill.lower().strip()
                 if loc == "zh":
-                    loc_skill = first_source.get("skillName_zh") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("zh") or raw_skill
+                    loc_skill = first_source.get("skillName_zh") or raw_skill
                     loc_cat = first_source.get("category_zh") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("zh") or raw_cat
                     loc_citation = first_source.get("citation_zh") or first_source.get("citation", "")
                 elif loc == "ms":
-                    loc_skill = first_source.get("skillName_ms") or COMMON_SKILL_TRANSLATIONS.get(norm_skill, {}).get("ms") or raw_skill
+                    loc_skill = first_source.get("skillName_ms") or raw_skill
                     loc_cat = first_source.get("category_ms") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("ms") or raw_cat
                     loc_citation = first_source.get("citation_ms") or first_source.get("citation", "")
                 else:
@@ -202,3 +186,47 @@ async def trigger_live_trend_sync():
     # Invalidate cache so fresh signals appear immediately
     invalidate_trends_cache()
     return result
+
+
+@router.post("/trends/search", response_model=SkillSearchResponse)
+async def search_skill_trend_post(payload: SkillSearchRequest):
+    """
+    Analyzes a user-searched skill or competency:
+    1. First uses BAAI/bge-m3 dense semantic embeddings + lexical match to find the skill in trend_signals.
+    2. If found, returns its velocity score, market trend, 7-period visualization curve, and 5 closest ESCO roles.
+    3. If not found, prompts Gemini Flash to synthesize the skill trend in trilingual format and 5 suggested roles,
+       persists the new skill into trend_signals, embeds and persists the new roles into esco_roles, and returns them.
+    """
+    try:
+        response = await search_and_analyze_skill(
+            query=payload.query,
+            locale=payload.locale or "en",
+        )
+        if response.isNewSkillSynthesized:
+            invalidate_trends_cache()
+        return response
+    except Exception as e:
+        print(f"[trends_router] Error searching skill '{payload.query}': {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/trends/search", response_model=SkillSearchResponse)
+async def search_skill_trend_get(
+    query: str = Query(..., min_length=1, max_length=120, description="Skill name or keyword to analyze"),
+    locale: str = Query(default="en", description="Target language locale (en, ms, zh)"),
+):
+    """
+    GET variant for skill search and trend analysis.
+    Useful for client URL-driven searches and quick browser lookups.
+    """
+    try:
+        response = await search_and_analyze_skill(
+            query=query,
+            locale=locale or "en",
+        )
+        if response.isNewSkillSynthesized:
+            invalidate_trends_cache()
+        return response
+    except Exception as e:
+        print(f"[trends_router] Error searching skill '{query}': {e}")
+        raise HTTPException(status_code=500, detail=str(e))
