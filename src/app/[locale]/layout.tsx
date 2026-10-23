@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -72,29 +71,6 @@ export default async function LocaleLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
-        />
-        {/* Inline Theme Detection Script: Instantly applies theme class and data-theme to prevent flash */}
-        <Script
-          id="theme-detector"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var theme = localStorage.getItem('skillverse-theme');
-                if (theme === 'light') {
-                  document.documentElement.classList.remove('dark', 'scheme-dark');
-                  document.documentElement.classList.add('light');
-                  document.documentElement.setAttribute('data-theme', 'light');
-                  document.documentElement.style.colorScheme = 'light';
-                } else {
-                  document.documentElement.classList.remove('light');
-                  document.documentElement.classList.add('dark', 'scheme-dark');
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                }
-              } catch (e) {}
-            `,
-          }}
         />
       </head>
       <body className="min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans antialiased">
