@@ -23,7 +23,8 @@
 | Replit Project    | https://replit.com/@ngjaawei/SDC-HACKATHON-2026                   |
 | Live Demo         | https://www.skillverse-ai.site/                                   |
 |                   | https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/ |
-| RunPod Endpoint   |                                                                   |
+|                   | https://skill-verse-ai.replit.app                                 |
+| RunPod Endpoint   | https://l4ljrq2b0cwesb-8000.proxy.runpod.net/                     |
 | Slide Deck        |                                                                   |
 | Demo Video        |                                                                   |
 
