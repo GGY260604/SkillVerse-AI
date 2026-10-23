@@ -51,7 +51,7 @@
       "no_categories": "暂无分类数据",
       "velocity_threshold_emerging": "需求增速 > +0.25",
       "velocity_threshold_declining": "淘汰风险 < -0.30",
-      "footer_sources_note": "以上资料更新于 {date}，资料来自于 ArXiv 及其他网站。",
+      "footer_sources_note": "以上资料更新于 {date}，资料来自于 <arxiv>ArXiv</arxiv> 及 <remoteok>RemoteOK</remoteok>。",
       "coming_soon": "实时数据可视化即将推出。"
     },
     "skill_trend": {
@@ -146,6 +146,7 @@
       "preserved": "已保留",
       "coming_soon": "分析功能正在开发中。"
     },
+    "attribution_sources_note": "所有分析均基于 <esco>Esco Roles</esco>、<arxiv>Arxiv</arxiv> 和 <remoteok>RemoteOK</remoteok>。",
     "empty": {
       "title": "目前没有任何规划",
       "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",

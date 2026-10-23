@@ -51,7 +51,7 @@
       "no_categories": "Tiada kategori ditemui",
       "velocity_threshold_emerging": "Halaju Permintaan > +0.25",
       "velocity_threshold_declining": "Risiko Attrisi < -0.30",
-      "footer_sources_note": "Data dikemas kini pada {date}, bersumberkan daripada ArXiv dan laman web lain.",
+      "footer_sources_note": "Data dikemas kini pada {date}, bersumberkan daripada <arxiv>ArXiv</arxiv> dan <remoteok>RemoteOK</remoteok>.",
       "coming_soon": "Visualisasi data masa nyata akan datang."
     },
     "skill_trend": {
@@ -146,6 +146,7 @@
       "preserved": "Disimpan",
       "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
     },
+    "attribution_sources_note": "Semua analisis adalah berdasarkan <esco>Esco Roles</esco>, <arxiv>Arxiv</arxiv>, dan <remoteok>RemoteOK</remoteok>.",
     "empty": {
       "title": "Tiada Sebarang Pelan Buat Masa Ini",
       "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",

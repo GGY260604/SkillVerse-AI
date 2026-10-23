@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { useAuth } from "@/context/auth/AuthContext";
 import EmptyPlanState from "@/components/analysis/EmptyPlanState";
 import ExistPlanState from "@/components/analysis/ExistPlanState";
+import AnalysisSourcesAttribution from "@/components/analysis/AnalysisSourcesAttribution";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { usePlanModal } from "@/context/analysis/PlanModalContext";
 import { PlanData } from "@/components/analysis/planCard/planData";
@@ -104,8 +105,9 @@ export default function AnalysisDashboardView() {
   // Render blank state if user has no roadmaps in the database
   if (!hasAnyPlan) {
     return (
-      <div className="animate-fade-in max-w-7xl mx-auto py-12 px-4 sm:px-6 w-full flex-1 flex flex-col justify-center">
+      <div className="animate-fade-in max-w-7xl mx-auto py-12 px-4 sm:px-6 w-full flex-1 flex flex-col justify-between">
         <EmptyPlanState />
+        <AnalysisSourcesAttribution />
       </div>
     );
   }
@@ -130,12 +132,13 @@ export default function AnalysisDashboardView() {
   const effectiveCurrentPlan = currentPlan || activePlan || undefined;
 
   return (
-    <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
+    <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1 flex flex-col justify-between">
       <ExistPlanState
         currentPlan={effectiveCurrentPlan}
         historyPlans={historyPlans}
         onPhaseToggle={handlePlanPhaseToggle}
       />
+      <AnalysisSourcesAttribution />
     </div>
   );
 }
