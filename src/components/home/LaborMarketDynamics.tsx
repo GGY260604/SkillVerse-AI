@@ -188,27 +188,64 @@ export default function LaborMarketDynamics() {
   }, [rankedCategories]);
 
   // 5. Telemetry Synchronization Timestamp Localization
-  // - Timestamp Extraction:
-  //   - Parse the ISO-8601 string (`lastSynced`) indicating the latest database synchronization run.
-  // - Multi-Language Regional Formatting:
-  //   - Retrieve localized month name and date template from `other.helper.date`.
-  //   - Format date string using `{year}`, `{month}`, and `{day}` tokens without hardcoding locale branches.
-  // - Graceful Fallback:
-  //   - Return ellipsis (`"..."`) when data is loading or undefined.
-  //   - Return raw string if Date parsing fails.
-  const formattedSyncDate = useMemo(() => {
-    if (!data?.lastSynced) return "..."; // Return placeholder while synchronization timestamp is loading.
-    try {
-      const d = new Date(data.lastSynced);
-      if (isNaN(d.getTime())) return data.lastSynced; // Fall back to raw string if timestamp is invalid.
-      const year = d.getFullYear();
-      const month = tDate(`month_${d.getMonth() + 1}` as any); // Retrieve localized month representation.
-      const day = d.getDate();
-      return tDate("format", { year, month, day }); // Format into localized date string template.
-    } catch {
-      return data.lastSynced; // Fall back to raw timestamp string if parsing encounters an error.
+  // - Extract the latest date across all telemetry records (signals and their respective sources)
+  //   or fall back to the global lastSynced timestamp.
+  const latestDataDate = useMemo<Date | null>(() => {
+    if (!data) return null;
+
+    let maxTime = -Infinity;
+    let maxDateObj: Date | null = null;
+
+    const recordDate = (val: unknown) => {
+      if (!val || typeof val !== "string") return;
+      const d = new Date(val);
+      const time = d.getTime();
+      if (!isNaN(time) && time > maxTime) {
+        maxTime = time;
+        maxDateObj = d;
+      }
+    };
+
+    // 1. Check root lastSynced timestamp
+    recordDate(data.lastSynced);
+
+    // 2. Scan all signals and their source records to identify the latest data date
+    if (Array.isArray(data.signals)) {
+      for (const signal of data.signals) {
+        recordDate(signal.updatedAt);
+
+        if (Array.isArray(signal.sources)) {
+          for (const src of signal.sources) {
+            if (src && typeof src === "object") {
+              recordDate((src as any).capturedAt);
+              recordDate((src as any).publishedAt);
+              recordDate((src as any).date);
+              recordDate((src as any).timestamp);
+            }
+          }
+        }
+      }
     }
-  }, [data?.lastSynced, tDate]);
+
+    return maxDateObj;
+  }, [data]);
+
+  const formattedSyncDate = useMemo(() => {
+    if (!latestDataDate) {
+      if (loading) return "...";
+      if (data?.lastSynced) return data.lastSynced;
+      return "...";
+    }
+
+    try {
+      const year = latestDataDate.getFullYear();
+      const month = tDate(`month_${latestDataDate.getMonth() + 1}` as any);
+      const day = latestDataDate.getDate();
+      return tDate("format", { year, month, day });
+    } catch {
+      return latestDataDate.toISOString().split("T")[0];
+    }
+  }, [latestDataDate, loading, data?.lastSynced, tDate]);
 
   // --- UI ---
   return (
@@ -255,7 +292,7 @@ export default function LaborMarketDynamics() {
       <div className="-mx-4 w-full overflow-x-auto overscroll-x-contain px-4 pb-4 pt-1 snap-x snap-mandatory sm:-mx-6 sm:px-6 lg:mx-0 lg:overflow-visible lg:px-0">
         <div className="flex min-w-0 items-stretch gap-4 lg:grid lg:grid-cols-2 lg:gap-6">
           {/* Chart 1: Ranking of Most Popular and In-Demand Skills */}
-          <div className={`w-[88%] min-w-[280px] max-w-[440px] flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
+          <div className={`w-[88%] min-w-70 max-w-110 flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
             skillFilter === "emerging"
               ? "border-border-subtle hover:border-accent/40"
               : "border-border-subtle hover:border-rose-500/40"
@@ -365,7 +402,7 @@ export default function LaborMarketDynamics() {
           </div>
 
           {/* Chart 2: Most Popular Job Categories by Telemetry Share */}
-          <div className={`w-[88%] min-w-[280px] max-w-[440px] flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
+          <div className={`w-[88%] min-w-70 max-w-110 flex-none snap-start glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between border transition-all duration-300 shadow-lg lg:w-auto lg:min-w-0 lg:max-w-none ${
             skillFilter === "emerging"
               ? "border-border-subtle hover:border-accent/40"
               : "border-border-subtle hover:border-rose-500/40"

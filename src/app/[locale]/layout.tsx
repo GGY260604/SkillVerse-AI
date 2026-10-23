@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import Script from "next/script";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -73,10 +74,9 @@ export default async function LocaleLayout({
           rel="stylesheet"
         />
         {/* Inline Theme Detection Script: Instantly applies theme class and data-theme to prevent flash */}
-        <script
+        <Script
           id="theme-detector"
-          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
-          suppressHydrationWarning
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {

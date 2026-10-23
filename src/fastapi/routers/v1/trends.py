@@ -107,7 +107,35 @@ async def get_live_trends(locale: str = "en"):
         resp = await client.get(endpoint, headers=headers)
         if resp.status_code == 200:
             rows = resp.json()
-            latest_timestamp = rows[0].get("updatedAt") if rows else None
+
+            # Find the true latest timestamp across all records and sources
+            latest_timestamp = None
+            if rows:
+                candidate_timestamps = []
+                for r in rows:
+                    if r.get("updatedAt"):
+                        candidate_timestamps.append(str(r["updatedAt"]))
+                    sources = r.get("sources")
+                    if isinstance(sources, list):
+                        for s in sources:
+                            if isinstance(s, dict):
+                                for date_key in ("capturedAt", "publishedAt", "date", "timestamp"):
+                                    if s.get(date_key):
+                                        candidate_timestamps.append(str(s[date_key]))
+                if candidate_timestamps:
+                    try:
+                        from datetime import datetime
+                        def parse_iso(ts_str: str) -> datetime:
+                            clean_ts = ts_str.replace("Z", "+00:00")
+                            try:
+                                return datetime.fromisoformat(clean_ts)
+                            except Exception:
+                                return datetime.min
+                        latest_timestamp = max(candidate_timestamps, key=parse_iso)
+                    except Exception:
+                        latest_timestamp = sorted(candidate_timestamps, reverse=True)[0]
+                else:
+                    latest_timestamp = rows[0].get("updatedAt")
 
             localized_signals = []
             for r in rows:
