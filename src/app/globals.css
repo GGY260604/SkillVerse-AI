@@ -245,3 +245,39 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* --- Print Stylesheet for PDF Report Generation --- */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  header,
+  footer,
+  nav,
+  button,
+  .print-hidden {
+    display: none !important;
+  }
+
+  #heatmap-printable-report {
+    position: static !important;
+    left: auto !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+  }
+}

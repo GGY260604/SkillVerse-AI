@@ -50,7 +50,7 @@ export default function TransformationPlan() {
   return (
     <section
       id="transformation-plan"
-      className="animate-fade-in-up-delay-3 max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24"
+      className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24"
     >
       {/* Section Header */}
       <div className="text-center mb-8 sm:mb-12">
@@ -78,7 +78,7 @@ export default function TransformationPlan() {
               handleSelectPathway("upload");
             }
           }}
-          className="group relative w-[88%] min-w-[270px] max-w-[420px] flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
+          className="group relative w-[88%] min-w-67.5 max-w-105 flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
         >
           {/* Ambient Hover Glow */}
           <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -147,7 +147,7 @@ export default function TransformationPlan() {
               handleSelectPathway("wizard");
             }
           }}
-          className="group relative w-[88%] min-w-[270px] max-w-[420px] flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
+          className="group relative w-[88%] min-w-67.5 max-w-105 flex-none snap-start bg-bg-card/90 hover:bg-bg-card-hover/95 backdrop-blur-xl border border-border-subtle hover:border-accent rounded-2xl p-5 sm:p-8 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_var(--accent-glow)] overflow-hidden lg:w-full lg:min-w-0 lg:max-w-none"
         >
           {/* Ambient Hover Glow */}
           <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top,var(--accent-glow)_0%,transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />

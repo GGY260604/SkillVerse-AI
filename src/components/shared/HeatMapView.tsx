@@ -6,10 +6,11 @@ import simpleheat from "simpleheat";
 import type { SharedRoadmapItem } from "@/components/shared/SharedPlansView";
 import { getAvatarInitials } from "@/lib/avatar";
 import { useTheme, type Theme } from "@/context/ThemeContext";
+import { exportHeatmapToPdf } from "@/lib/pdf/heatmapPdfExporter";
 
 // --- Type Definitions ---
 
-interface SkillEvaluationItem {
+export interface SkillEvaluationItem {
   skillName: string;
   skillNameLocalized?: Record<string, string>;
   status: "mastered" | "gap" | "critical_deficit" | string;
@@ -20,7 +21,7 @@ interface SkillEvaluationItem {
   statusLabel?: string;
 }
 
-interface TeamMemberAnalysis {
+export interface TeamMemberAnalysis {
   userId: string;
   name: string;
   email?: string;
@@ -37,7 +38,7 @@ interface TeamMemberAnalysis {
   criticalDeficitCount: number;
 }
 
-interface TeamSkillMatrixResponse {
+export interface TeamSkillMatrixResponse {
   targetRoleId: string;
   targetRoleTitle: string;
   targetRoleTitleLocalized?: Record<string, string>;
@@ -181,6 +182,7 @@ export default function HeatMapView({
   const [isScrolledX, setIsScrolledX] = useState<boolean>(false);
   const rightScrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollContainerWidth, setScrollContainerWidth] = useState<number>(0);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Dropdown states for role selection
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
@@ -387,6 +389,74 @@ export default function HeatMapView({
     }
   };
 
+  // --- PDF Export Handler ---
+  // Format team benchmark telemetry data programmatically and trigger executive PDF download.
+  const handleExportPdf = async () => {
+    if (!matrixData || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      const candidatesList =
+        sortedMembers.length > 0
+          ? (sortedMembers
+              .map((m) => candidateMap.get(m.owner.id))
+              .filter(Boolean) as TeamMemberAnalysis[])
+          : (sortedUserIds
+              .map((uid) => candidateMap.get(uid))
+              .filter(Boolean) as TeamMemberAnalysis[]);
+
+      const rawRole =
+        matrixData.targetRoleTitleLocalized?.[locale] ||
+        matrixData.targetRoleTitle ||
+        "Benchmark";
+      const sanitizedRole = rawRole
+        .replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, "_")
+        .slice(0, 40);
+      const dateTag = new Date().toISOString().split("T")[0];
+      const filename = `SkillVerse_HeatMap_${sanitizedRole}_${dateTag}.pdf`;
+
+      await exportHeatmapToPdf({
+        matrixData,
+        candidates: candidatesList,
+        competencies,
+        locale,
+        filename,
+        labels: {
+          reportTitle: t("heatmap.report_title"),
+          targetBenchmark: t("heatmap.target_benchmark"),
+          industry: t("heatmap.industry"),
+          generatedAt: t("heatmap.generated_at"),
+          teamAverageScore: t("heatmap.team_average_score"),
+          totalCandidates: t("heatmap.total_candidates"),
+          totalCompetencies: t("heatmap.total_competencies"),
+          rank: t("heatmap.rank"),
+          usersColumn: t("heatmap.users_column"),
+          overallScore: t("heatmap.overall_score"),
+          mastered: t("heatmap.mastered"),
+          bridgeableGap: t("heatmap.bridgeable_gap"),
+          criticalDeficit: t("heatmap.critical_deficit"),
+          legendTitle: t("heatmap.legend_title"),
+          topCandidateLabel:
+            locale === "zh"
+              ? "头号匹配候选人"
+              : locale === "ms"
+              ? "Calon Kedudukan Teratas"
+              : "Top Ranked Candidate",
+          confidentialNotice:
+            locale === "zh"
+              ? "SkillVerse AI 劳动力智能平台 • 绝密行政评估报告"
+              : locale === "ms"
+              ? "Platform Kecerdasan Tenaga Kerja SkillVerse AI • Laporan Eksekutif Sulit"
+              : "SkillVerse AI Workforce Intelligence Platform • Confidential Executive Report",
+        },
+      });
+    } catch (err) {
+      console.error("[HeatMapView] PDF export failed:", err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   // Resolved list of competencies for table columns.
   const competencies: { name: string; localizedName: string }[] = React.useMemo(() => {
     if (!matrixData || !matrixData.requiredSkills || matrixData.requiredSkills.length === 0) {
@@ -519,6 +589,32 @@ export default function HeatMapView({
             </p>
           </div>
         </div>
+
+        {/* Top Header Right Action: Export Report as PDF */}
+        {matrixData && (
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            title={t("heatmap.export_tooltip")}
+            aria-label={t("heatmap.export_pdf")}
+            className="h-10 sm:h-11 px-2.5 sm:px-3.5 rounded-xl border border-border-subtle bg-bg-card hover:bg-bg-card-hover text-text-primary hover:text-accent hover:border-accent/40 font-mono text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 group"
+          >
+            {isExportingPdf ? (
+              <svg className="w-4 h-4 animate-spin text-accent shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-accent group-hover:scale-110 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            )}
+            <span className="hidden md:inline whitespace-nowrap">
+              {isExportingPdf ? t("heatmap.exporting_pdf") : t("heatmap.export_pdf")}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Role Input Bar with Dropdown and Analysis Trigger */}
@@ -772,27 +868,30 @@ export default function HeatMapView({
           {/* Subtle Ambient Corner Light Bloom */}
           <div className="absolute -top-12 -right-12 w-36 h-36 pointer-events-none" />
 
-          <div className="relative flex items-center justify-between gap-4">
+          <div className="relative flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             {/* Target Role Title */}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-widest uppercase text-accent">
                   {t("heatmap.target_benchmark") || "Target Benchmark"}
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-text-primary truncate mt-1 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-text-primary wrap-break-word mt-1 tracking-tight">
                 {matrixData.targetRoleTitleLocalized?.[locale] || matrixData.targetRoleTitle}
               </h2>
             </div>
 
             {/* Target Industry Sector Badge */}
-            <div className="shrink-0 ml-auto flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-linear-to-r from-accent/15 via-accent/10 to-transparent border border-accent/30 shadow-xs backdrop-blur-sm">
-              <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div
+              title={`${t("heatmap.industry")}: ${matrixData.industryLocalized?.[locale] || matrixData.industry}`}
+              className="max-w-full flex items-center gap-1.5 sm:gap-2.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl bg-linear-to-r from-accent/15 via-accent/10 to-transparent border border-accent/30 shadow-xs backdrop-blur-sm self-start sm:self-auto sm:ml-auto transition-all"
+            >
+              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              <div className="flex items-center gap-1.5 text-xs font-mono">
-                <span className="text-text-muted hidden sm:inline">{t("heatmap.industry")}:</span>
-                <span className="font-bold text-accent tracking-wide">
+              <div className="flex items-center gap-1 text-[11px] sm:text-xs font-mono min-w-0">
+                <span className="text-text-muted shrink-0">{t("heatmap.industry")}:</span>
+                <span className="font-bold text-accent tracking-wide truncate max-w-45 sm:max-w-85 md:max-w-none">
                   {matrixData.industryLocalized?.[locale] || matrixData.industry}
                 </span>
               </div>
