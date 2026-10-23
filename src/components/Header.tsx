@@ -87,6 +87,7 @@ export default function Header() {
             </Link>
             <Link
               href="/analysis"
+              prefetch={false}
               onClick={(e) => handleProtectedNav(e, "/analysis")}
               className={`text-sm font-medium uppercase tracking-wider transition-colors duration-200 relative ${
                 isActive("/analysis")
@@ -98,6 +99,7 @@ export default function Header() {
             </Link>
             <Link
               href="/shared"
+              prefetch={false}
               onClick={(e) => handleProtectedNav(e, "/shared")}
               className={`text-sm font-medium uppercase tracking-wider transition-colors duration-200 relative ${
                 isActive("/shared")
@@ -285,6 +287,7 @@ export default function Header() {
             </Link>
             <Link
               href="/analysis"
+              prefetch={false}
               onClick={(e) => {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/analysis");
@@ -299,6 +302,7 @@ export default function Header() {
             </Link>
             <Link
               href="/shared"
+              prefetch={false}
               onClick={(e) => {
                 setIsMobileMenuOpen(false);
                 handleProtectedNav(e, "/shared");

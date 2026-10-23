@@ -27,7 +27,11 @@ export default async function middleware(request: NextRequest) {
         : routing.defaultLocale;
 
       const redirectUrl = new URL(`/${locale}?auth=login`, request.url);
-      return NextResponse.redirect(redirectUrl);
+      const redirectResponse = NextResponse.redirect(redirectUrl);
+      redirectResponse.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      redirectResponse.headers.set("Pragma", "no-cache");
+      redirectResponse.headers.set("Expires", "0");
+      return redirectResponse;
     }
   }
 
