@@ -12,7 +12,8 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Database connection string resolved from environment variables.
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+// Prioritize pooled DATABASE_URL at runtime to prevent IPv6/connection exhaustion on Vercel Serverless.
+const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
 
 // Step 1: PostgreSQL Connection Pool
 // Initialize or reuse existing pool to avoid resource exhaustion during hot reloads.

@@ -1,7 +1,7 @@
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "@/lib/i18n/routing";
-import { ACCESS_TOKEN_COOKIE } from "@/lib/supabase/cookies";
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "@/lib/supabase/cookies";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -14,7 +14,10 @@ export default async function middleware(request: NextRequest) {
   const isProtected = /(analysis|shared)/.test(pathname);
 
   if (isProtected) {
-    const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+    // Check both access token and refresh token so sessions undergoing silent refresh aren't blocked on Vercel.
+    const token =
+      request.cookies.get(ACCESS_TOKEN_COOKIE)?.value ||
+      request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 
     // Redirect unauthenticated requests to home page with auth query trigger.
     if (!token) {
@@ -33,6 +36,6 @@ export default async function middleware(request: NextRequest) {
 
 // --- Middleware Route Matcher Configuration ---
 export const config = {
-  // Match the root URL and all supported locale path segments.
-  matcher: ["/", "/(en|ms|zh)/:path*"],
+  // Match all request paths except for internal assets, api routes, and static files
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
 };

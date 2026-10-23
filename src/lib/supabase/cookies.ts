@@ -23,11 +23,20 @@ export function attachAuthCookies(
     secure: isProd,
     sameSite: "lax" as const,
     path: "/",
-    ...(typeof maxAge === "number" ? { maxAge } : {}),
   };
 
-  response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, cookieOptions);
-  response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, cookieOptions);
+  const accessMaxAge = typeof maxAge === "number" ? maxAge : DEFAULT_MAX_AGE;
+  // Refresh token must retain long session capability (at least 30 days) for silent refresh on Vercel
+  const refreshMaxAge = Math.max(accessMaxAge, 60 * 60 * 24 * 30);
+
+  response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
+    ...cookieOptions,
+    maxAge: accessMaxAge,
+  });
+  response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
+    ...cookieOptions,
+    maxAge: refreshMaxAge,
+  });
 
   return response;
 }
