@@ -51,7 +51,7 @@
       "no_categories": "No categories found",
       "velocity_threshold_emerging": "Demand Velocity > +0.25",
       "velocity_threshold_declining": "Attrition Risk < -0.30",
-      "footer_sources_note": "Data updated on {date}, sourced from ArXiv and other website.",
+      "footer_sources_note": "Data updated on {date}, sourced from <arxiv>ArXiv</arxiv> and <remoteok>RemoteOK</remoteok>.",
       "coming_soon": "Real-time data visualization coming soon."
     },
     "skill_trend": {
@@ -146,6 +146,7 @@
       "preserved": "Preserved",
       "coming_soon": "Analysis features are under development."
     },
+    "attribution_sources_note": "All analyses are based on <esco>Esco Roles</esco>, <arxiv>Arxiv</arxiv>, and <remoteok>RemoteOK</remoteok>.",
     "empty": {
       "title": "No Career Plans Available Currently",
       "desc": "You haven't generated an AI transformation roadmap yet. Start your diagnostic to unlock personalized reskilling pathways.",

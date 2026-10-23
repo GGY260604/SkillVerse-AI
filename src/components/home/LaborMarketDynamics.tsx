@@ -520,8 +520,28 @@ export default function LaborMarketDynamics() {
       {/* Footer Attribution Note */}
       <div className="mt-3 text-xs text-text-muted font-mono tracking-wide">
         <p>
-          {t("footer_sources_note", {
+          {t.rich("footer_sources_note", {
             date: formattedSyncDate,
+            arxiv: (chunks) => (
+              <a
+                href="https://arxiv.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-muted hover:text-accent font-medium underline underline-offset-2 transition-colors duration-200"
+              >
+                {chunks}
+              </a>
+            ),
+            remoteok: (chunks) => (
+              <a
+                href="https://remoteok.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-muted hover:text-accent font-medium underline underline-offset-2 transition-colors duration-200"
+              >
+                {chunks}
+              </a>
+            ),
           })}
         </p>
       </div>
