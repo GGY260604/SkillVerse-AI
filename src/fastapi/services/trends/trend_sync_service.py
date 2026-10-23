@@ -10,11 +10,13 @@ from services.gemini_service import call_gemini_with_fallback
 from services.embedding_service import generate_embedding, generate_embeddings_batch
 from services.http_client import get_shared_client
 
-
+# This API is used to get the latest AI research papers from ArXiv, which is a research papers website
 ARXIV_API_URL = (
     "https://export.arxiv.org/api/query?"
     "search_query=cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=descending&max_results=10"
 )
+
+# This API is used to get the latest remote job postings from RemoteOK, which is a remote job board
 REMOTEOK_API_URL = "https://remoteok.com/api"
 
 # Used for sync_live_trend_signals_to_supabase by pulling open feeds and send to the LLM to extract emerging vs declining skills, then updating the trend_signals table
