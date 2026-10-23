@@ -174,7 +174,7 @@ export async function fetchWithFastApiFallback(
 
       clearTimeout(timer);
 
-      if (response.ok || (response.status >= 400 && response.status < 500)) {
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 404)) {
         return response;
       }
 
