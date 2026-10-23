@@ -375,7 +375,16 @@
       "required_competencies": "Required Competencies",
       "overall_score": "Overall Score",
       "error_fallback": "Failed to analyze benchmark. Please verify backend service and retry.",
-      "scroll_hint": "Scroll horizontally to view all competencies →"
+      "scroll_hint": "Scroll horizontally to view all competencies →",
+      "dropdown_title": "Current Roles of Selected Members",
+      "dropdown_hint": "Select a role or type a custom one",
+      "dropdown_empty": "No matching roles found from selected members",
+      "dropdown_no_roles": "No roles found in current plans of selected members",
+      "dropdown_all_roles": "All suggested roles",
+      "dropdown_custom_tip": "You can also enter any custom role name directly",
+      "members_count": "{count} members",
+      "member_singular": "1 member",
+      "toggle_roles_dropdown": "Toggle role suggestions"
     },
     "search_placeholder": "Search by name, role, or department...",
     "view_roadmap": "View Analysis Roadmap",

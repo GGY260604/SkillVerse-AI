@@ -55,6 +55,114 @@ interface HeatMapViewProps {
   selectedMembers?: SharedRoadmapItem[];
 }
 
+interface RoleOption {
+  key: string;
+  targetRole: string;
+  targetTitleLocalized?: {
+    en?: string;
+    ms?: string;
+    zh?: string;
+  };
+  displayTitle: string;
+  secondaryTitle?: string;
+  memberCount: number;
+  memberNames: string[];
+}
+
+// Fallback dictionary for common role titles to guarantee trilingual support across all environments.
+const COMMON_ROLE_TRANSLATIONS: Record<string, { en: string; ms: string; zh: string }> = {
+  "prompt engineer": {
+    en: "Prompt Engineer",
+    ms: "Jurutera Prompt",
+    zh: "提示词工程师",
+  },
+  "cloud architect": {
+    en: "Cloud Architect",
+    ms: "Arkitek Awan",
+    zh: "云架构师",
+  },
+  "ai specialist": {
+    en: "AI Specialist",
+    ms: "Pakar AI",
+    zh: "人工智能专家",
+  },
+  "ai engineer": {
+    en: "AI Engineer",
+    ms: "Jurutera AI",
+    zh: "人工智能工程师",
+  },
+  "data scientist": {
+    en: "Data Scientist",
+    ms: "Saintis Data",
+    zh: "数据科学家",
+  },
+  "data engineer": {
+    en: "Data Engineer",
+    ms: "Jurutera Data",
+    zh: "数据工程师",
+  },
+  "machine learning engineer": {
+    en: "Machine Learning Engineer",
+    ms: "Jurutera Pembelajaran Mesin",
+    zh: "机器学习工程师",
+  },
+  "devops engineer": {
+    en: "DevOps Engineer",
+    ms: "Jurutera DevOps",
+    zh: "DevOps 运维工程师",
+  },
+  "cybersecurity specialist": {
+    en: "Cybersecurity Specialist",
+    ms: "Pakar Keselamatan Siber",
+    zh: "网络安全专家",
+  },
+  "cybersecurity analyst": {
+    en: "Cybersecurity Analyst",
+    ms: "Penganalisis Keselamatan Siber",
+    zh: "网络安全分析师",
+  },
+  "full stack developer": {
+    en: "Full Stack Developer",
+    ms: "Pembangun Tindanan Penuh",
+    zh: "全栈开发人员",
+  },
+  "software engineer": {
+    en: "Software Engineer",
+    ms: "Jurutera Perisian",
+    zh: "软件工程师",
+  },
+  "digital skills specialist": {
+    en: "Digital Skills Specialist",
+    ms: "Pakar Kemahiran Digital",
+    zh: "数字技能专家",
+  },
+};
+
+// Resolve localized role title strictly supporting English, Malay, and Chinese.
+function getRoleTitleForLocale(
+  targetRole: string,
+  targetTitleLocalized: { en?: string; ms?: string; zh?: string; [key: string]: string | undefined } | undefined,
+  locale: string
+): string {
+  if (targetTitleLocalized) {
+    if (locale === "zh" && targetTitleLocalized.zh?.trim()) return targetTitleLocalized.zh.trim();
+    if (locale === "ms" && targetTitleLocalized.ms?.trim()) return targetTitleLocalized.ms.trim();
+    if (locale === "en" && targetTitleLocalized.en?.trim()) return targetTitleLocalized.en.trim();
+    const locVal = targetTitleLocalized[locale];
+    if (locVal?.trim()) return locVal.trim();
+  }
+
+  const normalized = targetRole.trim().toLowerCase();
+  if (COMMON_ROLE_TRANSLATIONS[normalized]) {
+    const entry = COMMON_ROLE_TRANSLATIONS[normalized];
+    if (locale === "zh" && entry.zh) return entry.zh;
+    if (locale === "ms" && entry.ms) return entry.ms;
+    if (locale === "en" && entry.en) return entry.en;
+  }
+
+  return targetRole || "";
+}
+
 // --- HeatMap Matrix View Component ---
 // Render interactive workforce competency heatmap with real-time continuous simpleheat blending.
 export default function HeatMapView({
@@ -73,6 +181,155 @@ export default function HeatMapView({
   const [isScrolledX, setIsScrolledX] = useState<boolean>(false);
   const rightScrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollContainerWidth, setScrollContainerWidth] = useState<number>(0);
+
+  // Dropdown states for role selection
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [selectedRoleKey, setSelectedRoleKey] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Extract and deduplicate unique roles from current plans of selected members with trilingual support.
+  const availableRoles = React.useMemo<RoleOption[]>(() => {
+    if (!selectedMembers || selectedMembers.length === 0) return [];
+
+    const roleMap = new Map<
+      string,
+      {
+        targetRole: string;
+        targetTitleLocalized?: { en?: string; ms?: string; zh?: string; [key: string]: string | undefined };
+        memberNames: string[];
+      }
+    >();
+
+    for (const member of selectedMembers) {
+      // Prioritize current plan targetRole, fallback to owner role
+      const rawRole =
+        member.currentPlan?.targetRole ||
+        member.owner?.role ||
+        "";
+
+      if (!rawRole || !rawRole.trim()) continue;
+
+      const trimmedRole = rawRole.trim();
+      const canonicalKey = trimmedRole.toLowerCase();
+
+      const memberName =
+        member.owner?.name || member.owner?.email?.split("@")[0] || "User";
+
+      const locMap = member.currentPlan?.targetTitleLocalized;
+
+      if (!roleMap.has(canonicalKey)) {
+        roleMap.set(canonicalKey, {
+          targetRole: trimmedRole,
+          targetTitleLocalized: locMap,
+          memberNames: [memberName],
+        });
+      } else {
+        const existing = roleMap.get(canonicalKey)!;
+        if (!existing.memberNames.includes(memberName)) {
+          existing.memberNames.push(memberName);
+        }
+        if (locMap) {
+          existing.targetTitleLocalized = {
+            ...existing.targetTitleLocalized,
+            ...locMap,
+          };
+        }
+      }
+    }
+
+    const options: RoleOption[] = [];
+
+    roleMap.forEach((val, key) => {
+      const displayTitle = getRoleTitleForLocale(
+        val.targetRole,
+        val.targetTitleLocalized,
+        locale
+      );
+
+      let secondaryTitle: string | undefined;
+      const enTitle = val.targetTitleLocalized?.en || val.targetRole;
+      if (locale !== "en" && enTitle && enTitle.toLowerCase() !== displayTitle.toLowerCase()) {
+        secondaryTitle = enTitle;
+      }
+
+      options.push({
+        key,
+        targetRole: val.targetRole,
+        targetTitleLocalized: val.targetTitleLocalized,
+        displayTitle,
+        secondaryTitle,
+        memberCount: val.memberNames.length,
+        memberNames: val.memberNames,
+      });
+    });
+
+    return options.sort((a, b) => {
+      if (b.memberCount !== a.memberCount) {
+        return b.memberCount - a.memberCount;
+      }
+      return a.displayTitle.localeCompare(b.displayTitle);
+    });
+  }, [selectedMembers, locale]);
+
+  // Dynamically update input text when locale switches if a suggested role was chosen.
+  useEffect(() => {
+    if (selectedRoleKey) {
+      const match = availableRoles.find((r) => r.key === selectedRoleKey);
+      if (match) {
+        setRoleInput(match.displayTitle);
+      }
+    }
+  }, [locale, selectedRoleKey, availableRoles]);
+
+  // Dismiss dropdown on outside clicks.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  // Compute filtered role suggestions based on user input.
+  const filteredRoles = React.useMemo(() => {
+    if (!roleInput.trim()) return availableRoles;
+    const query = roleInput.trim().toLowerCase();
+    return availableRoles.filter(
+      (r) =>
+        r.displayTitle.toLowerCase().includes(query) ||
+        r.secondaryTitle?.toLowerCase().includes(query) ||
+        r.targetRole.toLowerCase().includes(query)
+    );
+  }, [availableRoles, roleInput]);
+
+  const handleSelectRole = (role: RoleOption) => {
+    setRoleInput(role.displayTitle);
+    setSelectedRoleKey(role.key);
+    setIsDropdownOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const handleInputChange = (value: string) => {
+    setRoleInput(value);
+    const exact = availableRoles.find(
+      (r) => r.displayTitle.toLowerCase() === value.trim().toLowerCase()
+    );
+    setSelectedRoleKey(exact ? exact.key : null);
+    if (availableRoles.length > 0 && !isDropdownOpen) {
+      setIsDropdownOpen(true);
+    }
+  };
 
   // Measure visible width of right scroll container to dynamically expand skill columns.
   useEffect(() => {
@@ -264,40 +521,213 @@ export default function HeatMapView({
         </div>
       </div>
 
-      {/* Role Input Bar and Analysis Trigger */}
+      {/* Role Input Bar with Dropdown and Analysis Trigger */}
       <div className="mb-6 flex w-full items-center gap-2.5 sm:gap-3">
-        <div className="relative min-w-0 flex-1 flex items-center">
-          <input
-            type="text"
-            value={roleInput}
-            onChange={(e) => setRoleInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleStartAnalysis();
-              }
-            }}
-            disabled={isAnalyzing}
-            placeholder={t("heatmap.input_placeholder")}
-            className="h-11 w-full bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-4 pr-10 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono disabled:opacity-50"
-          />
-          {roleInput && !isAnalyzing && (
-            <button
-              type="button"
-              onClick={() => setRoleInput("")}
-              className="absolute right-3 text-text-muted hover:text-text-primary p-0.5 border-none bg-transparent cursor-pointer"
-              title={t("heatmap.clear")}
-              aria-label={t("heatmap.clear")}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <div ref={dropdownRef} className="relative min-w-0 flex-1">
+          <div className="relative flex items-center">
+            {/* Input Left Icon */}
+            <div className="absolute left-3.5 text-text-muted pointer-events-none flex items-center">
+              <svg className="w-4 h-4 text-accent/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
               </svg>
-            </button>
+            </div>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={roleInput}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onFocus={() => {
+                if (availableRoles.length > 0) setIsDropdownOpen(true);
+              }}
+              onClick={() => {
+                if (availableRoles.length > 0) setIsDropdownOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setIsDropdownOpen(false);
+                  handleStartAnalysis();
+                } else if (e.key === "Escape") {
+                  setIsDropdownOpen(false);
+                } else if (e.key === "ArrowDown" && !isDropdownOpen && availableRoles.length > 0) {
+                  setIsDropdownOpen(true);
+                }
+              }}
+              disabled={isAnalyzing}
+              placeholder={t("heatmap.input_placeholder")}
+              className="h-11 w-full bg-bg-card border border-border-subtle focus:border-accent focus:ring-1 focus:ring-accent/40 rounded-xl pl-10 pr-20 text-xs sm:text-sm text-text-primary placeholder:text-text-muted outline-none transition-all font-mono disabled:opacity-50"
+              aria-label={t("heatmap.input_placeholder")}
+              aria-expanded={isDropdownOpen}
+              aria-haspopup="listbox"
+              role="combobox"
+            />
+
+            {/* Right-side Controls: Clear Button + Vertical Divider + Dropdown Chevron */}
+            <div className="absolute right-2.5 flex items-center gap-1.5">
+              {roleInput && !isAnalyzing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRoleInput("");
+                    setSelectedRoleKey(null);
+                    inputRef.current?.focus();
+                    if (availableRoles.length > 0) {
+                      setIsDropdownOpen(true);
+                    }
+                  }}
+                  className="text-text-muted hover:text-text-primary p-1 rounded-md hover:bg-bg-card-hover transition-colors border-none bg-transparent cursor-pointer flex items-center justify-center"
+                  title={t("heatmap.clear")}
+                  aria-label={t("heatmap.clear")}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+
+              {roleInput && !isAnalyzing && availableRoles.length > 0 && (
+                <div className="h-4 w-px bg-border-subtle/80" />
+              )}
+
+              {availableRoles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  disabled={isAnalyzing}
+                  className={`p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-bg-card-hover transition-all border-none bg-transparent cursor-pointer flex items-center justify-center ${
+                    isDropdownOpen ? "text-accent rotate-180" : ""
+                  }`}
+                  title={t("heatmap.toggle_roles_dropdown")}
+                  aria-label={t("heatmap.toggle_roles_dropdown")}
+                  aria-expanded={isDropdownOpen}
+                >
+                  <svg className="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Role Suggestions Dropdown Menu */}
+          {isDropdownOpen && availableRoles.length > 0 && (
+            <div
+              className="absolute top-full left-0 right-0 mt-2 z-50 rounded-xl border border-border-subtle bg-bg-card/95 backdrop-blur-md shadow-xl overflow-hidden animate-fade-in-up"
+              role="listbox"
+            >
+              {/* Roles List */}
+              <div className="max-h-60 overflow-y-auto divide-y divide-border-subtle/40">
+                {filteredRoles.length > 0 ? (
+                  filteredRoles.map((role) => {
+                    const isSelected =
+                      selectedRoleKey === role.key ||
+                      roleInput.trim().toLowerCase() === role.displayTitle.toLowerCase() ||
+                      roleInput.trim().toLowerCase() === role.targetRole.toLowerCase();
+
+                    return (
+                      <button
+                        key={role.key}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() => handleSelectRole(role)}
+                        className={`w-full px-3.5 py-2.5 text-left transition-all flex items-center justify-between gap-3 cursor-pointer border-none ${
+                          isSelected
+                            ? "bg-accent/15 text-accent font-medium"
+                            : "bg-transparent hover:bg-bg-card-hover text-text-primary"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 flex items-center gap-2">
+                          <span className="font-semibold text-xs sm:text-sm truncate">
+                            {role.displayTitle}
+                          </span>
+                          {role.secondaryTitle && (
+                            <span className="text-[11px] font-mono text-text-muted truncate hidden sm:inline">
+                              ({role.secondaryTitle})
+                            </span>
+                          )}
+                        </div>
+
+                        {isSelected && (
+                          <svg className="w-4 h-4 text-accent shrink-0 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div>
+                    <div className="p-3 text-center text-xs font-mono text-text-muted">
+                      {t("heatmap.dropdown_empty")}
+                    </div>
+                    {/* Fallback to show all roles */}
+                    <div className="px-3.5 py-1.5 bg-bg-primary/40 border-t border-b border-border-subtle/50 text-[10px] font-mono text-text-muted uppercase tracking-wider">
+                      {t("heatmap.dropdown_all_roles")}
+                    </div>
+                    {availableRoles.map((role) => {
+                      const isSelected =
+                        selectedRoleKey === role.key ||
+                        roleInput.trim().toLowerCase() === role.displayTitle.toLowerCase() ||
+                        roleInput.trim().toLowerCase() === role.targetRole.toLowerCase();
+
+                      return (
+                        <button
+                          key={role.key}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handleSelectRole(role)}
+                          className={`w-full px-3.5 py-2.5 text-left transition-colors flex items-center justify-between gap-3 cursor-pointer border-none ${
+                            isSelected
+                              ? "bg-accent/15 text-accent font-medium"
+                              : "bg-transparent hover:bg-bg-card-hover text-text-secondary hover:text-text-primary"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1 flex items-center gap-2">
+                            <span className="font-semibold text-xs truncate">
+                              {role.displayTitle}
+                            </span>
+                            {role.secondaryTitle && (
+                              <span className="text-[11px] font-mono text-text-muted truncate hidden sm:inline">
+                                ({role.secondaryTitle})
+                              </span>
+                            )}
+                          </div>
+                          {isSelected && (
+                            <svg className="w-4 h-4 text-accent shrink-0 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Dropdown Footer Tip */}
+              <div className="px-3.5 py-2 border-t border-border-subtle/60 bg-bg-primary/40 text-[10px] sm:text-[11px] text-text-muted font-mono flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="truncate">{t("heatmap.dropdown_custom_tip")}</span>
+              </div>
+            </div>
           )}
         </div>
 
         <button
           type="button"
-          onClick={handleStartAnalysis}
+          onClick={() => {
+            setIsDropdownOpen(false);
+            handleStartAnalysis();
+          }}
           disabled={!roleInput.trim() || isAnalyzing}
           className="h-11 px-5 rounded-xl font-mono text-xs sm:text-sm font-semibold bg-accent text-bg-primary hover:opacity-90 transition-all shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center justify-center gap-2"
         >

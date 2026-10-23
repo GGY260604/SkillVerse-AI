@@ -375,7 +375,16 @@
       "required_competencies": "对标核心能力",
       "overall_score": "综合匹配度",
       "error_fallback": "分析对标失败，请检查后台服务并重试。",
-      "scroll_hint": "横向滑动以查看所有能力指标 →"
+      "scroll_hint": "横向滑动以查看所有能力指标 →",
+      "dropdown_title": "所选成员当前规划岗位",
+      "dropdown_hint": "可直接选择或自由输入岗位",
+      "dropdown_empty": "未找到与关键词匹配的所选成员岗位",
+      "dropdown_no_roles": "所选成员的当前规划中未包含岗位数据",
+      "dropdown_all_roles": "全部候选建议岗位",
+      "dropdown_custom_tip": "您也可以在输入框中直接输入任意自定义岗位",
+      "members_count": "{count} 位成员",
+      "member_singular": "1 位成员",
+      "toggle_roles_dropdown": "切换展开岗位建议"
     },
     "search_placeholder": "按姓名、目标岗位或部门搜索...",
     "view_roadmap": "查看规划分析",

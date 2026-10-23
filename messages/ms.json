@@ -375,7 +375,16 @@
       "required_competencies": "Kompetensi Diperlukan",
       "overall_score": "Skor Keseluruhan",
       "error_fallback": "Gagal menganalisis penanda aras. Sila sahkan perkhidmatan bahagian belakang dan cuba lagi.",
-      "scroll_hint": "Tatal secara mendatar untuk melihat semua kompetensi →"
+      "scroll_hint": "Tatal secara mendatar untuk melihat semua kompetensi →",
+      "dropdown_title": "Peranan Semasa Ahli Terpilih",
+      "dropdown_hint": "Pilih peranan atau taip peranan tersuai",
+      "dropdown_empty": "Tiada peranan sepadan ditemui daripada ahli terpilih",
+      "dropdown_no_roles": "Tiada peranan ditemui dalam pelan semasa ahli terpilih",
+      "dropdown_all_roles": "Semua cadangan peranan",
+      "dropdown_custom_tip": "Anda juga boleh menaip sebarang nama jawatan tersuai secara langsung",
+      "members_count": "{count} ahli",
+      "member_singular": "1 ahli",
+      "toggle_roles_dropdown": "Togol cadangan peranan"
     },
     "search_placeholder": "Cari mengikut nama, peranan atau jabatan...",
     "view_roadmap": "Lihat Analisis Pelan",
