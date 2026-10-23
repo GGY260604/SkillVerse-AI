@@ -1,4 +1,6 @@
+import os
 import math
+import asyncio
 import httpx
 from typing import List, Optional, Dict
 from config import settings
@@ -95,8 +97,8 @@ _local_embedding_model = None
 
 def get_local_embedding_model():
     """
-    Lazy-loads the in-process BAAI/bge-m3 model using fastembed or sentence-transformers
-    when running directly inside the RunPod GPU container (ENABLE_LOCAL_BGE_M3=true).
+    Loads and caches the in-process BAAI/bge-m3 model using sentence-transformers.
+    Automatically configures optimal hardware device (CUDA GPU vs multi-threaded CPU).
     """
     global _local_embedding_model
     if not settings.ENABLE_LOCAL_BGE_M3:
@@ -104,10 +106,18 @@ def get_local_embedding_model():
     if _local_embedding_model is not None:
         return _local_embedding_model
     try:
+        import torch
         from sentence_transformers import SentenceTransformer
-        _local_embedding_model = SentenceTransformer("BAAI/bge-m3")
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cpu":
+            num_cores = max(1, min(8, os.cpu_count() or 4))
+            torch.set_num_threads(num_cores)
+
+        _local_embedding_model = SentenceTransformer("BAAI/bge-m3", device=device)
         return _local_embedding_model
-    except Exception:
+    except Exception as e:
+        print(f"[embedding_service] SentenceTransformer load failed ({e}), attempting fastembed fallback...")
         try:
             from fastembed import TextEmbedding
             _local_embedding_model = TextEmbedding(model_name="BAAI/bge-m3")
@@ -116,25 +126,38 @@ def get_local_embedding_model():
             return None
 
 
-
-def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
+def get_embeddings_batch_from_local_bge_m3(texts: List[str]) -> Optional[List[List[float]]]:
     """
-    Computes 1024-dimensional semantic embedding in-process using BAAI/bge-m3
-    when FastAPI is deployed on a RunPod GPU instance.
+    Vectorized batch encoder using BAAI/bge-m3 with PyTorch tensor acceleration.
+    Encodes multiple texts simultaneously (batch_size=32) with normalized embeddings.
     """
+    if not texts:
+        return []
     model = get_local_embedding_model()
     if not model:
         return None
     try:
-        if hasattr(model, "embed"):
-            embeddings = list(model.embed([text]))
-            if embeddings and len(embeddings) > 0:
-                return [float(x) for x in embeddings[0]]
+        import torch
         if hasattr(model, "encode"):
-            vec = model.encode(text)
-            return [float(x) for x in vec]
-    except Exception:
+            with torch.inference_mode():
+                vectors = model.encode(texts, batch_size=32, normalize_embeddings=True, show_progress_bar=False)
+                return [v.tolist() if hasattr(v, "tolist") else [float(x) for x in v] for v in vectors]
+        elif hasattr(model, "embed"):
+            embeddings = list(model.embed(texts))
+            return [[float(x) for x in emb] for emb in embeddings]
+    except Exception as err:
+        print(f"[embedding_service] Local BGE-M3 batch encode failed: {err}")
         return None
+    return None
+
+
+def get_embedding_from_local_bge_m3(text: str) -> Optional[List[float]]:
+    """
+    Computes 1024-dimensional semantic embedding in-process using BAAI/bge-m3.
+    """
+    batch = get_embeddings_batch_from_local_bge_m3([text])
+    if batch and len(batch) > 0:
+        return batch[0]
     return None
 
 
@@ -192,14 +215,88 @@ async def get_embedding_from_gemini(text: str) -> Optional[List[float]]:
     return None
 
 
+async def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
+    """
+    High-throughput vectorized batch embedding generator.
+    1. Checks in-memory cache for all requested texts.
+    2. Batches all uncached items together into a single vectorized local model call (PyTorch tensor acceleration).
+    3. Offloads CPU/GPU inference to a background thread pool via asyncio.to_thread (non-blocking).
+    4. Falls back to Gemini / RunPod / deterministic hash for any items that fail.
+    5. Caches new results and returns full list in original request order.
+    """
+    if not texts:
+        return []
+
+    results: List[Optional[List[float]]] = [None] * len(texts)
+    missing_indices: List[int] = []
+    missing_texts: List[str] = []
+
+    # 1. Populate from in-memory cache first (0.00ms hit)
+    for idx, raw_t in enumerate(texts):
+        clean_t = (raw_t or "").lower().strip()
+        if not clean_t:
+            results[idx] = [0.0] * 1024
+            continue
+        cached = _EMBEDDING_CACHE.get(clean_t)
+        if cached is not None:
+            results[idx] = cached
+        else:
+            missing_indices.append(idx)
+            missing_texts.append(clean_t)
+
+    if not missing_texts:
+        return [r for r in results if r is not None]
+
+    # 2. Vectorized Batch Execution via Local BGE-M3 (RunPod / Local CPU)
+    if settings.ENABLE_LOCAL_BGE_M3:
+        try:
+            local_batch = await asyncio.to_thread(
+                get_embeddings_batch_from_local_bge_m3,
+                missing_texts,
+            )
+            if local_batch and len(local_batch) == len(missing_texts):
+                for orig_idx, clean_t, vec in zip(missing_indices, missing_texts, local_batch):
+                    if vec and len(vec) > 0:
+                        _EMBEDDING_CACHE[clean_t] = vec
+                        results[orig_idx] = vec
+        except Exception as e:
+            print(f"[embedding_service] Local batch encode error: {e}")
+
+    # 3. Fallback for any remaining uncomputed items
+    still_missing = [(idx, t) for idx, t in zip(missing_indices, missing_texts) if results[idx] is None]
+    if still_missing:
+        # Fallback cascade item-by-item (RunPod endpoint -> Gemini -> pseudo-vector)
+        for orig_idx, clean_t in still_missing:
+            vec = await _generate_single_embedding_fallback(clean_t)
+            results[orig_idx] = vec
+
+    return [r if r is not None else [0.0] * 1024 for r in results]
+
+
+async def _generate_single_embedding_fallback(clean_text: str) -> List[float]:
+    """Helper fallback when local model is disabled or fails."""
+    # 1. Remote RunPod GPU endpoint (if configured)
+    runpod_vector = await get_embedding_from_runpod(clean_text)
+    if runpod_vector and len(runpod_vector) > 0:
+        _EMBEDDING_CACHE[clean_text] = runpod_vector
+        return runpod_vector
+
+    # 2. Fallback: Google Gemini Embedding API
+    gemini_vector = await get_embedding_from_gemini(clean_text)
+    if gemini_vector and len(gemini_vector) > 0:
+        _EMBEDDING_CACHE[clean_text] = gemini_vector
+        return gemini_vector
+
+    # 3. Deterministic pseudo-vector fallback (zero downtime guarantee)
+    pseudo_vector = generate_deterministic_vector(clean_text)
+    _EMBEDDING_CACHE[clean_text] = pseudo_vector
+    return pseudo_vector
+
+
 async def generate_embedding(text: str) -> List[float]:
     """
     Generates a dense 1024-dimensional semantic vector representation for the given text.
     Uses in-memory LRU cache to make repeated calls instantaneous (0.000ms).
-    1. Primary (RunPod In-Process GPU): Local BAAI/bge-m3 model.
-    2. Primary (External RunPod URL): RunPod GPU Endpoint if configured.
-    3. Fallback: Google Gemini Embedding API (gemini-embedding-001 / 1024-dim).
-    4. Failsafe fallback: Deterministic hash pseudo-vector (guarantees zero crashes).
     """
     clean_text = text.lower().strip()
     if not clean_text:
@@ -210,33 +307,12 @@ async def generate_embedding(text: str) -> List[float]:
     if cached is not None:
         return cached
 
-    vector: Optional[List[float]] = None
+    # Fast-path via vectorized batch function
+    batch_res = await generate_embeddings_batch([clean_text])
+    if batch_res and len(batch_res) > 0:
+        return batch_res[0]
 
-    # 1. Primary: In-process GPU BAAI/bge-m3 (FastAPI on RunPod)
-    local_vector = get_embedding_from_local_bge_m3(clean_text)
-    if local_vector and len(local_vector) > 0:
-        vector = local_vector
-
-    # 2. Remote RunPod GPU endpoint (if configured)
-    if vector is None:
-        runpod_vector = await get_embedding_from_runpod(clean_text)
-        if runpod_vector and len(runpod_vector) > 0:
-            vector = runpod_vector
-
-    # 3. Fallback: Google Gemini Embedding API
-    if vector is None:
-        gemini_vector = await get_embedding_from_gemini(clean_text)
-        if gemini_vector and len(gemini_vector) > 0:
-            vector = gemini_vector
-
-    # 4. Deterministic pseudo-vector fallback (zero downtime guarantee)
-    if vector is None:
-        vector = generate_deterministic_vector(clean_text)
-
-    # Store in memory cache
-    _EMBEDDING_CACHE[clean_text] = vector
-
-    return vector
+    return generate_deterministic_vector(clean_text)
 
 
 async def is_skill_semantically_matched(

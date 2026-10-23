@@ -16,7 +16,7 @@ from schemas.team import (
     TeamSkillMatrixResponse,
 )
 from schemas.analysis import MacroScenario
-from services.embedding_service import generate_embedding, cosine_similarity
+from services.embedding_service import generate_embedding, generate_embeddings_batch, cosine_similarity
 from services.analyze.matching_service import (
     fetch_active_roles_from_supabase,
     synthesize_on_demand_role,
@@ -418,14 +418,15 @@ async def evaluate_team_skill_matrix(
 
         try:
             all_vecs = await asyncio.wait_for(
-                asyncio.gather(*(generate_embedding(s) for s in all_distinct_skills), return_exceptions=True),
-                timeout=4.0,
+                generate_embeddings_batch(all_distinct_skills),
+                timeout=12.0,
             )
             global_skill_vectors: Dict[str, List[float]] = {}
             for s, v in zip(all_distinct_skills, all_vecs):
                 if isinstance(v, list) and len(v) > 0:
                     global_skill_vectors[s] = v
-        except Exception:
+        except Exception as err:
+            print(f"[team-matrix] Batch embedding warning: {err}, continuing.")
             global_skill_vectors = {}
     else:
         global_skill_vectors = {}

@@ -21,6 +21,7 @@ from .gemini_service import (
 )
 from .embedding_service import (
     generate_embedding,
+    generate_embeddings_batch,
     cosine_similarity,
     persist_embedding_cache,
 )
@@ -45,6 +46,7 @@ __all__ = [
     "heuristic_extract_profile",
     # Embedding core
     "generate_embedding",
+    "generate_embeddings_batch",
     "cosine_similarity",
     "persist_embedding_cache",
 ]

@@ -7,7 +7,7 @@ import httpx
 
 from config import settings
 from services.gemini_service import call_gemini_with_fallback
-from services.embedding_service import generate_embedding
+from services.embedding_service import generate_embedding, generate_embeddings_batch
 from services.http_client import get_shared_client
 
 
@@ -352,8 +352,9 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 "embed_text": embed_text,
             })
 
-        # Generate dense embeddings concurrently via asyncio.gather
-        role_vectors = await asyncio.gather(*(generate_embedding(item["embed_text"]) for item in role_items_to_embed))
+        # Generate dense embeddings concurrently via vectorized batch inference
+        role_texts = [item["embed_text"] for item in role_items_to_embed]
+        role_vectors = await generate_embeddings_batch(role_texts)
 
         for item, vector in zip(role_items_to_embed, role_vectors):
             role_payloads.append({

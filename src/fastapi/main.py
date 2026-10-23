@@ -11,6 +11,18 @@ from services.http_client import get_shared_client, close_shared_client
 async def lifespan(app: FastAPI):
     # Eagerly initialize warm HTTP connection pool on startup
     get_shared_client()
+
+    # Pre-warm local BGE-M3 model into memory during startup if enabled
+    if settings.ENABLE_LOCAL_BGE_M3:
+        import asyncio
+        from services.embedding_service import get_local_embedding_model
+        try:
+            print("[startup] Pre-warming BAAI/bge-m3 local embedding model into RAM...")
+            await asyncio.to_thread(get_local_embedding_model)
+            print("[startup] BAAI/bge-m3 model warmed up and ready for zero-latency inference.")
+        except Exception as e:
+            print(f"[startup] Warning: Failed to pre-warm local embedding model: {e}")
+
     yield
     # Gracefully close connections on shutdown
     await close_shared_client()

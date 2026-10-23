@@ -5,7 +5,7 @@ import httpx
 from typing import List, Dict, Any, Tuple, Optional
 from config import settings
 from services.http_client import get_shared_client
-from services.embedding_service import generate_embedding, cosine_similarity, persist_embedding_cache
+from services.embedding_service import generate_embedding, generate_embeddings_batch, cosine_similarity, persist_embedding_cache
 from schemas.analysis import (
     MacroScenario,
     MatchedRole,
@@ -570,7 +570,7 @@ async def evaluate_roles(
 
     # Pre-embed user skills in parallel for dynamic semantic similarity and cross-lingual evaluation
     if user_skills_list:
-        raw_u_vecs = await asyncio.gather(*(generate_embedding(u) for u in user_skills_list))
+        raw_u_vecs = await generate_embeddings_batch(user_skills_list)
         user_skill_vectors: Dict[str, List[float]] = dict(zip(user_skills_list, raw_u_vecs))
     else:
         user_skill_vectors = {}
@@ -584,7 +584,7 @@ async def evaluate_roles(
     # Pre-embed unique declining keys in parallel once into cache for sub-millisecond Tier 3 evaluation
     uncached_declining = [k for k in declining_catalog.keys() if k not in _declining_vectors_cache]
     if uncached_declining:
-        dec_vecs = await asyncio.gather(*(generate_embedding(k) for k in uncached_declining))
+        dec_vecs = await generate_embeddings_batch(uncached_declining)
         for k, v in zip(uncached_declining, dec_vecs):
             if v:
                 _declining_vectors_cache[k] = v
@@ -726,7 +726,7 @@ async def evaluate_roles(
 
     if unmatched_skills_to_embed and user_skills_list:
         unique_req_skills = list(unmatched_skills_to_embed)[:20]
-        req_vectors = await asyncio.gather(*(generate_embedding(s) for s in unique_req_skills))
+        req_vectors = await generate_embeddings_batch(unique_req_skills)
         req_vector_map = dict(zip(unique_req_skills, req_vectors))
 
 
