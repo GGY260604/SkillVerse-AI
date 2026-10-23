@@ -4,7 +4,6 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import Script from "next/script";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
@@ -74,9 +73,10 @@ export default async function LocaleLayout({
           rel="stylesheet"
         />
         {/* Inline Theme Detection Script: Instantly applies theme class and data-theme to prevent flash */}
-        <Script
+        <script
           id="theme-detector"
-          strategy="beforeInteractive"
+          type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -87,6 +87,7 @@ export default async function LocaleLayout({
                   document.documentElement.setAttribute('data-theme', 'light');
                   document.documentElement.style.colorScheme = 'light';
                 } else {
+                  document.documentElement.classList.remove('light');
                   document.documentElement.classList.add('dark', 'scheme-dark');
                   document.documentElement.setAttribute('data-theme', 'dark');
                   document.documentElement.style.colorScheme = 'dark';
