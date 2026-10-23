@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useAuth, AuthModalView } from "@/context/auth/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import Logo from "@/components/Logo";
@@ -63,6 +64,7 @@ function PasswordEyeToggle({
 export default function AuthModal() {
   const t = useTranslations("auth");
   const locale = useLocale();
+  const router = useRouter();
   const { theme } = useTheme();
   const {
     isAuthModalOpen,
@@ -74,6 +76,7 @@ export default function AuthModal() {
     setPendingEmail,
     setAuthModalNotice,
     checkAuth,
+    setUser,
   } = useAuth();
 
   // --- Form State ---
@@ -221,7 +224,11 @@ export default function AuthModal() {
         }
       }
 
+      if (data.user) {
+        setUser(data.user);
+      }
       await checkAuth();
+      router.refresh();
       closeAuthModal();
     } catch {
       setErrorMsg(t("common.errors.network"));
@@ -300,7 +307,11 @@ export default function AuthModal() {
         return;
       }
 
+      if (data.user) {
+        setUser(data.user);
+      }
       await checkAuth();
+      router.refresh();
       closeAuthModal();
     } catch {
       setErrorMsg(t("common.errors.network"));
@@ -384,7 +395,11 @@ export default function AuthModal() {
         return;
       }
 
+      if (data.user) {
+        setUser(data.user);
+      }
       await checkAuth();
+      router.refresh();
       closeAuthModal();
     } catch {
       setErrorMsg(t("common.errors.network"));

@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 
 export type AuthModalView =
   | "login"
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Ref tracking current user state for timer and listener callbacks without stale closures.
   const userRef = useRef<AuthUser | null>(user);
@@ -254,9 +256,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Redirect to home page when logging out from a protected route.
       if (pathname.includes("/analysis") || pathname.includes("/shared")) {
         window.location.href = "/";
+      } else {
+        router.refresh();
       }
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
   // Update user state and its session cache synchronously.
   const handleSetUser = useCallback((newUser: AuthUser | null) => {
