@@ -2,7 +2,9 @@ import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/lib/i18n/routing";
 import Hero from "@/components/home/Hero";
 import LaborMarketDynamics from "@/components/home/LaborMarketDynamics";
+import SkillTrendCheck from "@/components/home/SkillTrendCheck";
 import TransformationPlan from "@/components/home/TransformationPlan";
+import ScrollReveal from "@/components/home/ScrollReveal";
 
 // --- Route Rendering Configuration ---
 // Disable instant app shell prerendering to allow direct dynamic route parameter access.
@@ -15,7 +17,7 @@ export function generateStaticParams() {
 }
 
 // --- Home Page Component ---
-// Render the landing hero section, real-time market signals, and AI transformation plan.
+// Render landing hero, real-time telemetry, skill trend diagnostics, and AI transformation plan.
 export default async function HomePage({
   params,
 }: {
@@ -48,10 +50,19 @@ export default async function HomePage({
       <Hero />
 
       {/* Real-time Market Data Section */}
-      <LaborMarketDynamics />
+      <ScrollReveal>
+        <LaborMarketDynamics />
+      </ScrollReveal>
+
+      {/* Skill Trend Trajectory Diagnostic Section */}
+      <ScrollReveal>
+        <SkillTrendCheck />
+      </ScrollReveal>
 
       {/* AI Transformation Plan Section */}
-      <TransformationPlan />
+      <ScrollReveal>
+        <TransformationPlan />
+      </ScrollReveal>
     </>
   );
 }

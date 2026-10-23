@@ -249,7 +249,7 @@ export default function LaborMarketDynamics() {
 
   // --- UI ---
   return (
-    <section className="animate-fade-in-up-delay-2 max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full">
       {/* Section Header with Global Filter Switcher */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
