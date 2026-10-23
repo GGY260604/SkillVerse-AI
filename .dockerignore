@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.venv
+src/fastapi/.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+.pytest_cache
