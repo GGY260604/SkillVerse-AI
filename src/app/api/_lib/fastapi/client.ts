@@ -146,7 +146,8 @@ export async function fetchWithFastApiFallback(
 ): Promise<Response> {
   const targets = getFastApiTargets();
   const cleanSubPath = subPath.startsWith("/") ? subPath : `/${subPath}`;
-  const timeoutMs = options?.timeoutMs ?? 15000;
+  // Allow 60s default for serverless GPU cold-starts (container boot + BGE-M3 model warm-up)
+  const timeoutMs = options?.timeoutMs ?? 60000;
   const errors: string[] = [];
 
   for (let i = 0; i < targets.length; i++) {
@@ -155,7 +156,9 @@ export async function fetchWithFastApiFallback(
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      // Fail fast on local tier (3s) if local server isn't running, but allow full duration for cloud tiers
+      const effectiveTimeout = target.tier === "local" ? Math.min(timeoutMs, 3000) : timeoutMs;
+      const timer = setTimeout(() => controller.abort(), effectiveTimeout);
 
       const mergedHeaders = {
         ...target.headers,
