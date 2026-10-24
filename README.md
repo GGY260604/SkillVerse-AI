@@ -20,7 +20,7 @@
 | Resource          | Link                                                              |
 | ----------------- | ----------------------------------------------------------------- |
 | GitHub Repository | https://github.com/njwongzhe/SkillVerse-AI                        |
-| Live Demo         | • **Custom Domain:** https://www.skillverse-ai.site/<br>• **Vercel Mirror:** https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/<br>• **Replit Mirror:** https://skill-verse-ai.replit.app |
+| Live Demo         | • **Custom Domain:** https://www.skillverse-ai.site/<br>• **Vercel Mirror:** https://skill-verse-ai-gray.vercel.app/<br>• **Replit Mirror:** https://skill-verse-ai.replit.app |
 | RunPod Endpoint   | https://g83nqi9mdolu2h-8000.proxy.runpod.net/                     |
 | Slide Deck        | https://github.com/njwongzhe/SkillVerse-AI/blob/main/docs/Slide%20Deck/ |
 | Demo Video        | • **Youtube Link:** https://youtu.be/s7jrfcFnFH4<br>• **Backup Drive Link:** https://tinyurl.com/42by65y2 |
@@ -348,16 +348,16 @@ curl -X POST https://l4ljrq2b0cwesb-8000.proxy.runpod.net/embed \
 
 ## Submission Checklist
 
-- [/] Team name, domain (Domain 1 / Domain 2) and SDG track filled in
-- [/] Slide deck link added
-- [/] Demo video link added
-- [/] Replit used, with proof of use in `submission/`
-- [/] RunPod used, with proof of use in `submission/`
-- [/] Preliminary submission completed (`SDC2026_TeamName_Preliminary.pdf`)
-- [/] Technology declaration completed (`SDC2026_TeamName_TechDeclaration.pdf`)
-- [/] Submission files renamed with your team name (replace `TeamName`)
-- [/] "How to Run" steps verified
-- [/] No API keys or secrets committed to the repository
+- [x] Team name, domain (Domain 1 / Domain 2) and SDG track filled in
+- [x] Slide deck link added
+- [x] Demo video link added
+- [x] Replit used, with proof of use in `submission/`
+- [x] RunPod used, with proof of use in `submission/`
+- [x] Preliminary submission completed (`SDC2026_TeamName_Preliminary.pdf`)
+- [x] Technology declaration completed (`SDC2026_TeamName_TechDeclaration.pdf`)
+- [x] Submission files renamed with your team name (replace `TeamName`)
+- [x] "How to Run" steps verified
+- [x] No API keys or secrets committed to the repository
 
 ## License
 
