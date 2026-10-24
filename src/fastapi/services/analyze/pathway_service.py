@@ -25,6 +25,7 @@ CANDIDATE CONTEXT:
 - Skills to Acquire (Gap): {skills_gap}
 - Matched Strengths (Already Mastered): {matched_strengths}
 - Weekly Availability: {weekly_hours} hours per week
+(NOTE: If the candidate already possesses all baseline skills, you MUST synthesize 3 progressive, future-ready frontier competencies/leadership skills into "skillsToAcquire" and "skillsToAcquireLocalized" (trilingual en, ms, zh) and design the milestones around these advanced topics so Skills to Acquire is never null or 0.)
 
 MANDATORY REQUIREMENTS:
 1. TRILINGUAL SUPPORT (CRITICAL):
@@ -49,6 +50,12 @@ MANDATORY REQUIREMENTS:
 5. Output MUST be ONLY valid JSON matching this schema:
 {{
   "totalWeeks": 10,
+  "skillsToAcquire": ["Advanced Generative AI Workflows", "Production Scalability Architecture", "Cross-Functional Digital Leadership"],
+  "skillsToAcquireLocalized": {{
+    "en": ["Advanced Generative AI Workflows", "Production Scalability Architecture", "Cross-Functional Digital Leadership"],
+    "ms": ["Aliran Kerja AI Generatif Lanjutan", "Seni Bina Kebolehskalaan Pengeluaran", "Kepimpinan Digital Rentas Fungsi"],
+    "zh": ["高级生成式 AI 生产流", "生产级高可用架构设计", "跨职能数字技术领导力"]
+  }},
   "milestones": [
     {{
       "phaseIndex": 1,
@@ -115,8 +122,21 @@ MANDATORY REQUIREMENTS:
 
 def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> SelectedRoleRoadmap:
     """Fallback deterministic trilingual roadmap if LLM call is unavailable."""
-    first_gap = target_role.skillsGap[0] if target_role.skillsGap else "Industry Tools"
-    second_gap = target_role.skillsGap[1] if len(target_role.skillsGap) > 1 else "Workflow Automation"
+    if target_role.skillsGap:
+        first_gap = target_role.skillsGap[0]
+        second_gap = target_role.skillsGap[1] if len(target_role.skillsGap) > 1 else "Workflow Automation"
+        fallback_skills = list(target_role.skillsGap)
+        fallback_skills_loc = dict(target_role.skillsGapLocalized) if target_role.skillsGapLocalized else None
+    else:
+        first_gap = f"Advanced {target_role.title} Architecture"
+        second_gap = f"Automated {target_role.industry} Systems"
+        fallback_skills = [first_gap, second_gap, "Sustainable Digital Leadership"]
+        fallback_skills_loc = {
+            "en": fallback_skills,
+            "ms": [f"Seni Bina {target_role.title} Lanjutan", f"Sistem Automasi {target_role.industry}", "Kepimpinan Digital Mampan"],
+            "zh": [f"高级 {target_role.title} 架构设计", f"{target_role.industry} 自动化流水线系统", "可持续数字技术领导力"],
+        }
+
     role_name_en = target_role.title
     role_name_localized = target_role.titleLocalized or target_role.title
     primary_role_sdg = (
@@ -335,6 +355,8 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
         targetRoleId=target_role.roleId,
         totalWeeks=10,
         milestones=milestones,
+        skillsToAcquire=fallback_skills,
+        skillsToAcquireLocalized=fallback_skills_loc,
     )
 
 
@@ -368,10 +390,16 @@ async def synthesize_pathway(
         else "SDG 8.2, SDG 4.4, SDG 9.4"
     )
 
+    gap_skills = target_role.skillsGap[:5]
+    if not gap_skills:
+        gap_desc = "Baseline requirements fully mastered. Candidate is ready for senior frontier competencies, AI workflow acceleration, and sustainable digital leadership."
+    else:
+        gap_desc = ", ".join(gap_skills)
+
     prompt = PATHWAY_PROMPT_TEMPLATE.format(
         target_role_title=target_role.title,
         target_industry=target_role.industry,
-        skills_gap=", ".join(target_role.skillsGap[:5]) or "General Upgrading",
+        skills_gap=gap_desc,
         matched_strengths=", ".join(target_role.matchedStrengths[:4]) or "Foundational experience",
         weekly_hours=profile.weeklyCommitmentHours or "3-5",
         target_sdgs=target_sdgs_str,
@@ -477,11 +505,31 @@ async def synthesize_pathway(
                 )
             )
 
+        # Extract or synthesize non-empty skillsToAcquire
+        synthesized_skills = json_data.get("skillsToAcquire")
+        synthesized_skills_loc = json_data.get("skillsToAcquireLocalized")
+
+        if not synthesized_skills or not isinstance(synthesized_skills, list) or len(synthesized_skills) == 0:
+            if target_role.skillsGap:
+                synthesized_skills = list(target_role.skillsGap)
+                synthesized_skills_loc = dict(target_role.skillsGapLocalized) if target_role.skillsGapLocalized else None
+            else:
+                first_gap = f"Advanced {target_role.title} Architecture"
+                second_gap = f"Automated {target_role.industry} Systems"
+                synthesized_skills = [first_gap, second_gap, "Sustainable Digital Leadership"]
+                synthesized_skills_loc = {
+                    "en": synthesized_skills,
+                    "ms": [f"Seni Bina {target_role.title} Lanjutan", f"Sistem Automasi {target_role.industry}", "Kepimpinan Digital Mampan"],
+                    "zh": [f"高级 {target_role.title} 架构设计", f"{target_role.industry} 自动化流水线系统", "可持续数字技术领导力"],
+                }
+
         if milestones:
             roadmap_result = SelectedRoleRoadmap(
                 targetRoleId=target_role.roleId,
                 totalWeeks=total_weeks,
                 milestones=milestones,
+                skillsToAcquire=synthesized_skills,
+                skillsToAcquireLocalized=synthesized_skills_loc,
             )
             _pathway_cache[cache_key] = (roadmap_result, now)
             return roadmap_result

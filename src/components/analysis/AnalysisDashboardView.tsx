@@ -60,7 +60,11 @@ export default function AnalysisDashboardView() {
 
   // 3. RoleSelectorModal dispatches this event only after the API confirms synthesis/persistence.
   useEffect(() => {
-    const handleRefresh = () => {
+    const handleRefresh = (event?: Event) => {
+      const customEvt = event as CustomEvent<{ newPlan?: PlanData }>;
+      if (customEvt?.detail?.newPlan) {
+        setCurrentPlan(customEvt.detail.newPlan);
+      }
       fetchRoadmaps();
     };
     window.addEventListener("roadmap-refresh", handleRefresh);

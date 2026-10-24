@@ -790,7 +790,30 @@ async def evaluate_roles(
                 )
 
         matched_loc = localize_skill_list_trilingual(item["matched_strengths"])
-        gap_loc = localize_skill_list_trilingual(item["skills_gap"])
+        if not item["skills_gap"]:
+            frontier_gaps = [
+                f"Advanced {role_def['title']} Architecture",
+                f"Automated {role_def['industry']} Systems",
+                "Sustainable Digital Leadership",
+            ]
+            gap_loc = {
+                "en": frontier_gaps,
+                "ms": [
+                    f"Seni Bina {role_def['title']} Lanjutan",
+                    f"Sistem Automasi {role_def['industry']}",
+                    "Kepimpinan Digital Mampan",
+                ],
+                "zh": [
+                    f"高级 {loc_title} 架构设计",
+                    f"{role_def['industry']} 自动化流水线系统",
+                    "可持续数字技术领导力",
+                ],
+            }
+            skills_gap_for_candidate = gap_loc.get(locale, frontier_gaps)
+        else:
+            gap_loc = localize_skill_list_trilingual(item["skills_gap"])
+            skills_gap_for_candidate = gap_loc.get(locale, item["skills_gap"])
+
         at_risk_loc = localize_skill_list_trilingual([a.skillName for a in at_risk_items])
 
         evaluated_candidates.append({
@@ -803,7 +826,7 @@ async def evaluate_roles(
             "sdgAlignments": sdg_items,
             "matchedStrengths": matched_loc.get(locale, item["matched_strengths"]),
             "matchedStrengthsLocalized": matched_loc,
-            "skillsGap": gap_loc.get(locale, item["skills_gap"]),
+            "skillsGap": skills_gap_for_candidate,
             "skillsGapLocalized": gap_loc,
             "atRiskCompetencies": at_risk_items,
             "atRiskSkillsLocalized": at_risk_loc,

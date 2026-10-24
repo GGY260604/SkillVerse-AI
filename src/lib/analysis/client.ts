@@ -296,9 +296,21 @@ export function convertAssessmentToPlanData(
   let finalSkillsGapZh = skillsGapZh;
   let finalSkillsGapLocalized = skillsGapLocalized;
 
+  const roadmapSkillsToAcquire = (assessment.selectedRoleRoadmap as any)?.skillsToAcquire || (createdRoadmap as any)?.skillsToAcquire;
+  const roadmapSkillsToAcquireLoc = (assessment.selectedRoleRoadmap as any)?.skillsToAcquireLocalized || (createdRoadmap as any)?.skillsToAcquireLocalized;
+
   // If candidate already mastered all baseline skills in the catalog (skillsGap is empty),
-  // dynamically populate Skills to Acquire from the forward-looking skills synthesized across the roadmap phases!
-  if (finalSkillsGap.length === 0 && phases.length > 0) {
+  // dynamically populate Skills to Acquire from the roadmap's synthesized target competencies or phase objectives!
+  if (finalSkillsGap.length === 0 && Array.isArray(roadmapSkillsToAcquire) && roadmapSkillsToAcquire.length > 0) {
+    finalSkillsGap = roadmapSkillsToAcquire;
+    finalSkillsGapMs = roadmapSkillsToAcquireLoc?.ms || finalSkillsGap;
+    finalSkillsGapZh = roadmapSkillsToAcquireLoc?.zh || finalSkillsGap;
+    finalSkillsGapLocalized = roadmapSkillsToAcquireLoc || {
+      en: finalSkillsGap,
+      ms: finalSkillsGapMs,
+      zh: finalSkillsGapZh,
+    };
+  } else if (finalSkillsGap.length === 0 && phases.length > 0) {
     const extractedEn: string[] = [];
     const extractedMs: string[] = [];
     const extractedZh: string[] = [];
@@ -326,7 +338,7 @@ export function convertAssessmentToPlanData(
   }
 
   return {
-    id: assessment.assessmentId,
+    id: (assessment as any).createdRoadmapId || (assessment as any).createdRoadmap?.id || assessment.assessmentId,
     isCurrent: true,
     code: `SV-${now.getFullYear()}-${roleCodeSuffix}`,
     date: dateStr,

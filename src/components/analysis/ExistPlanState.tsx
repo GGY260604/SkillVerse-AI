@@ -54,7 +54,8 @@ export default function ExistPlanState({
     setActiveCurrentPlan(currentPlan ?? null);
     setSelectedPlan((prev) => {
       if (!prev) return null;
-      if (currentPlan && prev.id === currentPlan.id) {
+      // If user was reviewing the current plan, automatically navigate to the new current plan
+      if (currentPlan && (prev.isCurrent || prev.id === currentPlan.id)) {
         return currentPlan;
       }
       return prev;
@@ -65,6 +66,8 @@ export default function ExistPlanState({
     setActiveHistoryPlans(historyPlans);
     setSelectedPlan((prev) => {
       if (!prev) return null;
+      // Never downgrade an active current plan into archived history
+      if (prev.isCurrent) return prev;
       const matched = historyPlans.find((hp) => hp.id === prev.id);
       return matched || prev;
     });
@@ -72,6 +75,22 @@ export default function ExistPlanState({
 
   // Track the selected roadmap shown in detail mode.
   const [selectedPlan, setSelectedPlan] = useState<PlanData | null>(null);
+
+  // When a new roadmap is generated/regenerated, automatically navigate to the new roadmap
+  useEffect(() => {
+    const handleRoadmapRefresh = (event: Event) => {
+      const customEvt = event as CustomEvent<{ newPlan?: PlanData }>;
+      if (customEvt?.detail?.newPlan) {
+        const newPlan = customEvt.detail.newPlan;
+        setActiveCurrentPlan(newPlan);
+        setSelectedPlan(newPlan);
+      }
+    };
+    window.addEventListener("roadmap-refresh", handleRoadmapRefresh);
+    return () => {
+      window.removeEventListener("roadmap-refresh", handleRoadmapRefresh);
+    };
+  }, []);
 
   // Control how many archived roadmaps are visible.
   const [showAllHistory, setShowAllHistory] = useState<boolean>(false);
@@ -168,12 +187,12 @@ export default function ExistPlanState({
           ) : null}
 
           <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+            <h1 className="wrap-break-word text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
               {isSharedView && sharedUser
                 ? t("shared_title", { name: sharedUser.name })
                 : t("title")}
             </h1>
-            <p className="break-words text-xs sm:text-sm text-text-secondary mt-1">
+            <p className="wrap-break-word text-xs sm:text-sm text-text-secondary mt-1">
               {isSharedView && sharedUser
                 ? t("shared_subtitle", {
                     name: sharedUser.name,

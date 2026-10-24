@@ -314,7 +314,11 @@ export default function RoleSelectorModal() {
 
       // Refresh roadmap data after the save succeeds.
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("roadmap-refresh"));
+        window.dispatchEvent(
+          new CustomEvent("roadmap-refresh", {
+            detail: { newPlan: planData, newPlanId: planData.id },
+          })
+        );
       }
 
       // Close the modal after the success state is visible.
@@ -484,7 +488,7 @@ export default function RoleSelectorModal() {
                   >
                     {/* Role and Match Score */}
                     <div className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 break-words text-xs sm:text-sm font-bold font-mono text-text-primary">
+                      <span className="min-w-0 wrap-break-word text-xs sm:text-sm font-bold font-mono text-text-primary">
                         {idx + 1}. {role.titleLocalized || role.title}
                       </span>
                       <span className="text-xs font-mono font-bold text-accent shrink-0">
