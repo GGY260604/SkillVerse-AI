@@ -441,6 +441,8 @@ async def synthesize_on_demand_cohort(
 
     has_existing = bool(existing_titles)
     existing_list_str = ", ".join(f'"{t}"' for t in (existing_titles or []))
+    default_industry = "Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance"
+    target_industry = industry or default_industry
 
     if has_existing:
         role_instructions = (
@@ -471,7 +473,7 @@ async def synthesize_on_demand_cohort(
         f'      "title": "{sample_title}",\n'
         f'      "title_ms": "Bahasa Melayu translation of title",\n'
         f'      "title_zh": "Simplified Chinese translation of title",\n'
-        f'      "industry": "{industry or 'Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance'}",\n'
+        f'      "industry": "{target_industry}",\n'
         f'      "required_skills": ["top 6-8 essential professional skills in English"],\n'
         f'      "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order"],\n'
         f'      "required_skills_zh": ["Simplified Chinese translations of the 6-8 skills in matching order"],\n'
