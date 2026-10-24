@@ -425,11 +425,13 @@ async def synthesize_on_demand_cohort(
     industry: Optional[str] = None,
     user_skills: Optional[List[str]] = None,
     target_count: int = 5,
+    existing_titles: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Synthesizes a cohesive cohort of domain-aligned, future-ready roles:
-    - Role #1 is the primary requested role: `primary_title`.
-    - Roles #2 to #target_count are distinct specialized sibling pathways in the exact same domain.
+    - If no existing titles: Role #1 is primary_title, and Roles #2..N are complementary siblings.
+    - If existing titles: Synthesizes `target_count` non-duplicate complementary sibling roles
+      in the exact same domain to complete a 5-role cohort.
 
     Generates trilingual titles and competencies, calibrated macro-scenario multipliers,
     1024-dim ML embeddings via batch vectorization, and registers them into the active catalog.
@@ -437,20 +439,36 @@ async def synthesize_on_demand_cohort(
     from services.gemini_service import call_gemini_json
     from services.analyze.skill_translations import register_skill_translation
 
+    has_existing = bool(existing_titles)
+    existing_list_str = ", ".join(f'"{t}"' for t in (existing_titles or []))
+
+    if has_existing:
+        role_instructions = (
+            f"The candidate's catalog ALREADY has these matching roles in this domain: [{existing_list_str}].\n"
+            f"Do NOT duplicate or regenerate those existing roles.\n"
+            f"Generate exactly {target_count} NEW, distinct, complementary sibling pathways or specialized career trajectories in the EXACT same domain / industry (e.g., adjacent technical specializations, senior pathways, compliance/governance variants, or emerging operations roles) to complete a 5-role cohort."
+        )
+        sample_title = f"{primary_title} Specialist"
+    else:
+        role_instructions = (
+            f"Generate a cohesive cohort of exactly {target_count} distinct, future-ready occupational roles in this exact domain:\n"
+            f"- Role #1 MUST be the primary target role: \"{primary_title}\".\n"
+            f"- Roles #2 to #{target_count} MUST be realistic, highly complementary sibling specializations and adjacent career pathways in the EXACT same domain / industry, providing compelling alternative pathways for this candidate."
+        )
+        sample_title = primary_title
+
     prompt = (
         f"You are an expert occupational taxonomist and future-workforce strategist for the UN Sustainable Development Goals.\n"
         f"A user has requested a career trajectory for an emerging or specialized occupational focus:\n"
-        f"Primary Target Role: \"{primary_title}\"\n"
+        f"Domain Focus / Target: \"{primary_title}\"\n"
         f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
         f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
-        f"Generate a cohesive cohort of exactly {target_count} distinct, future-ready occupational roles in this exact domain:\n"
-        f"- Role #1 MUST be the primary target role: \"{primary_title}\".\n"
-        f"- Roles #2 to #{target_count} MUST be realistic, highly complementary sibling specializations and adjacent career pathways in the EXACT same domain / industry, providing compelling alternative pathways for this candidate.\n\n"
+        f"{role_instructions}\n\n"
         f"Provide the output strictly as a JSON object with a \"roles\" array containing {target_count} role objects with all titles and skills in English, Bahasa Melayu, and Simplified Chinese:\n"
         f"{{\n"
         f'  "roles": [\n'
         f"    {{\n"
-        f'      "title": "{primary_title}",\n'
+        f'      "title": "{sample_title}",\n'
         f'      "title_ms": "Bahasa Melayu translation of title",\n'
         f'      "title_zh": "Simplified Chinese translation of title",\n'
         f'      "industry": "{industry or 'Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance'}",\n'
@@ -491,9 +509,13 @@ async def synthesize_on_demand_cohort(
         for idx, item in enumerate(raw_roles[:target_count]):
             if not isinstance(item, dict):
                 continue
-            r_title = item.get("title", primary_title if idx == 0 else f"{primary_title} Specialist")
-            if idx == 0 and len(primary_title.strip()) > 2:
+            r_title = item.get("title", f"{primary_title} Specialist {idx+1}")
+            if not has_existing and idx == 0 and len(primary_title.strip()) > 2:
                 r_title = primary_title.strip()
+
+            # Prevent generating duplicate title if it already exists in existing_titles
+            if has_existing and existing_titles and any(r_title.lower().strip() == ex.lower().strip() for ex in existing_titles):
+                r_title = f"{r_title} Specialist"
 
             skills_en = item.get("required_skills", [f"{r_title} Operations", "Problem Solving", "Digital Collaboration"])
             skills_ms = item.get("required_skills_ms") or []
@@ -524,8 +546,8 @@ async def synthesize_on_demand_cohort(
 
             clean_slug = r_title.lower().strip().replace(" ", "-").replace("/", "-")
             role_id = f"custom-{clean_slug}"
-            if idx > 0 and role_id == f"custom-{primary_title.lower().strip().replace(' ', '-').replace('/', '-') }":
-                role_id = f"{role_id}-variant-{idx}"
+            if (idx > 0 and role_id == f"custom-{primary_title.lower().strip().replace(' ', '-').replace('/', '-') }") or has_existing:
+                role_id = f"{role_id}-variant-{idx+1}"
 
             calibrated_mults = calibrate_scenario_multipliers(
                 title=r_title,
@@ -543,6 +565,9 @@ async def synthesize_on_demand_cohort(
             emb_text = f"Occupational Title: {r_title}. Sector: {r_ind}. Essential Competencies: {', '.join(skills_en)}."
             embedding_texts.append(emb_text)
 
+            is_primary = (not has_existing and idx == 0)
+            is_sibling = not is_primary
+
             prepared_roles.append({
                 "role_id": role_id,
                 "title": r_title,
@@ -556,8 +581,8 @@ async def synthesize_on_demand_cohort(
                 "sdg_alignments": sdg_al,
                 "scenario_multipliers": calibrated_mults,
                 "radar_requirements": radar_req,
-                "is_cohort_primary": (idx == 0),
-                "is_cohort_sibling": (idx > 0),
+                "is_cohort_primary": is_primary,
+                "is_cohort_sibling": is_sibling,
                 "cohort_domain": primary_title,
             })
 
@@ -565,27 +590,29 @@ async def synthesize_on_demand_cohort(
         vectors = await generate_embeddings_batch(embedding_texts)
 
         cohort_entries = []
+        db_records_to_sync = []
+
         for i, prep in enumerate(prepared_roles):
             vec = vectors[i] if i < len(vectors) else []
             prep["embedding"] = vec
 
-            # Async persist to Supabase esco_roles
-            if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
-                try:
-                    base_url = settings.SUPABASE_URL.rstrip("/")
-                    if base_url.endswith("/rest/v1"):
-                        base_url = base_url[:-8]
-                    endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
-                    headers = {
-                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-                        "Content-Type": "application/json",
-                        "Prefer": "resolution=merge-duplicates",
-                    }
-                    client = get_shared_client(timeout=5.0)
-                    await client.post(endpoint, json=prep, headers=headers)
-                except Exception:
-                    pass
+            # Schema-conforming database payload for Supabase esco_roles
+            db_record = {
+                "role_id": prep["role_id"],
+                "title": prep["title"],
+                "title_ms": prep["title_ms"],
+                "title_zh": prep["title_zh"],
+                "industry": prep["industry"],
+                "required_skills": prep["required_skills"],
+                "required_skills_ms": prep["required_skills_ms"],
+                "required_skills_zh": prep["required_skills_zh"],
+                "required_skills_localized": prep["required_skills_localized"],
+                "sdg_alignments": prep["sdg_alignments"],
+                "scenario_multipliers": prep["scenario_multipliers"],
+                "radar_requirements": prep["radar_requirements"],
+                "embedding": vec,
+            }
+            db_records_to_sync.append(db_record)
 
             entry = {
                 "roleId": prep["role_id"],
@@ -609,6 +636,28 @@ async def synthesize_on_demand_cohort(
 
             if _cached_active_roles:
                 _cached_active_roles.append(entry)
+
+        # Atomic batch persist all synthesized roles to Supabase esco_roles
+        if db_records_to_sync and settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+            try:
+                base_url = settings.SUPABASE_URL.rstrip("/")
+                if base_url.endswith("/rest/v1"):
+                    base_url = base_url[:-8]
+                endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
+                headers = {
+                    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates",
+                }
+                client = get_shared_client(timeout=8.0)
+                sync_resp = await client.post(endpoint, json=db_records_to_sync, headers=headers)
+                if sync_resp.status_code in (200, 201):
+                    print(f"[Supabase Sync] Successfully persisted {len(db_records_to_sync)} roles to esco_roles.")
+                else:
+                    print(f"[Supabase Sync] Supabase responded with {sync_resp.status_code}: {sync_resp.text}")
+            except Exception as sync_err:
+                print(f"[Supabase Sync] Error persisting roles to Supabase esco_roles: {sync_err}")
 
         return cohort_entries
     except Exception:
@@ -726,13 +775,16 @@ async def evaluate_roles(
                 or (r.get("titleLocalized", {}).get("zh") and target_norm in r["titleLocalized"]["zh"].lower())
                 or (r.get("titleLocalized", {}).get("ms") and target_norm in r["titleLocalized"]["ms"].lower())
             ]
-            # If fewer than 3 closely matching domain roles exist in catalog, synthesize a full cohesive cohort of 5 roles!
-            if len(domain_matches) < 3:
+            # If fewer than 5 matching domain roles exist in catalog, synthesize remaining complementary roles!
+            if len(domain_matches) < 5:
+                needed = 5 - len(domain_matches)
+                existing_titles = [r["title"] for r in domain_matches] if domain_matches else None
                 cohort_roles = await synthesize_on_demand_cohort(
                     primary_title=target_clean,
                     industry=profile.industry,
                     user_skills=user_skills_list,
-                    target_count=5,
+                    target_count=needed,
+                    existing_titles=existing_titles,
                 )
                 if cohort_roles:
                     for c_role in reversed(cohort_roles):
@@ -909,12 +961,19 @@ async def evaluate_roles(
             "is_cohort_sibling": is_cohort_sibling,
         })
 
-    # Check if matching scores do not reach threshold (< 0.45) and no cohort was synthesized yet
-    highest_match = max((r["base_match"] for r in raw_evaluations), default=0.0)
-    if highest_match < 0.45 and not synthesized_cohort_ids:
+    # Phase 1.5: Adaptive Cohort Completion (if fewer than 5 strong matches exist in catalog)
+    strong_matches = [r for r in raw_evaluations if r["base_match"] >= 0.48]
+    if len(strong_matches) < 5 and not synthesized_cohort_ids:
+        needed = 5 - len(strong_matches)
+        existing_match_titles = [r["role_def"]["title"] for r in strong_matches] if strong_matches else None
+
         candidate_seed = None
+        candidate_ind = profile.industry
         if profile.currentJobTitle and len(profile.currentJobTitle.strip()) >= 2 and profile.currentJobTitle.strip().lower() not in DISALLOWED_TARGET_TITLES:
-            candidate_seed = f"Future {profile.currentJobTitle.strip()} Specialist"
+            candidate_seed = profile.currentJobTitle.strip()
+        elif strong_matches:
+            candidate_seed = strong_matches[0]["role_def"]["title"]
+            candidate_ind = candidate_ind or strong_matches[0]["role_def"]["industry"]
         elif user_skills_list:
             candidate_seed = f"Advanced {user_skills_list[0]} Specialist"
         elif profile.industry and len(profile.industry.strip()) >= 2:
@@ -924,9 +983,10 @@ async def evaluate_roles(
 
         threshold_cohort = await synthesize_on_demand_cohort(
             primary_title=candidate_seed,
-            industry=profile.industry,
+            industry=candidate_ind,
             user_skills=user_skills_list,
-            target_count=5,
+            target_count=needed,
+            existing_titles=existing_match_titles,
         )
         if threshold_cohort:
             for idx, c_role in enumerate(threshold_cohort):
@@ -938,8 +998,10 @@ async def evaluate_roles(
                         c_matched.append(rq)
                     else:
                         c_gap.append(rq)
-                c_base = 0.86 - (idx * 0.03) + (0.10 * (len(c_matched) / max(len(c_req), 1)))
-                c_base = min(0.95, max(0.72, c_base))
+                # Calibrate score so synthesized roles comfortably sit in the top 5
+                # without overshadowing genuine high-matching existing roles
+                c_base = 0.84 - (idx * 0.02) + (0.08 * (len(c_matched) / max(len(c_req), 1)))
+                c_base = min(0.92, max(0.70, c_base))
                 raw_evaluations.append({
                     "role_def": c_role,
                     "matched_strengths": c_matched,
@@ -947,8 +1009,8 @@ async def evaluate_roles(
                     "base_match": c_base,
                     "soft_overlap_ratio": len(c_matched) / max(len(c_req), 1),
                     "cosine_val": 0.80,
-                    "is_target_role": (idx == 0),
-                    "is_cohort_sibling": (idx > 0),
+                    "is_target_role": (not existing_match_titles and idx == 0),
+                    "is_cohort_sibling": True,
                 })
                 synthesized_cohort_ids.add(c_role["roleId"])
 
