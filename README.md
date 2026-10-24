@@ -21,9 +21,7 @@
 | ----------------- | ----------------------------------------------------------------- |
 | GitHub Repository | https://github.com/njwongzhe/SkillVerse-AI                        |
 | Replit Project    | https://replit.com/@ngjaawei/SkillVerse-AI                        |
-| Live Demo         | https://www.skillverse-ai.site/                                   |
-|                   | https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/ |
-|                   | https://skill-verse-ai.replit.app                                 |
+| Live Demo         | • **Custom Domain:** https://www.skillverse-ai.site/<br>• **Vercel Mirror:** https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/<br>• **Replit Mirror:** https://skill-verse-ai.replit.app |
 | RunPod Endpoint   | https://l4ljrq2b0cwesb-8000.proxy.runpod.net/                     |
 | Slide Deck        |                                                                   |
 | Demo Video        |                                                                   |
@@ -63,13 +61,13 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 
 ### Tech Stack
 
-| Layer         | Technology                                                                                           |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| Frontend      | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4                                        |
-| Backend       | Next.js Route Handlers, Python (FastAPI microservice in `src/fastapi`)                               |
-| Database      | Supabase (PostgreSQL 15 + `pgvector`), Prisma ORM                                                    |
-| AI / Compute  | Google Gemini APIs (OCR & Multimodal Synthesis), RunPod / Render (GPU with `bge-m3` Embeddings) |
-| Hosting / Dev | Vercel, Replit, VSCode, Antigravity                                                                  |
+| Layer            | Technology                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend         | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4                                                                    |
+| Backend & ML     | Next.js Route Handlers, Python (FastAPI microservice in `src/fastapi`), PyTorch (`torch`), Hugging Face Transformers (`transformers`, `sentence-transformers`) |
+| Database         | Supabase (PostgreSQL 15 + `pgvector`), Prisma ORM                                                                                |
+| AI & ML Compute  | Google Gemini APIs (OCR & Multimodal Synthesis), PyTorch & Transformers on RunPod / Render GPU (`bge-m3` 1024-dim Embeddings)      |
+| Hosting / Dev    | Vercel, Replit, VSCode, Antigravity                                                                                              |
 
 ---
 
