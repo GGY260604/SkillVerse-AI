@@ -23,7 +23,9 @@ export interface SharedRoadmapItem {
     name: string | null;
     email: string;
     level?: number;
+    targetRoleId?: string;
     role: string;
+    roleLocalized?: Record<string, string>;
     department: string;
   };
   currentPlan: PlanData;
@@ -120,16 +122,18 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
       const email = item.owner.email.toLowerCase();
       const uid = item.owner.id.toLowerCase();
       const targetRole = item.currentPlan.targetRole.toLowerCase();
+      const localizedRole = (item.currentPlan.targetTitleLocalized?.[locale] || item.owner.roleLocalized?.[locale] || "").toLowerCase();
       const category = (item.currentPlan.roleCategory || "").toLowerCase();
       return (
         name.includes(query) ||
         email.includes(query) ||
         uid.includes(query) ||
         targetRole.includes(query) ||
+        localizedRole.includes(query) ||
         category.includes(query)
       );
     });
-  }, [sharedRoadmaps, searchQuery]);
+  }, [sharedRoadmaps, searchQuery, locale]);
 
   // 4. Active Shared Item Resolution
   // Retrieve selected roadmap object for displaying peer dashboard view.
@@ -194,6 +198,11 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
   // Render the selected peer roadmap in read-only analysis dashboard format.
   if (activeItem) {
     const displayName = activeItem.owner.name || activeItem.owner.email.split("@")[0] || "Peer";
+    const localizedRole =
+      activeItem.currentPlan.targetTitleLocalized?.[locale] ||
+      activeItem.owner.roleLocalized?.[locale] ||
+      activeItem.currentPlan.targetRole ||
+      activeItem.owner.role;
 
     return (
       <div className="animate-fade-in max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
@@ -205,7 +214,7 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
           sharedUser={{
             id: activeItem.owner.id,
             name: displayName,
-            role: activeItem.currentPlan.targetRole || activeItem.owner.role,
+            role: localizedRole,
             email: activeItem.owner.email,
             sharedAt: activeItem.sharedAt,
             department: activeItem.owner.department,
@@ -381,7 +390,15 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
                 key={item.id}
                 role={isHeatMapSelectionMode ? "checkbox" : undefined}
                 aria-checked={isHeatMapSelectionMode ? isHeatMapUserSelected : undefined}
-                aria-label={isHeatMapSelectionMode ? `Select ${displayName} for HeatMap` : undefined}
+                aria-label={
+                  isHeatMapSelectionMode
+                    ? locale === "zh"
+                      ? `选择 ${displayName} 进行能力热力图对标`
+                      : locale === "ms"
+                      ? `Pilih ${displayName} untuk analisis Peta Haba`
+                      : `Select ${displayName} for HeatMap analysis`
+                    : undefined
+                }
                 tabIndex={isHeatMapSelectionMode ? 0 : undefined}
                 onClick={() => {
                   if (isHeatMapSelectionMode) {
@@ -498,7 +515,7 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
                 {/* Bottom Row: Career Direction, Match Score & Date */}
                 <div className="px-1 flex items-center gap-2 text-xs text-text-secondary flex-wrap">
                   <span className="font-semibold text-text-primary truncate max-w-sm">
-                    {item.currentPlan.targetTitleLocalized?.[locale] || item.currentPlan.targetRole}
+                    {item.currentPlan.targetTitleLocalized?.[locale] || item.owner.roleLocalized?.[locale] || item.currentPlan.targetRole}
                   </span>
                   <span className="text-text-muted">•</span>
                   <span className="font-mono text-accent text-xs font-semibold">

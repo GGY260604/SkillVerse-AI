@@ -401,7 +401,7 @@
       "subtitle": "Benchmark team members against target competencies with continuous skill heatmaps.",
       "target_benchmark": "Target Benchmark",
       "button_label": "HeatMap",
-      "select_users_hint": "Click user cards to select people for HeatMap.",
+      "select_users_hint": "Click user cards to select members for HeatMap analysis.",
       "view_heatmap": "View HeatMap",
       "input_placeholder": "Enter target benchmark role (e.g. Prompt Engineer, Cloud Architect, AI Specialist)...",
       "clear": "Clear",

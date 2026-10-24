@@ -190,6 +190,50 @@ export default function HeatMapView({
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Cache of ESCO roles from database table esco_roles
+  const [escoRoles, setEscoRoles] = useState<
+    Array<{
+      roleId: string;
+      title: string;
+      titleMs: string;
+      titleZh: string;
+      industry?: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadEscoRoles() {
+      try {
+        const res = await fetch("/api/shared/roles");
+        const json = await res.json();
+        if (!isCancelled && json.success && Array.isArray(json.roles)) {
+          setEscoRoles(json.roles);
+        }
+      } catch (e) {
+        console.warn("[HeatMapView] Could not fetch ESCO roles catalog:", e);
+      }
+    }
+    loadEscoRoles();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const escoMap = React.useMemo(() => {
+    const map = new Map<string, { en: string; ms: string; zh: string }>();
+    escoRoles.forEach((r) => {
+      const loc = { en: r.title, ms: r.titleMs, zh: r.titleZh };
+      const rawId = r.roleId.toLowerCase().trim();
+      map.set(rawId, loc);
+      map.set(rawId.replace(/^role-/, ""), loc);
+      map.set(r.title.toLowerCase().trim(), loc);
+      if (r.titleMs) map.set(r.titleMs.toLowerCase().trim(), loc);
+      if (r.titleZh) map.set(r.titleZh.toLowerCase().trim(), loc);
+    });
+    return map;
+  }, [escoRoles]);
+
   // Extract and deduplicate unique roles from current plans of selected members with trilingual support.
   const availableRoles = React.useMemo<RoleOption[]>(() => {
     if (!selectedMembers || selectedMembers.length === 0) return [];
@@ -213,12 +257,30 @@ export default function HeatMapView({
       if (!rawRole || !rawRole.trim()) continue;
 
       const trimmedRole = rawRole.trim();
-      const canonicalKey = trimmedRole.toLowerCase();
+      const targetRoleId =
+        (member.currentPlan as any)?.targetRoleId ||
+        (member.owner as any)?.targetRoleId ||
+        (member.currentPlan as any)?.target_role_id ||
+        "";
+
+      const rIdLower = targetRoleId.toLowerCase().trim();
+      const rTitleLower = trimmedRole.toLowerCase();
+
+      // Look up ESCO table first using roleId then title, then locMap, then fallback
+      const escoMatch =
+        escoMap.get(rIdLower) ||
+        escoMap.get(rIdLower.replace(/^role-/, "")) ||
+        escoMap.get(rTitleLower);
+
+      const locMap =
+        escoMatch ||
+        member.currentPlan?.targetTitleLocalized ||
+        (member.owner as any)?.roleLocalized;
+
+      const canonicalKey = (targetRoleId || trimmedRole).toLowerCase();
 
       const memberName =
         member.owner?.name || member.owner?.email?.split("@")[0] || "User";
-
-      const locMap = member.currentPlan?.targetTitleLocalized;
 
       if (!roleMap.has(canonicalKey)) {
         roleMap.set(canonicalKey, {
@@ -272,17 +334,67 @@ export default function HeatMapView({
       }
       return a.displayTitle.localeCompare(b.displayTitle);
     });
-  }, [selectedMembers, locale]);
+  }, [selectedMembers, locale, escoMap]);
+
+  // Full catalog of ESCO roles for searchbar autocomplete recommendations
+  const allCatalogRoles = React.useMemo<RoleOption[]>(() => {
+    if (!escoRoles || escoRoles.length === 0) return [];
+    return escoRoles.map((r) => {
+      const displayTitle =
+        locale === "zh" && r.titleZh
+          ? r.titleZh
+          : locale === "ms" && r.titleMs
+          ? r.titleMs
+          : r.title;
+      const secondaryTitle =
+        locale !== "en" && r.title.toLowerCase() !== displayTitle.toLowerCase()
+          ? r.title
+          : undefined;
+
+      return {
+        key: r.roleId.toLowerCase(),
+        targetRole: r.title,
+        targetTitleLocalized: { en: r.title, ms: r.titleMs, zh: r.titleZh },
+        displayTitle,
+        secondaryTitle,
+        memberCount: 0,
+        memberNames: [],
+      };
+    });
+  }, [escoRoles, locale]);
 
   // Dynamically update input text when locale switches if a suggested role was chosen.
   useEffect(() => {
     if (selectedRoleKey) {
-      const match = availableRoles.find((r) => r.key === selectedRoleKey);
+      const match =
+        availableRoles.find((r) => r.key === selectedRoleKey) ||
+        allCatalogRoles.find((r) => r.key === selectedRoleKey);
       if (match) {
         setRoleInput(match.displayTitle);
       }
+    } else if (roleInput.trim()) {
+      const query = roleInput.trim().toLowerCase();
+      const match =
+        availableRoles.find(
+          (r) =>
+            r.displayTitle.toLowerCase() === query ||
+            r.targetRole.toLowerCase() === query ||
+            r.targetTitleLocalized?.zh?.toLowerCase() === query ||
+            r.targetTitleLocalized?.ms?.toLowerCase() === query
+        ) ||
+        allCatalogRoles.find(
+          (r) =>
+            r.displayTitle.toLowerCase() === query ||
+            r.targetRole.toLowerCase() === query ||
+            r.targetTitleLocalized?.zh?.toLowerCase() === query ||
+            r.targetTitleLocalized?.ms?.toLowerCase() === query
+        );
+      if (match) {
+        setRoleInput(match.displayTitle);
+        setSelectedRoleKey(match.key);
+      }
     }
-  }, [locale, selectedRoleKey, availableRoles]);
+  }, [locale, selectedRoleKey, availableRoles, allCatalogRoles]);
 
   // Dismiss dropdown on outside clicks.
   useEffect(() => {
@@ -305,15 +417,32 @@ export default function HeatMapView({
 
   // Compute filtered role suggestions based on user input.
   const filteredRoles = React.useMemo(() => {
-    if (!roleInput.trim()) return availableRoles;
     const query = roleInput.trim().toLowerCase();
-    return availableRoles.filter(
+
+    const cohortMatches = !query
+      ? availableRoles
+      : availableRoles.filter(
+          (r) =>
+            r.displayTitle.toLowerCase().includes(query) ||
+            r.secondaryTitle?.toLowerCase().includes(query) ||
+            r.targetRole.toLowerCase().includes(query)
+        );
+
+    if (!query) {
+      return cohortMatches;
+    }
+
+    const existingKeys = new Set(availableRoles.map((r) => r.key));
+    const catalogMatches = allCatalogRoles.filter(
       (r) =>
-        r.displayTitle.toLowerCase().includes(query) ||
-        r.secondaryTitle?.toLowerCase().includes(query) ||
-        r.targetRole.toLowerCase().includes(query)
+        !existingKeys.has(r.key) &&
+        (r.displayTitle.toLowerCase().includes(query) ||
+          r.secondaryTitle?.toLowerCase().includes(query) ||
+          r.targetRole.toLowerCase().includes(query))
     );
-  }, [availableRoles, roleInput]);
+
+    return [...cohortMatches, ...catalogMatches];
+  }, [availableRoles, allCatalogRoles, roleInput]);
 
   const handleSelectRole = (role: RoleOption) => {
     setRoleInput(role.displayTitle);
@@ -324,14 +453,20 @@ export default function HeatMapView({
 
   const handleInputChange = (value: string) => {
     setRoleInput(value);
-    const exact = availableRoles.find(
-      (r) => r.displayTitle.toLowerCase() === value.trim().toLowerCase()
-    );
+    const exact =
+      availableRoles.find(
+        (r) => r.displayTitle.toLowerCase() === value.trim().toLowerCase()
+      ) ||
+      allCatalogRoles.find(
+        (r) => r.displayTitle.toLowerCase() === value.trim().toLowerCase()
+      );
     setSelectedRoleKey(exact ? exact.key : null);
-    if (availableRoles.length > 0 && !isDropdownOpen) {
+    if ((availableRoles.length > 0 || allCatalogRoles.length > 0) && !isDropdownOpen) {
       setIsDropdownOpen(true);
     }
   };
+
+  const hasRoles = availableRoles.length > 0 || allCatalogRoles.length > 0;
 
   // Measure visible width of right scroll container to dynamically expand skill columns.
   useEffect(() => {
@@ -639,10 +774,10 @@ export default function HeatMapView({
               value={roleInput}
               onChange={(e) => handleInputChange(e.target.value)}
               onFocus={() => {
-                if (availableRoles.length > 0) setIsDropdownOpen(true);
+                if (hasRoles) setIsDropdownOpen(true);
               }}
               onClick={() => {
-                if (availableRoles.length > 0) setIsDropdownOpen(true);
+                if (hasRoles) setIsDropdownOpen(true);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -650,7 +785,7 @@ export default function HeatMapView({
                   handleStartAnalysis();
                 } else if (e.key === "Escape") {
                   setIsDropdownOpen(false);
-                } else if (e.key === "ArrowDown" && !isDropdownOpen && availableRoles.length > 0) {
+                } else if (e.key === "ArrowDown" && !isDropdownOpen && hasRoles) {
                   setIsDropdownOpen(true);
                 }
               }}
@@ -672,7 +807,7 @@ export default function HeatMapView({
                     setRoleInput("");
                     setSelectedRoleKey(null);
                     inputRef.current?.focus();
-                    if (availableRoles.length > 0) {
+                    if (hasRoles) {
                       setIsDropdownOpen(true);
                     }
                   }}
@@ -686,11 +821,11 @@ export default function HeatMapView({
                 </button>
               )}
 
-              {roleInput && !isAnalyzing && availableRoles.length > 0 && (
+              {roleInput && !isAnalyzing && hasRoles && (
                 <div className="h-4 w-px bg-border-subtle/80" />
               )}
 
-              {availableRoles.length > 0 && (
+              {hasRoles && (
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen((prev) => !prev)}
@@ -711,7 +846,7 @@ export default function HeatMapView({
           </div>
 
           {/* Role Suggestions Dropdown Menu */}
-          {isDropdownOpen && availableRoles.length > 0 && (
+          {isDropdownOpen && hasRoles && (
             <div
               className="absolute top-full left-0 right-0 mt-2 z-50 rounded-xl border border-border-subtle bg-bg-card/95 backdrop-blur-md shadow-xl overflow-hidden animate-fade-in-up"
               role="listbox"
@@ -742,9 +877,9 @@ export default function HeatMapView({
                           <span className="font-semibold text-xs sm:text-sm truncate">
                             {role.displayTitle}
                           </span>
-                          {role.secondaryTitle && (
-                            <span className="text-[11px] font-mono text-text-muted truncate hidden sm:inline">
-                              ({role.secondaryTitle})
+                          {role.memberCount > 0 && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-accent/15 text-accent font-semibold shrink-0 ml-1.5">
+                              {role.memberCount} {locale === "zh" ? "人" : locale === "ms" ? "ahli" : "members"}
                             </span>
                           )}
                         </div>
@@ -766,7 +901,7 @@ export default function HeatMapView({
                     <div className="px-3.5 py-1.5 bg-bg-primary/40 border-t border-b border-border-subtle/50 text-[10px] font-mono text-text-muted uppercase tracking-wider">
                       {t("heatmap.dropdown_all_roles")}
                     </div>
-                    {availableRoles.map((role) => {
+                    {(availableRoles.length > 0 ? availableRoles : allCatalogRoles).slice(0, 20).map((role) => {
                       const isSelected =
                         selectedRoleKey === role.key ||
                         roleInput.trim().toLowerCase() === role.displayTitle.toLowerCase() ||
@@ -789,9 +924,9 @@ export default function HeatMapView({
                             <span className="font-semibold text-xs truncate">
                               {role.displayTitle}
                             </span>
-                            {role.secondaryTitle && (
-                              <span className="text-[11px] font-mono text-text-muted truncate hidden sm:inline">
-                                ({role.secondaryTitle})
+                            {role.memberCount > 0 && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-accent/15 text-accent font-semibold shrink-0 ml-1.5">
+                                {role.memberCount} {locale === "zh" ? "人" : locale === "ms" ? "ahli" : "members"}
                               </span>
                             )}
                           </div>

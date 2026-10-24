@@ -435,9 +435,10 @@ export default function PlanDetailView({
               ))}
             </ul>
           ) : (
-            <div className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-              <span className="font-bold text-emerald-500 dark:text-emerald-400">✓</span>
-              <span>{tCurrent("no_at_risk_skills")}</span>
+            <div className="flex-1 flex items-center justify-center p-4 text-center min-h-[80px]">
+              <span className="skill-empty-text text-black dark:text-white text-xs sm:text-sm font-medium">
+                {tCurrent("no_at_risk_skills")}
+              </span>
             </div>
           )}
         </div>

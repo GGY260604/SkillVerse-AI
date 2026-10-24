@@ -300,6 +300,10 @@ body {
   color: var(--text-primary);
 }
 
+.skill-empty-text {
+  color: #000000;
+}
+
 /* In Dark Mode (html.dark, html[data-theme="dark"], and default dark root) */
 :root:not(.light):not([data-theme="light"]) .skill-card-green,
 html.dark .skill-card-green,
@@ -389,6 +393,12 @@ html[data-theme="dark"] .skill-border-rose {
 html.dark .skill-item-text,
 html[data-theme="dark"] .skill-item-text {
   color: #f4f4f5 !important; /* Pure crisp bright white/zinc */
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-empty-text,
+html.dark .skill-empty-text,
+html[data-theme="dark"] .skill-empty-text {
+  color: #ffffff !important;
 }
 
 /* --- Print Stylesheet for PDF Report Generation --- */

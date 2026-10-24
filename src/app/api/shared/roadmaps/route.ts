@@ -103,11 +103,84 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // 3. Resolve ESCO table multilingual role names using roadmap targetRoleId and targetRoleTitle
+    const roleIdSet = new Set<string>();
+    const roleTitleSet = new Set<string>();
+
+    sharedRecords.forEach((s: any) => {
+      const rId = s.roadmap?.targetRoleId || s.roadmap?.target_role_id;
+      const rTitle = s.roadmap?.targetRoleTitle || s.roadmap?.target_role_title;
+      if (rId) roleIdSet.add(String(rId));
+      if (rTitle) roleTitleSet.add(String(rTitle));
+    });
+
+    historyRoadmaps.forEach((hr: any) => {
+      const rId = hr.targetRoleId || hr.target_role_id;
+      const rTitle = hr.targetRoleTitle || hr.target_role_title;
+      if (rId) roleIdSet.add(String(rId));
+      if (rTitle) roleTitleSet.add(String(rTitle));
+    });
+
+    const escoRoles = await prisma.escoRole.findMany({
+      where: {
+        OR: [
+          { roleId: { in: Array.from(roleIdSet) } },
+          { title: { in: Array.from(roleTitleSet) } },
+        ],
+      },
+      select: {
+        roleId: true,
+        title: true,
+        titleMs: true,
+        titleZh: true,
+      },
+    });
+
+    const escoMap = new Map<string, { en: string; ms: string; zh: string }>();
+    escoRoles.forEach((er) => {
+      const localized = { en: er.title, ms: er.titleMs, zh: er.titleZh };
+      const rawId = er.roleId.toLowerCase().trim();
+      escoMap.set(rawId, localized);
+      escoMap.set(rawId.replace(/^role-/, ""), localized);
+      escoMap.set(er.title.toLowerCase().trim(), localized);
+      if (er.titleMs) escoMap.set(er.titleMs.toLowerCase().trim(), localized);
+      if (er.titleZh) escoMap.set(er.titleZh.toLowerCase().trim(), localized);
+    });
+
+    const resolveRoleLocalization = (roleId?: string, roleTitle?: string, existingLocalized?: any) => {
+      const rId = (roleId || "").toLowerCase().trim();
+      const rTitle = (roleTitle || "").toLowerCase().trim();
+      const match =
+        escoMap.get(rId) ||
+        escoMap.get(rId.replace(/^role-/, "")) ||
+        escoMap.get(rTitle);
+
+      return {
+        en: match?.en || existingLocalized?.en || roleTitle || "Professional",
+        ms: match?.ms || existingLocalized?.ms || match?.en || roleTitle || "Professional",
+        zh: match?.zh || existingLocalized?.zh || match?.en || roleTitle || "Professional",
+      };
+    };
+
     const historyMap = new Map<string, any[]>();
     historyRoadmaps.forEach((hr: any) => {
       if (hr.userId) {
         const list = historyMap.get(hr.userId) || [];
-        list.push(formatRoadmapToPlanData(hr as any));
+        const hrRoleId = hr.targetRoleId || hr.target_role_id;
+        const hrRoleTitle = hr.targetRoleTitle || hr.target_role_title;
+        const hrLoc = resolveRoleLocalization(
+          hrRoleId,
+          hrRoleTitle,
+          hr.targetTitleLocalized || hr.target_title_localized
+        );
+
+        const planData = formatRoadmapToPlanData({
+          ...hr,
+          targetTitleLocalized: hrLoc,
+        } as any);
+        (planData as any).targetRoleId = hrRoleId;
+        planData.targetTitleLocalized = hrLoc;
+        list.push(planData);
         historyMap.set(hr.userId, list);
       }
     });
@@ -115,8 +188,21 @@ export async function GET(request: NextRequest) {
     const formattedList = sharedRecords
       .filter((s: any) => s.roadmap && s.owner)
       .map((s: any) => {
+        const targetRoleId = s.roadmap.targetRoleId || s.roadmap.target_role_id || "";
+        const targetRoleTitle = s.roadmap.targetRoleTitle || s.roadmap.target_role_title || "";
+        const roleLocalized = resolveRoleLocalization(
+          targetRoleId,
+          targetRoleTitle,
+          s.roadmap.targetTitleLocalized || s.roadmap.target_title_localized
+        );
+
         const currentPlan = {
-          ...formatRoadmapToPlanData(s.roadmap),
+          ...formatRoadmapToPlanData({
+            ...s.roadmap,
+            targetTitleLocalized: roleLocalized,
+          }),
+          targetRoleId,
+          targetTitleLocalized: roleLocalized,
           isCurrent: true,
         };
 
@@ -134,12 +220,9 @@ export async function GET(request: NextRequest) {
             name: s.owner.name,
             email: s.owner.email,
             level: s.owner.level ?? 1,
-            role:
-              s.owner.currentJobTitle ||
-              s.owner.current_job_title ||
-              s.roadmap.targetRoleTitle ||
-              s.roadmap.target_role_title ||
-              "Professional",
+            targetRoleId,
+            role: roleLocalized.en,
+            roleLocalized,
             department:
               s.owner.industry ||
               s.roadmap.roleCategory ||
