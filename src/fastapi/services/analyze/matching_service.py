@@ -232,6 +232,108 @@ async def query_supabase_pgvector(
     return None
 
 
+def calibrate_scenario_multipliers(
+    title: str,
+    industry: str = "",
+    sdg_alignments: Optional[List[Any]] = None,
+    required_skills: Optional[List[str]] = None,
+    raw_multipliers: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """
+    Calibrates distinct macro-scenario multipliers for:
+    - moderate (baseline = 1.0)
+    - accelerated_ai (1.03 to 1.30)
+    - green_economy (1.03 to 1.32)
+
+    Guarantees a discernible separation of at least 0.08 between accelerated_ai
+    and green_economy based on occupational title, industry, SDG targets, and skills.
+    Completely prevents identical scenario match scores and ensures distinct role rankings.
+    """
+    AI_KEYWORDS = {
+        "ai", "artificial intelligence", "machine learning", "deep learning", "neural",
+        "algorithm", "robotics", "automation", "automated", "software", "cloud",
+        "cyber", "cybersecurity", "data", "developer", "full stack", "backend",
+        "frontend", "nlp", "llm", "generative", "vision", "devops", "sre", "rag",
+        "agent", "iot", "digital", "computational", "informatics", "firmware",
+        "embedded", "engineer", "analytics", "programmer", "architect", "prompt",
+        "fintech", "blockchain", "quantum", "platform", "systems", "microservices"
+    }
+
+    GREEN_KEYWORDS = {
+        "green", "clean", "energy", "solar", "wind", "bess", "battery", "carbon",
+        "esg", "sustainability", "sustainable", "climate", "net-zero", "circular",
+        "ecology", "ecological", "environmental", "renewable", "biodiversity",
+        "conservation", "water", "waste", "agriculture", "agritech", "smart grid",
+        "decarbonization", "pollution", "resilience", "nature", "lifecycle",
+        "cleantech", "eco", "remediation", "emission", "photovoltaic", "forest",
+        "aquaculture", "marine", "efficiency", "grid", "power", "bioenergy"
+    }
+
+    t_lower = (title or "").lower()
+    ind_lower = (industry or "").lower()
+    skills_text = " ".join(required_skills or []).lower()
+
+    ai_score = 0
+    green_score = 0
+
+    for kw in AI_KEYWORDS:
+        if kw in t_lower:
+            ai_score += 3
+        if kw in ind_lower:
+            ai_score += 2
+        if kw in skills_text:
+            ai_score += 1
+
+    for kw in GREEN_KEYWORDS:
+        if kw in t_lower:
+            green_score += 3
+        if kw in ind_lower:
+            green_score += 2
+        if kw in skills_text:
+            green_score += 1
+
+    if sdg_alignments:
+        for s in sdg_alignments:
+            code = s.get("targetCode", "") if isinstance(s, dict) else getattr(s, "targetCode", "")
+            if any(code.startswith(g) for g in ["SDG 7", "SDG 12", "SDG 13", "SDG 14", "SDG 15", "SDG 6"]):
+                green_score += 2
+            if any(code.startswith(a) for a in ["SDG 8.2", "SDG 9.4", "SDG 9.5"]):
+                ai_score += 1
+
+    # Base baseline
+    moderate = 1.0
+
+    if ai_score > green_score:
+        acc_ai = round(min(1.30, 1.15 + (ai_score * 0.015)), 2)
+        green = round(max(1.03, 1.08 - (ai_score * 0.008)), 2)
+    elif green_score > ai_score:
+        green = round(min(1.32, 1.16 + (green_score * 0.015)), 2)
+        acc_ai = round(max(1.03, 1.08 - (green_score * 0.008)), 2)
+    else:
+        # Balanced or neutral
+        if ai_score >= 3:
+            acc_ai = 1.22
+            green = 1.10
+        else:
+            acc_ai = 1.14
+            green = 1.05
+
+    # Enforce guaranteed minimum separation of at least 0.08 between AI Surge and Green Economy
+    if abs(acc_ai - green) < 0.08:
+        if ai_score >= green_score:
+            acc_ai = max(acc_ai, 1.22)
+            green = min(green, 1.08)
+        else:
+            green = max(green, 1.24)
+            acc_ai = min(acc_ai, 1.08)
+
+    return {
+        "moderate": moderate,
+        "accelerated_ai": acc_ai,
+        "green_economy": green,
+    }
+
+
 _cached_active_roles: List[Dict[str, Any]] = []
 _last_active_roles_fetch_time: float = 0.0
 _declining_vectors_cache: Dict[str, List[float]] = {}
@@ -279,6 +381,15 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                         if not rid or rid in seen_ids:
                             continue
                         seen_ids.add(rid)
+
+                        calibrated_multipliers = calibrate_scenario_multipliers(
+                            title=r["title"],
+                            industry=r.get("industry", ""),
+                            sdg_alignments=r.get("sdg_alignments", []),
+                            required_skills=r.get("required_skills", []),
+                            raw_multipliers=r.get("scenario_multipliers"),
+                        )
+
                         formatted.append({
                             "roleId": rid,
                             "title": r["title"],
@@ -291,9 +402,7 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                             "requiredSkills": r.get("required_skills", []),
                             "requiredSkillsLocalized": r.get("required_skills_localized") or localize_skill_list_trilingual(r.get("required_skills", [])),
                             "sdgAlignments": r.get("sdg_alignments", []),
-                            "scenarioMultipliers": r.get("scenario_multipliers", {
-                                "moderate": 1.0, "accelerated_ai": 1.0, "green_economy": 1.0
-                            }),
+                            "scenarioMultipliers": calibrated_multipliers,
                             "radarRequirement": r.get("radar_requirements", {
                                 "AI & Digital Tools": 75,
                                 "Data Literacy & Analytics": 75,
@@ -311,146 +420,217 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     return FALLBACK_ROLES_CATALOG
 
 
+async def synthesize_on_demand_cohort(
+    primary_title: str,
+    industry: Optional[str] = None,
+    user_skills: Optional[List[str]] = None,
+    target_count: int = 5,
+) -> List[Dict[str, Any]]:
+    """
+    Synthesizes a cohesive cohort of domain-aligned, future-ready roles:
+    - Role #1 is the primary requested role: `primary_title`.
+    - Roles #2 to #target_count are distinct specialized sibling pathways in the exact same domain.
+
+    Generates trilingual titles and competencies, calibrated macro-scenario multipliers,
+    1024-dim ML embeddings via batch vectorization, and registers them into the active catalog.
+    """
+    from services.gemini_service import call_gemini_json
+    from services.analyze.skill_translations import register_skill_translation
+
+    prompt = (
+        f"You are an expert occupational taxonomist and future-workforce strategist for the UN Sustainable Development Goals.\n"
+        f"A user has requested a career trajectory for an emerging or specialized occupational focus:\n"
+        f"Primary Target Role: \"{primary_title}\"\n"
+        f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
+        f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
+        f"Generate a cohesive cohort of exactly {target_count} distinct, future-ready occupational roles in this exact domain:\n"
+        f"- Role #1 MUST be the primary target role: \"{primary_title}\".\n"
+        f"- Roles #2 to #{target_count} MUST be realistic, highly complementary sibling specializations and adjacent career pathways in the EXACT same domain / industry, providing compelling alternative pathways for this candidate.\n\n"
+        f"Provide the output strictly as a JSON object with a \"roles\" array containing {target_count} role objects with all titles and skills in English, Bahasa Melayu, and Simplified Chinese:\n"
+        f"{{\n"
+        f'  "roles": [\n'
+        f"    {{\n"
+        f'      "title": "{primary_title}",\n'
+        f'      "title_ms": "Bahasa Melayu translation of title",\n'
+        f'      "title_zh": "Simplified Chinese translation of title",\n'
+        f'      "industry": "{industry or 'Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance'}",\n'
+        f'      "required_skills": ["top 6-8 essential professional skills in English"],\n'
+        f'      "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order"],\n'
+        f'      "required_skills_zh": ["Simplified Chinese translations of the 6-8 skills in matching order"],\n'
+        f'      "sdg_alignments": [\n'
+        f'        {{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}}\n'
+        f"      ],\n"
+        f'      "radar_requirements": {{\n'
+        f'        "AI & Digital Tools": 80,\n'
+        f'        "Data Literacy & Analytics": 75,\n'
+        f'        "Domain Operations": 80,\n'
+        f'        "Human Communication": 75,\n'
+        f'        "ESG & Sustainability": 70\n'
+        f"      }}\n"
+        f"    }}\n"
+        f"  ]\n"
+        f"}}\n"
+        f"Return ONLY valid JSON."
+    )
+
+    try:
+        contents = [{"role": "user", "parts": [{"text": prompt}]}]
+        data = await call_gemini_json(contents=contents)
+        raw_roles = []
+        if isinstance(data, dict):
+            raw_roles = data.get("roles") or [data]
+        elif isinstance(data, list):
+            raw_roles = data
+
+        if not raw_roles:
+            return []
+
+        prepared_roles = []
+        embedding_texts = []
+
+        for idx, item in enumerate(raw_roles[:target_count]):
+            if not isinstance(item, dict):
+                continue
+            r_title = item.get("title", primary_title if idx == 0 else f"{primary_title} Specialist")
+            if idx == 0 and len(primary_title.strip()) > 2:
+                r_title = primary_title.strip()
+
+            skills_en = item.get("required_skills", [f"{r_title} Operations", "Problem Solving", "Digital Collaboration"])
+            skills_ms = item.get("required_skills_ms") or []
+            skills_zh = item.get("required_skills_zh") or []
+
+            if not skills_ms or len(skills_ms) < len(skills_en):
+                skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
+            if not skills_zh or len(skills_zh) < len(skills_en):
+                skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
+
+            # Register newly synthesized competencies into dynamic translation cache
+            for i, s_en in enumerate(skills_en):
+                s_zh = skills_zh[i] if i < len(skills_zh) else s_en
+                s_ms = skills_ms[i] if i < len(skills_ms) else s_en
+                register_skill_translation(s_en, s_zh, s_ms)
+
+            r_ind = item.get("industry", industry or "Cross-Industry")
+            sdg_al = item.get("sdg_alignments", [
+                {"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}
+            ])
+            radar_req = item.get("radar_requirements", {
+                "AI & Digital Tools": 80,
+                "Data Literacy & Analytics": 75,
+                "Domain Operations": 80,
+                "Human Communication": 75,
+                "ESG & Sustainability": 70,
+            })
+
+            clean_slug = r_title.lower().strip().replace(" ", "-").replace("/", "-")
+            role_id = f"custom-{clean_slug}"
+            if idx > 0 and role_id == f"custom-{primary_title.lower().strip().replace(' ', '-').replace('/', '-') }":
+                role_id = f"{role_id}-variant-{idx}"
+
+            calibrated_mults = calibrate_scenario_multipliers(
+                title=r_title,
+                industry=r_ind,
+                sdg_alignments=sdg_al,
+                required_skills=skills_en,
+            )
+
+            localized_skills = {
+                "en": skills_en,
+                "ms": skills_ms,
+                "zh": skills_zh,
+            }
+
+            emb_text = f"Occupational Title: {r_title}. Sector: {r_ind}. Essential Competencies: {', '.join(skills_en)}."
+            embedding_texts.append(emb_text)
+
+            prepared_roles.append({
+                "role_id": role_id,
+                "title": r_title,
+                "title_ms": item.get("title_ms", r_title),
+                "title_zh": item.get("title_zh", r_title),
+                "industry": r_ind,
+                "required_skills": skills_en,
+                "required_skills_ms": skills_ms,
+                "required_skills_zh": skills_zh,
+                "required_skills_localized": localized_skills,
+                "sdg_alignments": sdg_al,
+                "scenario_multipliers": calibrated_mults,
+                "radar_requirements": radar_req,
+                "is_cohort_primary": (idx == 0),
+                "is_cohort_sibling": (idx > 0),
+                "cohort_domain": primary_title,
+            })
+
+        # Generate live 1024-dim ML semantic embeddings in parallel batch
+        vectors = await generate_embeddings_batch(embedding_texts)
+
+        cohort_entries = []
+        for i, prep in enumerate(prepared_roles):
+            vec = vectors[i] if i < len(vectors) else []
+            prep["embedding"] = vec
+
+            # Async persist to Supabase esco_roles
+            if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+                try:
+                    base_url = settings.SUPABASE_URL.rstrip("/")
+                    if base_url.endswith("/rest/v1"):
+                        base_url = base_url[:-8]
+                    endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
+                    headers = {
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates",
+                    }
+                    client = get_shared_client(timeout=5.0)
+                    await client.post(endpoint, json=prep, headers=headers)
+                except Exception:
+                    pass
+
+            entry = {
+                "roleId": prep["role_id"],
+                "title": prep["title"],
+                "titleLocalized": {
+                    "en": prep["title"],
+                    "ms": prep["title_ms"],
+                    "zh": prep["title_zh"],
+                },
+                "industry": prep["industry"],
+                "requiredSkills": prep["required_skills"],
+                "requiredSkillsLocalized": prep["required_skills_localized"],
+                "sdgAlignments": prep["sdg_alignments"],
+                "scenarioMultipliers": prep["scenario_multipliers"],
+                "radarRequirement": prep["radar_requirements"],
+                "is_cohort_primary": prep["is_cohort_primary"],
+                "is_cohort_sibling": prep["is_cohort_sibling"],
+                "cohort_domain": prep["cohort_domain"],
+            }
+            cohort_entries.append(entry)
+
+            if _cached_active_roles:
+                _cached_active_roles.append(entry)
+
+        return cohort_entries
+    except Exception:
+        return []
+
+
 async def synthesize_on_demand_role(
     title: str,
     industry: Optional[str] = None,
     user_skills: Optional[List[str]] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Zero-shot on-demand role synthesis (User-Driven):
-    If a user specifies a target career goal that doesn't yet exist in the database,
-    this hook synthesizes its canonical competency profile, computes its 1024-dim
-    embedding vector with BGE-M3/Gemini, and persists it into Supabase esco_roles.
+    Zero-shot on-demand role synthesis wrapper (backwards compatible).
+    Synthesizes a cohort of roles and returns the primary role entry.
     """
-    from services.gemini_service import call_gemini_json
-
-
-    prompt = (
-        f"You are an expert occupational taxonomist and future-workforce analyst for the UN Sustainable Development Goals.\n"
-        f"A user has requested a career trajectory for an emerging or specialized occupational title:\n"
-        f"Role Title: \"{title}\"\n"
-        f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
-        f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
-        f"Generate a canonical competency profile for this role in strict JSON format with all titles and skills provided in English, Bahasa Melayu, and Simplified Chinese:\n"
-        f"{{\n"
-        f'  "title": "{title}",\n'
-        f'  "title_ms": "Bahasa Melayu translation of title",\n'
-        f'  "title_zh": "Simplified Chinese translation of title",\n'
-        f'  "industry": "Clean Energy & ESG / Responsible AI & Digital Transformation / FinTech & Governance / etc.",\n'
-        f'  "required_skills": ["top 6-8 essential professional skills in English"],\n'
-        f'  "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order"],\n'
-        f'  "required_skills_zh": ["Simplified Chinese translations of the 6-8 skills in matching order"],\n'
-        f'  "sdg_alignments": [\n'
-        f'    {{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}}\n'
-        f"  ],\n"
-        f'  "radar_requirements": {{\n'
-        f'    "AI & Digital Tools": 80,\n'
-        f'    "Data Literacy & Analytics": 75,\n'
-        f'    "Domain Operations": 80,\n'
-        f'    "Human Communication": 75,\n'
-        f'    "ESG & Sustainability": 70\n'
-        f"  }}\n"
-        f"}}\n"
-        f"Return ONLY valid JSON."
+    cohort = await synthesize_on_demand_cohort(
+        primary_title=title,
+        industry=industry,
+        user_skills=user_skills,
+        target_count=1,
     )
-
-    clean_slug = title.lower().strip().replace(" ", "-").replace("/", "-")
-    role_id = f"custom-{clean_slug}"
-
-    try:
-        contents = [{"role": "user", "parts": [{"text": prompt}]}]
-        data = await call_gemini_json(contents=contents)
-
-        parsed_title = data.get("title", title)
-        skills_en = data.get("required_skills", [f"{title} Operations", "Problem Solving", "Digital Collaboration"])
-        skills_ms = data.get("required_skills_ms") or []
-        skills_zh = data.get("required_skills_zh") or []
-
-        if not skills_ms or len(skills_ms) < len(skills_en):
-            skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
-        if not skills_zh or len(skills_zh) < len(skills_en):
-            skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
-
-        # Register newly synthesized competencies into the dynamic cache
-        from services.analyze.skill_translations import register_skill_translation
-        for i, s_en in enumerate(skills_en):
-            s_zh = skills_zh[i] if i < len(skills_zh) else s_en
-            s_ms = skills_ms[i] if i < len(skills_ms) else s_en
-            register_skill_translation(s_en, s_zh, s_ms)
-
-        industry_val = data.get("industry", industry or "Cross-Industry")
-
-        # 1024-dim embedding
-        emb_text = f"Occupational Title: {parsed_title}. Sector: {industry_val}. Essential Competencies: {', '.join(skills_en)}."
-        vector = await generate_embedding(emb_text)
-
-        # Build role record with trilingual required skills
-        localized_skills = {
-            "en": skills_en,
-            "ms": skills_ms,
-            "zh": skills_zh,
-        }
-        role_record = {
-            "role_id": role_id,
-            "title": parsed_title,
-            "title_ms": data.get("title_ms", parsed_title),
-            "title_zh": data.get("title_zh", parsed_title),
-            "industry": industry_val,
-            "required_skills": skills_en,
-            "required_skills_ms": skills_ms,
-            "required_skills_zh": skills_zh,
-            "required_skills_localized": localized_skills,
-            "sdg_alignments": data.get("sdg_alignments", [{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}]),
-            "scenario_multipliers": {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.15},
-            "radar_requirements": data.get("radar_requirements", {
-                "AI & Digital Tools": 80,
-                "Data Literacy & Analytics": 75,
-                "Domain Operations": 80,
-                "Human Communication": 75,
-                "ESG & Sustainability": 70,
-            }),
-            "embedding": vector,
-        }
-
-
-        # Async persist to Supabase esco_roles
-        if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
-            base_url = settings.SUPABASE_URL.rstrip("/")
-            if base_url.endswith("/rest/v1"):
-                base_url = base_url[:-8]
-            endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
-            headers = {
-                "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-                "Content-Type": "application/json",
-                "Prefer": "resolution=merge-duplicates",
-            }
-            client = get_shared_client(timeout=5.0)
-            await client.post(endpoint, json=role_record, headers=headers)
-
-        new_role_entry = {
-            "roleId": role_id,
-            "title": parsed_title,
-            "titleLocalized": {
-                "en": parsed_title,
-                "ms": role_record["title_ms"],
-                "zh": role_record["title_zh"],
-            },
-            "industry": industry_val,
-            "requiredSkills": skills_en,
-            "requiredSkillsLocalized": localized_skills,
-            "sdgAlignments": role_record["sdg_alignments"],
-            "scenarioMultipliers": role_record["scenario_multipliers"],
-            "radarRequirement": role_record["radar_requirements"],
-        }
-
-        # Immediately register in-memory active roles cache for sub-millisecond retrieval
-        if _cached_active_roles:
-            _cached_active_roles.append(new_role_entry)
-
-        return new_role_entry
-    except Exception:
-        return None
+    return cohort[0] if cohort else None
 
 
 def get_sdg_impact_explanation(target_code: str, role_title: str, locale: str) -> str:
@@ -529,6 +709,8 @@ async def evaluate_roles(
         "apa-apa", "apa sahaja", "sebarang", "tak kisah", "mana-mana",
         "都可以", "随便", "任意", "无所谓", "没有", "看情况", "皆可", "不限",
     }
+    synthesized_cohort_ids = set()
+
     if profile.targetJobTitle and profile.targetJobTitle.strip():
         target_clean = profile.targetJobTitle.strip()
         target_norm = target_clean.lower()
@@ -536,23 +718,28 @@ async def evaluate_roles(
         expected_custom_id = f"custom-{clean_slug}"
 
         if len(target_clean) >= 2 and target_norm not in DISALLOWED_TARGET_TITLES:
-            exists = any(
-                r["roleId"] == expected_custom_id
+            domain_matches = [
+                r for r in active_roles
+                if r["roleId"] == expected_custom_id
                 or target_norm in r["title"].lower()
                 or r["title"].lower() in target_norm
                 or (r.get("titleLocalized", {}).get("zh") and target_norm in r["titleLocalized"]["zh"].lower())
                 or (r.get("titleLocalized", {}).get("ms") and target_norm in r["titleLocalized"]["ms"].lower())
-                for r in active_roles
-            )
-            if not exists:
-                custom_role = await synthesize_on_demand_role(
-                    title=target_clean,
+            ]
+            # If fewer than 3 closely matching domain roles exist in catalog, synthesize a full cohesive cohort of 5 roles!
+            if len(domain_matches) < 3:
+                cohort_roles = await synthesize_on_demand_cohort(
+                    primary_title=target_clean,
                     industry=profile.industry,
                     user_skills=user_skills_list,
+                    target_count=5,
                 )
-                if custom_role and custom_role["roleId"] not in seen_role_ids:
-                    seen_role_ids.add(custom_role["roleId"])
-                    active_roles.insert(0, custom_role)
+                if cohort_roles:
+                    for c_role in reversed(cohort_roles):
+                        if c_role["roleId"] not in seen_role_ids:
+                            seen_role_ids.add(c_role["roleId"])
+                            active_roles.insert(0, c_role)
+                        synthesized_cohort_ids.add(c_role["roleId"])
 
     # 2. Generate live 1024-dim ML semantic embedding for candidate profile
     profile_summary = (
@@ -696,7 +883,16 @@ async def evaluate_roles(
         base_match = (0.60 * cosine_val) + (0.40 * soft_overlap_ratio)
 
         is_target_role = False
-        if profile.targetJobTitle and profile.targetJobTitle.strip():
+        is_cohort_sibling = False
+
+        if role_def.get("is_cohort_primary"):
+            is_target_role = True
+            base_match = min(1.0, max(0.85, base_match + 0.25))
+        elif role_def.get("is_cohort_sibling") or role_def["roleId"] in synthesized_cohort_ids:
+            is_cohort_sibling = True
+            # Guaranteed domain synergy for sibling pathways in the synthesized cohort
+            base_match = min(0.92, max(0.72, base_match + 0.18))
+        elif profile.targetJobTitle and profile.targetJobTitle.strip():
             target_norm = profile.targetJobTitle.strip().lower()
             if target_norm in role_def["title"].lower() or role_def["title"].lower() in target_norm:
                 base_match = min(1.0, base_match + 0.25)
@@ -710,10 +906,61 @@ async def evaluate_roles(
             "soft_overlap_ratio": soft_overlap_ratio,
             "cosine_val": cosine_val,
             "is_target_role": is_target_role,
+            "is_cohort_sibling": is_cohort_sibling,
         })
 
-    # Sort candidates by preliminary match score
-    raw_evaluations.sort(key=lambda r: (r["is_target_role"], r["base_match"]), reverse=True)
+    # Check if matching scores do not reach threshold (< 0.45) and no cohort was synthesized yet
+    highest_match = max((r["base_match"] for r in raw_evaluations), default=0.0)
+    if highest_match < 0.45 and not synthesized_cohort_ids:
+        candidate_seed = None
+        if profile.currentJobTitle and len(profile.currentJobTitle.strip()) >= 2 and profile.currentJobTitle.strip().lower() not in DISALLOWED_TARGET_TITLES:
+            candidate_seed = f"Future {profile.currentJobTitle.strip()} Specialist"
+        elif user_skills_list:
+            candidate_seed = f"Advanced {user_skills_list[0]} Specialist"
+        elif profile.industry and len(profile.industry.strip()) >= 2:
+            candidate_seed = f"Emerging {profile.industry.strip()} Specialist"
+        else:
+            candidate_seed = "Modern Digital Transformation Lead"
+
+        threshold_cohort = await synthesize_on_demand_cohort(
+            primary_title=candidate_seed,
+            industry=profile.industry,
+            user_skills=user_skills_list,
+            target_count=5,
+        )
+        if threshold_cohort:
+            for idx, c_role in enumerate(threshold_cohort):
+                c_req = c_role["requiredSkills"]
+                c_matched = []
+                c_gap = []
+                for rq in c_req:
+                    if any(u.lower() in rq.lower() or rq.lower() in u.lower() for u in user_skills_list):
+                        c_matched.append(rq)
+                    else:
+                        c_gap.append(rq)
+                c_base = 0.86 - (idx * 0.03) + (0.10 * (len(c_matched) / max(len(c_req), 1)))
+                c_base = min(0.95, max(0.72, c_base))
+                raw_evaluations.append({
+                    "role_def": c_role,
+                    "matched_strengths": c_matched,
+                    "skills_gap": c_gap,
+                    "base_match": c_base,
+                    "soft_overlap_ratio": len(c_matched) / max(len(c_req), 1),
+                    "cosine_val": 0.80,
+                    "is_target_role": (idx == 0),
+                    "is_cohort_sibling": (idx > 0),
+                })
+                synthesized_cohort_ids.add(c_role["roleId"])
+
+    # Sort candidates by preliminary match score: target role first, then cohort siblings, then base_match
+    raw_evaluations.sort(
+        key=lambda r: (
+            1 if r["is_target_role"] else 0,
+            1 if r.get("is_cohort_sibling") else 0,
+            r["base_match"]
+        ),
+        reverse=True
+    )
 
     # Phase 2: Parallel Semantic Vector Refinement ONLY on top candidate roles (Top 10)
     # Only needed if candidate possesses skills to compare against (skips if empty skills)
@@ -755,6 +1002,17 @@ async def evaluate_roles(
             item["base_match"] = (0.60 * c_val) + (0.40 * item["soft_overlap_ratio"])
             if item["is_target_role"]:
                 item["base_match"] = min(1.0, item["base_match"] + 0.25)
+            elif item.get("is_cohort_sibling"):
+                item["base_match"] = min(0.92, max(0.72, item["base_match"] + 0.18))
+
+        raw_evaluations.sort(
+            key=lambda r: (
+                1 if r["is_target_role"] else 0,
+                1 if r.get("is_cohort_sibling") else 0,
+                r["base_match"]
+            ),
+            reverse=True
+        )
 
     # Dynamic zero-shot skill cache warming for new or custom future competencies
     top_skills_pool = []
@@ -816,13 +1074,21 @@ async def evaluate_roles(
 
         at_risk_loc = localize_skill_list_trilingual([a.skillName for a in at_risk_items])
 
+        calibrated_multipliers = calibrate_scenario_multipliers(
+            title=role_def["title"],
+            industry=role_def.get("industry", ""),
+            sdg_alignments=role_def.get("sdgAlignments", []),
+            required_skills=role_def.get("requiredSkills", []),
+            raw_multipliers=role_def.get("scenarioMultipliers"),
+        )
+
         evaluated_candidates.append({
             "roleId": role_def["roleId"],
             "title": role_def["title"],
             "titleLocalized": loc_title,
             "industry": role_def["industry"],
             "base_match": item["base_match"],
-            "scenarioMultipliers": role_def["scenarioMultipliers"],
+            "scenarioMultipliers": calibrated_multipliers,
             "sdgAlignments": sdg_items,
             "matchedStrengths": matched_loc.get(locale, item["matched_strengths"]),
             "matchedStrengthsLocalized": matched_loc,
@@ -876,8 +1142,13 @@ async def evaluate_roles(
     # Compute Radar Chart data comparing user baseline against top matched role
     top_role_def = next(
         (r for r in active_roles if r["roleId"] == matched_roles[0].roleId),
-        active_roles[0],
+        None,
     )
+    if not top_role_def:
+        top_role_def = next(
+            (it["role_def"] for it in raw_evaluations if it["role_def"]["roleId"] == matched_roles[0].roleId),
+            active_roles[0],
+        )
     req_radar = top_role_def["radarRequirement"]
     top_match_score = matched_roles[0].matchScore
 

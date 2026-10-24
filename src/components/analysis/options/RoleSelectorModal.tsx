@@ -42,14 +42,14 @@ const SCENARIO_OPTIONS: ScenarioConfig[] = [
     id: "accelerated_ai",
     labelKey: "scenario_ai_surge",
     descriptionKey: "scenario_ai_surge_desc",
-    multiplierBadge: "+15% AI",
+    multiplierBadge: "+25% AI",
     badgeStyle: "bg-blue-600 dark:bg-blue-500 text-white font-extrabold shadow-sm border border-blue-700 dark:border-blue-400",
   },
   {
     id: "green_economy",
     labelKey: "scenario_green_esg",
     descriptionKey: "scenario_green_esg_desc",
-    multiplierBadge: "+15% ESG",
+    multiplierBadge: "+12% ESG",
     badgeStyle: "bg-emerald-600 dark:bg-emerald-500 text-white font-extrabold shadow-sm border border-emerald-700 dark:border-emerald-400",
   },
 ];
@@ -117,6 +117,22 @@ export default function RoleSelectorModal() {
       : rolesToDisplay[0]?.roleId ?? null);
   const activeScenario =
     SCENARIO_OPTIONS.find((scenario) => scenario.id === selectedScenario) ?? SCENARIO_OPTIONS[0];
+
+  const getScenarioMultiplierBadge = (scenId: MacroScenarioType) => {
+    if (scenId === "moderate") return "1.0x";
+    const scenRoles = analysisResult?.scenarioRoles?.[scenId];
+    if (scenRoles && scenRoles.length > 0) {
+      const activeRoleInScen = scenRoles.find((r) => r.roleId === roleIdToDisplay) || scenRoles[0];
+      if (activeRoleInScen?.scenarioMultiplierApplied) {
+        const mult = activeRoleInScen.scenarioMultiplierApplied;
+        const pct = Math.round((mult - 1) * 100);
+        const sign = pct >= 0 ? "+" : "";
+        const tag = scenId === "accelerated_ai" ? "AI" : "ESG";
+        return `${sign}${pct}% ${tag}`;
+      }
+    }
+    return scenId === "accelerated_ai" ? "+25% AI" : "+12% ESG";
+  };
 
   // --- Role Matching ---
   // 1. On open, POST the saved profile to /api/analysis/analyze with action=stream.
@@ -438,7 +454,7 @@ export default function RoleSelectorModal() {
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shrink-0 inline-block tracking-tight ${scen.badgeStyle}`}
                       >
-                        {scen.multiplierBadge}
+                        {getScenarioMultiplierBadge(scen.id)}
                       </span>
                     </button>
                   );
@@ -488,9 +504,26 @@ export default function RoleSelectorModal() {
                   >
                     {/* Role and Match Score */}
                     <div className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 wrap-break-word text-xs sm:text-sm font-bold font-mono text-text-primary">
-                        {idx + 1}. {role.titleLocalized || role.title}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+                        <span className="min-w-0 wrap-break-word text-xs sm:text-sm font-bold font-mono text-text-primary">
+                          {idx + 1}. {role.titleLocalized || role.title}
+                        </span>
+                        {role.scenarioMultiplierApplied && role.scenarioMultiplierApplied !== 1.0 && (
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0 inline-flex items-center ${
+                              selectedScenario === "accelerated_ai"
+                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                                : selectedScenario === "green_economy"
+                                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
+                                : "bg-accent/15 text-accent border border-accent/30"
+                            }`}
+                          >
+                            {selectedScenario === "accelerated_ai" ? "AI" : "ESG"}{" "}
+                            {role.scenarioMultiplierApplied > 1 ? "+" : ""}
+                            {Math.round((role.scenarioMultiplierApplied - 1) * 100)}%
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-mono font-bold text-accent shrink-0">
                         {t("match_score", { percent: matchPct })}
                       </span>
