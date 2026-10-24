@@ -347,66 +347,99 @@ export default function PlanDetailView({
         </div>
       </div>
 
-      {/* Itemized Skills Section (No outer border/bg, no item border/bg, distinct colors and markers preserved) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 py-2">
+      {/* Itemized Skills Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 py-2">
         {/* Matched Strengths (Green) */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b-2 border-emerald-800/60 dark:border-emerald-500/20 mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-950 dark:text-emerald-400 font-mono">
-              {tCurrent("matched_strengths")}
-            </h3>
-            <span className="text-xs font-mono text-emerald-950 dark:text-emerald-400 font-black">
+        <div className="skill-card-green rounded-2xl p-4 sm:p-5 border flex flex-col transition-all">
+          <div className="skill-border-green flex items-center justify-between pb-3 mb-3.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+              <h3 className="skill-header-green text-xs font-bold uppercase tracking-wider font-mono truncate">
+                {tCurrent("matched_strengths")}
+              </h3>
+            </div>
+            <span className="skill-badge-green inline-flex items-center justify-center min-w-[1.6rem] h-5 px-1.5 rounded-full text-xs font-mono font-bold shrink-0 shadow-xs">
               {localizedMatchedStrengths.length}
             </span>
           </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {localizedMatchedStrengths.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-emerald-950 dark:text-emerald-400 font-black shrink-0 mt-0.5">✓</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
+
+          {localizedMatchedStrengths.length > 0 ? (
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+              {localizedMatchedStrengths.map((skill) => (
+                <li key={skill} className="flex items-start gap-2">
+                  <span className="text-emerald-500 dark:text-emerald-400 font-black shrink-0 mt-0.5">✓</span>
+                  <span className="skill-item-text font-medium">{skill}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-bg-secondary/40 text-xs text-text-muted font-medium">
+              <span>—</span>
+              <span>{tCurrent("no_matched_strengths")}</span>
+            </div>
+          )}
         </div>
 
         {/* Skills to Acquire (Amber) */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b-2 border-amber-800/60 dark:border-amber-500/20 mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-amber-950 dark:text-amber-400 font-mono">
-              {tCurrent("skills_gap")}
-            </h3>
-            <span className="text-xs font-mono text-amber-950 dark:text-amber-400 font-black">
+        <div className="skill-card-amber rounded-2xl p-4 sm:p-5 border flex flex-col transition-all">
+          <div className="skill-border-amber flex items-center justify-between pb-3 mb-3.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_10px_rgba(251,191,36,0.8)]" />
+              <h3 className="skill-header-amber text-xs font-bold uppercase tracking-wider font-mono truncate">
+                {tCurrent("skills_gap")}
+              </h3>
+            </div>
+            <span className="skill-badge-amber inline-flex items-center justify-center min-w-[1.6rem] h-5 px-1.5 rounded-full text-xs font-mono font-bold shrink-0 shadow-xs">
               {localizedSkillsGap.length}
             </span>
           </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {localizedSkillsGap.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-amber-950 dark:text-amber-400 font-black shrink-0 mt-0.5">▲</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
+
+          {localizedSkillsGap.length > 0 ? (
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+              {localizedSkillsGap.map((skill) => (
+                <li key={skill} className="flex items-start gap-2">
+                  <span className="text-amber-500 dark:text-amber-400 font-black shrink-0 mt-0.5">▲</span>
+                  <span className="skill-item-text font-medium">{skill}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+              <span className="font-bold text-emerald-500 dark:text-emerald-400">✓</span>
+              <span>{tCurrent("no_skills_gap")}</span>
+            </div>
+          )}
         </div>
 
         {/* Automation Alerts (Rose/Red) */}
-        <div>
-          <div className="flex items-center justify-between pb-3 border-b-2 border-rose-800/60 dark:border-rose-500/20 mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 dark:text-rose-400 font-mono">
-              {tCurrent("at_risk_skills")}
-            </h3>
-            <span className="text-xs font-mono text-rose-950 dark:text-rose-400 font-black">
+        <div className="skill-card-rose rounded-2xl p-4 sm:p-5 border flex flex-col transition-all">
+          <div className="skill-border-rose flex items-center justify-between pb-3 mb-3.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 shrink-0 shadow-[0_0_10px_rgba(251,113,133,0.8)]" />
+              <h3 className="skill-header-rose text-xs font-bold uppercase tracking-wider font-mono truncate">
+                {tCurrent("at_risk_skills")}
+              </h3>
+            </div>
+            <span className="skill-badge-rose inline-flex items-center justify-center min-w-[1.6rem] h-5 px-1.5 rounded-full text-xs font-mono font-bold shrink-0 shadow-xs">
               {localizedAtRiskSkills.length}
             </span>
           </div>
-          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
-            {localizedAtRiskSkills.map((skill) => (
-              <li key={skill} className="flex items-start gap-2">
-                <span className="text-rose-950 dark:text-rose-400 font-black shrink-0 mt-0.5">✕</span>
-                <span className="text-text-primary font-medium">{skill}</span>
-              </li>
-            ))}
-          </ul>
+
+          {localizedAtRiskSkills.length > 0 ? (
+            <ul className="flex flex-col gap-2.5 list-none p-0 m-0 text-xs leading-relaxed">
+              {localizedAtRiskSkills.map((skill) => (
+                <li key={skill} className="flex items-start gap-2">
+                  <span className="text-rose-500 dark:text-rose-400 font-black shrink-0 mt-0.5">✕</span>
+                  <span className="skill-item-text font-medium">{skill}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex items-center gap-2 py-2 px-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+              <span className="font-bold text-emerald-500 dark:text-emerald-400">✓</span>
+              <span>{tCurrent("no_at_risk_skills")}</span>
+            </div>
+          )}
         </div>
       </div>
 

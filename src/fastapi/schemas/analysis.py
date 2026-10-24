@@ -147,6 +147,8 @@ class SelectedRoleRoadmap(BaseModel):
     targetRoleId: str = Field(description="Role ID this roadmap was synthesized for")
     totalWeeks: int = Field(description="Total estimated roadmap completion time in weeks")
     milestones: List[RoadmapMilestone] = Field(default_factory=list)
+    skillsToAcquire: List[str] = Field(default_factory=list, description="Explicit competencies targeted by this reskilling roadmap")
+    skillsToAcquireLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual target competencies: en, ms, zh")
 
 
 class RadarAxisItem(BaseModel):

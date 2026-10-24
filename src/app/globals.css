@@ -246,6 +246,151 @@ body {
   background: var(--text-muted);
 }
 
+/* --- High-Contrast Skill Itemized Dashboard Theming --- */
+.skill-card-green {
+  background-color: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+.skill-card-amber {
+  background-color: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+.skill-card-rose {
+  background-color: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.35) !important;
+}
+
+.skill-header-green {
+  color: #047857;
+}
+.skill-header-amber {
+  color: #b45309;
+}
+.skill-header-rose {
+  color: #be123c;
+}
+
+.skill-badge-green {
+  background-color: rgba(16, 185, 129, 0.14);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.skill-badge-amber {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.skill-badge-rose {
+  background-color: rgba(244, 63, 94, 0.14);
+  color: #9f1239;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.skill-border-green {
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+}
+.skill-border-amber {
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+}
+.skill-border-rose {
+  border-bottom: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.skill-item-text {
+  color: var(--text-primary);
+}
+
+/* In Dark Mode (html.dark, html[data-theme="dark"], and default dark root) */
+:root:not(.light):not([data-theme="light"]) .skill-card-green,
+html.dark .skill-card-green,
+html[data-theme="dark"] .skill-card-green {
+  background-color: rgba(6, 78, 59, 0.25) !important;
+  border: 1px solid rgba(52, 211, 153, 0.45) !important;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.08);
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-card-amber,
+html.dark .skill-card-amber,
+html[data-theme="dark"] .skill-card-amber {
+  background-color: rgba(120, 53, 15, 0.25) !important;
+  border: 1px solid rgba(251, 191, 36, 0.45) !important;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.08);
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-card-rose,
+html.dark .skill-card-rose,
+html[data-theme="dark"] .skill-card-rose {
+  background-color: rgba(136, 19, 55, 0.25) !important;
+  border: 1px solid rgba(251, 113, 133, 0.45) !important;
+  box-shadow: 0 0 15px rgba(251, 113, 133, 0.08);
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-header-green,
+html.dark .skill-header-green,
+html[data-theme="dark"] .skill-header-green {
+  color: #34d399 !important; /* Vibrant luminous emerald 400 */
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-header-amber,
+html.dark .skill-header-amber,
+html[data-theme="dark"] .skill-header-amber {
+  color: #fbbf24 !important; /* Vibrant luminous amber 400 */
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-header-rose,
+html.dark .skill-header-rose,
+html[data-theme="dark"] .skill-header-rose {
+  color: #fb7185 !important; /* Vibrant luminous rose 400 */
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-badge-green,
+html.dark .skill-badge-green,
+html[data-theme="dark"] .skill-badge-green {
+  background-color: rgba(52, 211, 153, 0.2) !important;
+  color: #a7f3d0 !important; /* Bright emerald 200 */
+  border-color: rgba(52, 211, 153, 0.5) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-badge-amber,
+html.dark .skill-badge-amber,
+html[data-theme="dark"] .skill-badge-amber {
+  background-color: rgba(251, 191, 36, 0.2) !important;
+  color: #fde68a !important; /* Bright amber 200 */
+  border-color: rgba(251, 191, 36, 0.5) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-badge-rose,
+html.dark .skill-badge-rose,
+html[data-theme="dark"] .skill-badge-rose {
+  background-color: rgba(251, 113, 133, 0.2) !important;
+  color: #fecdd3 !important; /* Bright rose 200 */
+  border-color: rgba(251, 113, 133, 0.5) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-border-green,
+html.dark .skill-border-green,
+html[data-theme="dark"] .skill-border-green {
+  border-bottom: 1px solid rgba(52, 211, 153, 0.35) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-border-amber,
+html.dark .skill-border-amber,
+html[data-theme="dark"] .skill-border-amber {
+  border-bottom: 1px solid rgba(251, 191, 36, 0.35) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-border-rose,
+html.dark .skill-border-rose,
+html[data-theme="dark"] .skill-border-rose {
+  border-bottom: 1px solid rgba(251, 113, 133, 0.35) !important;
+}
+
+:root:not(.light):not([data-theme="light"]) .skill-item-text,
+html.dark .skill-item-text,
+html[data-theme="dark"] .skill-item-text {
+  color: #f4f4f5 !important; /* Pure crisp bright white/zinc */
+}
+
 /* --- Print Stylesheet for PDF Report Generation --- */
 @media print {
   @page {

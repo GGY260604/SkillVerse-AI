@@ -291,8 +291,54 @@ export function convertAssessmentToPlanData(
     atRiskSkillsLocalized?.zh ||
     [];
 
+  let finalSkillsGap = selectedRole.skillsGap || [];
+  let finalSkillsGapMs = skillsGapMs;
+  let finalSkillsGapZh = skillsGapZh;
+  let finalSkillsGapLocalized = skillsGapLocalized;
+
+  const roadmapSkillsToAcquire = (assessment.selectedRoleRoadmap as any)?.skillsToAcquire || (createdRoadmap as any)?.skillsToAcquire;
+  const roadmapSkillsToAcquireLoc = (assessment.selectedRoleRoadmap as any)?.skillsToAcquireLocalized || (createdRoadmap as any)?.skillsToAcquireLocalized;
+
+  // If candidate already mastered all baseline skills in the catalog (skillsGap is empty),
+  // dynamically populate Skills to Acquire from the roadmap's synthesized target competencies or phase objectives!
+  if (finalSkillsGap.length === 0 && Array.isArray(roadmapSkillsToAcquire) && roadmapSkillsToAcquire.length > 0) {
+    finalSkillsGap = roadmapSkillsToAcquire;
+    finalSkillsGapMs = roadmapSkillsToAcquireLoc?.ms || finalSkillsGap;
+    finalSkillsGapZh = roadmapSkillsToAcquireLoc?.zh || finalSkillsGap;
+    finalSkillsGapLocalized = roadmapSkillsToAcquireLoc || {
+      en: finalSkillsGap,
+      ms: finalSkillsGapMs,
+      zh: finalSkillsGapZh,
+    };
+  } else if (finalSkillsGap.length === 0 && phases.length > 0) {
+    const extractedEn: string[] = [];
+    const extractedMs: string[] = [];
+    const extractedZh: string[] = [];
+
+    phases.forEach((p) => {
+      const enObj = p.tasks?.[0] || p.title;
+      const msObj = p.objectivesLocalized?.ms?.[0] || p.titleLocalized?.ms || enObj;
+      const zhObj = p.objectivesLocalized?.zh?.[0] || p.titleLocalized?.zh || enObj;
+
+      if (enObj && !extractedEn.includes(enObj)) extractedEn.push(enObj);
+      if (msObj && !extractedMs.includes(msObj)) extractedMs.push(msObj);
+      if (zhObj && !extractedZh.includes(zhObj)) extractedZh.push(zhObj);
+    });
+
+    if (extractedEn.length > 0) {
+      finalSkillsGap = extractedEn.slice(0, 4);
+      finalSkillsGapMs = extractedMs.slice(0, 4);
+      finalSkillsGapZh = extractedZh.slice(0, 4);
+      finalSkillsGapLocalized = {
+        en: finalSkillsGap,
+        ms: finalSkillsGapMs,
+        zh: finalSkillsGapZh,
+      };
+    }
+  }
+
   return {
-    id: assessment.assessmentId,
+    id: (assessment as any).createdRoadmapId || (assessment as any).createdRoadmap?.id || assessment.assessmentId,
     isCurrent: true,
     code: `SV-${now.getFullYear()}-${roleCodeSuffix}`,
     date: dateStr,
@@ -310,10 +356,10 @@ export function convertAssessmentToPlanData(
     matchedStrengthsMs,
     matchedStrengthsZh,
     matchedStrengthsLocalized,
-    skillsGap: selectedRole.skillsGap || [],
-    skillsGapMs,
-    skillsGapZh,
-    skillsGapLocalized,
+    skillsGap: finalSkillsGap,
+    skillsGapMs: finalSkillsGapMs,
+    skillsGapZh: finalSkillsGapZh,
+    skillsGapLocalized: finalSkillsGapLocalized,
     atRiskSkills: selectedRole.atRiskCompetencies?.map((a) => a.skillName) || [],
     atRiskSkillsMs,
     atRiskSkillsZh,

@@ -57,6 +57,10 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
             profile=request.profile,
             locale=request.locale,
         )
+        if not target_role.skillsGap and roadmap and roadmap.skillsToAcquire:
+            target_role.skillsGap = list(roadmap.skillsToAcquire)
+            if roadmap.skillsToAcquireLocalized:
+                target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
 
     return AnalyzeResponsePayload(
         assessmentId=assessment_id,
@@ -198,6 +202,17 @@ async def synthesize_selected_role_roadmap(request: SynthesizeRoadmapRequest):
         profile=request.profile,
         locale=request.locale,
     )
+
+    if not target_role.skillsGap and roadmap and roadmap.skillsToAcquire:
+        target_role.skillsGap = list(roadmap.skillsToAcquire)
+        if roadmap.skillsToAcquireLocalized:
+            target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
+
+    for r in top_roles_to_save:
+        if r.roleId == target_role.roleId:
+            r.skillsGap = target_role.skillsGap
+            r.skillsGapLocalized = target_role.skillsGapLocalized
+            break
 
     return SynthesizeRoadmapResponse(
         assessmentId=assessment_id,
