@@ -20,11 +20,10 @@
 | Resource          | Link                                                              |
 | ----------------- | ----------------------------------------------------------------- |
 | GitHub Repository | https://github.com/njwongzhe/SkillVerse-AI                        |
-| Replit Project    | https://replit.com/@ngjaawei/SkillVerse-AI                        |
 | Live Demo         | • **Custom Domain:** https://www.skillverse-ai.site/<br>• **Vercel Mirror:** https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/<br>• **Replit Mirror:** https://skill-verse-ai.replit.app |
 | RunPod Endpoint   | https://l4ljrq2b0cwesb-8000.proxy.runpod.net/                     |
-| Slide Deck        |                                                                   |
-| Demo Video        |                                                                   |
+| Slide Deck        | https://github.com/njwongzhe/SkillVerse-AI/blob/main/docs/Slide%20Deck/ |
+| Demo Video        | • **Youtube Link:** https://youtu.be/s7jrfcFnFH4<br>• **Backup Drive Link:** https://drive.google.com/file/d/15MBqt01OAL4nsIwFX8uJAyRgwJDxZaga/view?usp=sharing |
 
 ---
 
@@ -75,76 +74,82 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 
 ```
 .
-├── messages/                            # Internationalization dictionaries (next-intl)
-│   ├── en.json                          # English translations
-│   ├── ms.json                          # Bahasa Melayu translations
-│   └── zh.json                          # Simplified Chinese translations
-├── prisma/                              # Database schema & migrations
-│   ├── schema.prisma                    # Prisma ORM schema with PostgreSQL + pgvector
-│   ├── migrations/                      # SQL migration history
-│   └── seed.sql                         # ESCO skills & taxonomy seed records
-├── public/                              # Static public assets, branding & icons
-├── src/
-│   ├── app/                             # Next.js 16 App Router
-│   │   ├── [locale]/                    # Localized page routes (home, analysis, shared)
-│   │   │   ├── error.tsx                # Error boundary
-│   │   │   ├── layout.tsx               # Layout
-│   │   │   ├── loading.tsx              # Loading state
-│   │   │   ├── not-found.tsx            # 404 Not Found page
-│   │   │   ├── page.tsx                 # Landing page & labor market telemetry
-│   │   │   ├── analysis/page.tsx        # Career analysis & reskilling dashboard
-│   │   │   └── shared/page.tsx          # Team competency heatmap & shared plans
-│   │   ├── api/                         # Next.js server route handlers
-│   │   ├   │── _lib/                    # Library functions for route handlers
-│   │   │   ├── analysis/                # Roadmap creation, update & verification APIs
-│   │   │   ├── auth/                    # User authentication & session endpoints
-│   │   │   ├── home/                    # Live labor market telemetry proxy
-│   │   │   ├── profile/                 # User profile management APIs
-│   │   │   └── shared/                  # Roadmap sharing & team matrix benchmarking
-│   │   ├── globals.css                  # Tailwind CSS v4 design tokens & theme layers
-│   │   ├── layout.tsx                   # Layout
-│   │   └── not-found.tsx                # 404 Not Found page
-│   ├── components/                      # Modular UI component tree
-│   │   ├── DarkLightSwitche.tsx         # Dark/Light mode switcher
-│   │   ├── Footer.tsx                   # Footer component
-│   │   ├── Header.tsx                   # Header component
-│   │   ├── LoadingSpinner.tsx           # Loading spinner component
-│   │   ├── Logo.tsx                     # Logo component
-│   │   ├── analysis/                    # Career roadmap cards, quizzes & flow details
-│   │   ├── auth/                        # Login, registration & user profile modals
-│   │   ├── home/                        # Labor market trends & trajectory charts
-│   │   └── shared/                      # Heatmap matrix visualization & PDF exporter
-│   ├── constants/                       # System configuration & platform constants
-│   ├── context/                         # Client-side React context providers (Auth, EXP, Theme)
-│   ├── lib/                             # Core utilities (i18n, Supabase, PDF generation)
-│   ├── middleware.ts                    # Routing middleware for next-intl & auth protection
-│   └── fastapi/                         # Python AI & GPU Microservice
-│       ├── .dockerignore                # Dockerignore file for .env protection
-│       ├── .env.example                 # Example environment variables template
-│       ├── config.py                    # 26-key circular Gemini rotation & env config
-│       ├── Dockerfile                   # Container build for GPU cloud deployment
-│       ├── main.py                      # FastAPI application entry point
-│       ├── README.md                    # FastAPI application documentation
-│       ├── requirements.txt             # Python dependencies (PyTorch, FastAPI, etc.)
-│       ├── runpod_setup.sh              # RunPod serverless GPU environment initialization
-│       ├── routers/                     # API endpoints (analyze, extract, trends, quiz)
-│       ├── schemas/                     # Pydantic validation schemas
-│       └── services/                    # Core AI & inference services
-├── submission/                          # Competition deliverables
-│   ├── SDC2026_TeamName_Preliminary.pdf      # Preliminary submission
-│   ├── SDC2026_TeamName_TechDeclaration.pdf  # Technology declaration
-│   ├── SDC2026_TeamName_Replit_POU.pdf       # Replit proof of use
-│   └── SDC2026_TeamName_Runpod_POU.pdf       # RunPod proof of use
-├── .dockerignore                        # Dockerignore file for .env protection
-├── .env.example                         # Example environment variables template
-├── .gitignore                           # Git ignore file
-├── eslint.config.mjs                    # ESLint configuration
-├── LICENSE                              # Project license
-├── next.config.ts                       # Next.js configuration
-├── package-lock.json                    # Node.js dependencies and run scripts
-├── package.json                         # Node.js dependencies and run scripts
-├── README.md                            # Comprehensive project documentation
-└── tsconfig.json                        # TypeScript compiler configuration
+├── docs/                                # All documents related to the project.
+│   ├── Simple Project Box Diagram.png   # System architecture diagram.
+│   └── Slide Deck/                      # Slide deck of the project.
+│       ├── Slide Deck.html              # HTML version of slide deck.
+│       ├── Slide Deck.pdf               # PDF version of slide deck.
+│       └── Slide Deck.pptx              # PowerPoint version of slide deck.
+├── messages/                            # Internationalization dictionaries (next-intl).
+│   ├── en.json                          # English translations.
+│   ├── ms.json                          # Bahasa Melayu translations.
+│   └── zh.json                          # Simplified Chinese translations.
+├── prisma/                              # Database schema & migrations.
+│   ├── schema.prisma                    # Prisma ORM schema with PostgreSQL + pgvector.
+│   ├── migrations/                      # SQL migration history.
+│   └── seed.sql                         # ESCO skills & taxonomy seed records.
+├── public/                              # Static public assets, branding & icons.
+├── src/                                 # All source code.
+│   ├── app/                             # Next.js 16 App Router.
+│   │   ├── [locale]/                    # Localized page routes (home, analysis, shared).
+│   │   │   ├── error.tsx                # Error boundary.
+│   │   │   ├── layout.tsx               # Layout.
+│   │   │   ├── loading.tsx              # Loading state.
+│   │   │   ├── not-found.tsx            # 404 Not Found page.
+│   │   │   ├── page.tsx                 # Landing page & labor market telemetry.
+│   │   │   ├── analysis/page.tsx        # Career analysis & reskilling dashboard.
+│   │   │   └── shared/page.tsx          # Team competency heatmap & shared plans.
+│   │   ├── api/                         # Next.js server route handlers.
+│   │   ├   │── _lib/                    # Library functions for route handlers.
+│   │   │   ├── analysis/                # Roadmap creation, update & verification APIs.
+│   │   │   ├── auth/                    # User authentication & session endpoints.
+│   │   │   ├── home/                    # Live labor market telemetry proxy.
+│   │   │   ├── profile/                 # User profile management APIs.
+│   │   │   └── shared/                  # Roadmap sharing & team matrix benchmarking.
+│   │   ├── globals.css                  # Tailwind CSS v4 design tokens & theme layers.
+│   │   ├── layout.tsx                   # Layout.
+│   │   └── not-found.tsx                # 404 Not Found page.
+│   ├── components/                      # Modular UI component tree.
+│   │   ├── DarkLightSwitche.tsx         # Dark/Light mode switcher.
+│   │   ├── Footer.tsx                   # Footer component.
+│   │   ├── Header.tsx                   # Header component.
+│   │   ├── LoadingSpinner.tsx           # Loading spinner component.
+│   │   ├── Logo.tsx                     # Logo component.
+│   │   ├── analysis/                    # Career roadmap cards, quizzes & flow details.
+│   │   ├── auth/                        # Login, registration & user profile modals.
+│   │   ├── home/                        # Labor market trends & trajectory charts.
+│   │   └── shared/                      # Heatmap matrix visualization & PDF exporter.
+│   ├── constants/                       # System configuration & platform constants.
+│   ├── context/                         # Client-side React context providers (Auth, EXP, Theme).
+│   ├── lib/                             # Core utilities (i18n, Supabase, PDF generation).
+│   ├── middleware.ts                    # Routing middleware for next-intl & auth protection.
+│   └── fastapi/                         # Python AI & GPU Microservice.
+│       ├── .dockerignore                # Dockerignore file for .env protection.
+│       ├── .env.example                 # Example environment variables template.
+│       ├── config.py                    # 26-key circular Gemini rotation & env config.
+│       ├── Dockerfile                   # Container build for GPU cloud deployment.
+│       ├── main.py                      # FastAPI application entry point.
+│       ├── README.md                    # FastAPI application documentation.
+│       ├── requirements.txt             # Python dependencies (PyTorch, FastAPI, etc.).
+│       ├── runpod_setup.sh              # RunPod serverless GPU environment initialization.
+│       ├── routers/                     # API endpoints (analyze, extract, trends, quiz).
+│       ├── schemas/                     # Pydantic validation schemas.
+│       └── services/                    # Core AI & inference services.
+├── submission/                          # Competition deliverables.
+│   ├── SDC2026_TeamName_Preliminary.pdf      # Preliminary submission.
+│   ├── SDC2026_TeamName_TechDeclaration.pdf  # Technology declaration.
+│   ├── SDC2026_TeamName_Replit_POU.pdf       # Replit proof of use.
+│   └── SDC2026_TeamName_Runpod_POU.pdf       # RunPod proof of use.
+├── .dockerignore                        # Dockerignore file for .env protection.
+├── .env.example                         # Example environment variables template.
+├── .gitignore                           # Git ignore file.
+├── eslint.config.mjs                    # ESLint configuration.
+├── LICENSE                              # Project license.
+├── next.config.ts                       # Next.js configuration.
+├── package-lock.json                    # Node.js dependencies and run scripts.
+├── package.json                         # Node.js dependencies and run scripts.
+├── README.md                            # Comprehensive project documentation.
+└── tsconfig.json                        # TypeScript compiler configuration.
 ```
 
 ### Architecture
@@ -173,6 +178,8 @@ User
              ├── ArXiv API (cs.AI Research Velocity Calculation)
              └── RemoteOK API (Live Job Market Demand Signals)
 ```
+
+![SkillVerse AI System Architecture & Pipeline](docs/Simple%20Project%20Box%20Diagram.png)
 
 ---
 
@@ -342,8 +349,8 @@ curl -X POST https://l4ljrq2b0cwesb-8000.proxy.runpod.net/embed \
 ## Submission Checklist
 
 - [/] Team name, domain (Domain 1 / Domain 2) and SDG track filled in
-- [ ] Slide deck link added
-- [ ] Demo video link added
+- [/] Slide deck link added
+- [/] Demo video link added
 - [/] Replit used, with proof of use in `submission/`
 - [/] RunPod used, with proof of use in `submission/`
 - [/] Preliminary submission completed (`SDC2026_TeamName_Preliminary.pdf`)
