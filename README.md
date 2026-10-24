@@ -23,7 +23,7 @@
 | Live Demo         | • **Custom Domain:** https://www.skillverse-ai.site/<br>• **Vercel Mirror:** https://skill-verse-ai-git-main-ng-jaa-wei-s-projects.vercel.app/<br>• **Replit Mirror:** https://skill-verse-ai.replit.app |
 | RunPod Endpoint   | https://l4ljrq2b0cwesb-8000.proxy.runpod.net/                     |
 | Slide Deck        | https://github.com/njwongzhe/SkillVerse-AI/blob/main/docs/Slide%20Deck/ |
-| Demo Video        | • **Youtube Link:** https://youtu.be/s7jrfcFnFH4<br>• **Backup Drive Link:** https://drive.google.com/file/d/15MBqt01OAL4nsIwFX8uJAyRgwJDxZaga/view?usp=sharing |
+| Demo Video        | • **Youtube Link:** https://youtu.be/s7jrfcFnFH4<br>• **Backup Drive Link:** https://tinyurl.com/42by65y2 |
 
 ---
 
