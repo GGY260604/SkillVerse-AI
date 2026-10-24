@@ -35,5 +35,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD curl -f http://localhost:${PORT}/ping || exit 1
 
-# Start Uvicorn ASGI server with dynamic port support
-CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+# Start Uvicorn ASGI server explicitly bound to 0.0.0.0:8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
