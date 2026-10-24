@@ -68,6 +68,14 @@ async def root():
     }
 
 
+@app.get("/ping", tags=["Health"])
+async def ping():
+    """
+    RunPod Serverless health check endpoint.
+    """
+    return {"status": "healthy"}
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """
