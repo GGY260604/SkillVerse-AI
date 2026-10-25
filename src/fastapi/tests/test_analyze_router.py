@@ -207,8 +207,9 @@ async def test_team_matrix_intelligence_tier1_qwen(monkeypatch):
 async def test_team_matrix_intelligence_tier2_gemini_fallback(monkeypatch):
     """Verifies evaluate_team_skill_matrix falls back to Tier 2 Gemini when Qwen fails."""
     from schemas.team import TeamSkillMatrixRequest
-    from services.analyze.team_matrix_service import evaluate_team_skill_matrix
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix, clear_team_matrix_cache
 
+    clear_team_matrix_cache()
     gemini_called = False
 
     async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
@@ -266,7 +267,9 @@ async def test_team_matrix_intelligence_tier2_gemini_fallback(monkeypatch):
 async def test_team_matrix_intelligence_tier3_deterministic_fallback(monkeypatch):
     """Verifies evaluate_team_skill_matrix falls back to Tier 3 deterministic template when both LLMs fail."""
     from schemas.team import TeamSkillMatrixRequest
-    from services.analyze.team_matrix_service import evaluate_team_skill_matrix
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix, clear_team_matrix_cache
+
+    clear_team_matrix_cache()
 
     async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
         raise ConnectionError("Ollama daemon offline")
@@ -297,4 +300,44 @@ async def test_team_matrix_intelligence_tier3_deterministic_fallback(monkeypatch
     assert "Professional Masterclass" in rec.courseTitle
     assert rec.durationHours == 16
     assert result.cohortSummary.executiveInsight is not None
+
+
+@pytest.mark.asyncio
+async def test_team_matrix_in_memory_cache(monkeypatch):
+    """Verifies evaluate_team_skill_matrix returns cached response on duplicate request."""
+    from schemas.team import TeamSkillMatrixRequest
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix, clear_team_matrix_cache
+
+    clear_team_matrix_cache()
+    call_count = 0
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        nonlocal call_count
+        call_count += 1
+        return {
+            "recommendations": [],
+            "executiveInsight": "Cached insight test",
+        }
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+
+    req = TeamSkillMatrixRequest(
+        targetRoleTitle="Cloud Platform Engineer",
+        customRequiredSkills=["Kubernetes", "Linux"],
+        teamMembers=[
+            {
+                "userId": "user-cache-1",
+                "name": "Cache Tester",
+                "skills": [{"name": "Linux", "proficiency": "advanced"}],
+            }
+        ],
+        locale="en",
+    )
+
+    res1 = await evaluate_team_skill_matrix(req)
+    assert call_count == 1
+    res2 = await evaluate_team_skill_matrix(req)
+    # Second call must hit cache without incrementing LLM call count
+    assert call_count == 1
+    assert res1.targetRoleTitle == res2.targetRoleTitle
 

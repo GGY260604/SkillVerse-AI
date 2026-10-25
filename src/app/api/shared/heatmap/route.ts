@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify(fastApiPayload),
       },
-      { timeoutMs: 30000 }
+      { timeoutMs: 90_000 }
     );
 
     if (!fastApiResponse.ok) {

@@ -3,6 +3,8 @@ import math
 import time
 import logging
 import re
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -407,7 +409,7 @@ TASK & CONSTRAINTS:
         raw_response = await call_local_llm_json(
             prompt=prompt,
             system_instruction="You are a Chief Workforce L&D and Human Capital Analytics Strategist for enterprise upskilling programs. Output valid JSON only.",
-            timeout=25.0,
+            timeout=16.0,
         )
         if raw_response and isinstance(raw_response, dict) and raw_response.get("recommendations"):
             logger.info(f"[team_matrix] Tier 1 Success: Qwen 2.5 synthesized cohort intelligence.")
@@ -515,6 +517,35 @@ TASK & CONSTRAINTS:
     return parsed_recommendations, exec_insight, exec_insight_loc
 
 
+# In-memory TTL cache for team matrix evaluation (15 min TTL)
+_team_matrix_cache: Dict[str, Tuple[TeamSkillMatrixResponse, float]] = {}
+_CACHE_TTL_SECONDS = 900.0
+
+
+def _compute_team_matrix_cache_key(request: TeamSkillMatrixRequest) -> str:
+    members_repr = []
+    for m in sorted(request.teamMembers, key=lambda x: str(x.userId or x.email or x.name)):
+        skills_tuple = tuple(sorted((s.name.lower().strip(), str(getattr(s.proficiency, 'value', s.proficiency))) for s in m.skills))
+        strengths_tuple = tuple(sorted(ms.lower().strip() for ms in (m.matchedStrengths or [])))
+        members_repr.append((str(m.userId or m.name), skills_tuple, strengths_tuple))
+
+    key_data = {
+        "roleId": request.targetRoleId or "",
+        "roleTitle": (request.targetRoleTitle or "").lower().strip(),
+        "locale": (request.locale or "en").lower().strip(),
+        "macro": str(request.macroScenario),
+        "customSkills": sorted(request.customRequiredSkills or []),
+        "members": members_repr,
+    }
+    raw_str = json.dumps(key_data, sort_keys=True)
+    return hashlib.sha256(raw_str.encode("utf-8")).hexdigest()
+
+
+def clear_team_matrix_cache() -> None:
+    """Clears the in-memory team matrix evaluation cache (useful for testing or manual eviction)."""
+    _team_matrix_cache.clear()
+
+
 async def evaluate_team_skill_matrix(
     request: TeamSkillMatrixRequest,
 ) -> TeamSkillMatrixResponse:
@@ -530,6 +561,16 @@ async def evaluate_team_skill_matrix(
       - Management deficit metrics and HRD Corp claimable cohort reskilling recommendations.
     """
     locale = request.locale or "en"
+
+    # 0. Check in-memory TTL cache
+    cache_key = _compute_team_matrix_cache_key(request)
+    now = time.time()
+    if cache_key in _team_matrix_cache:
+        cached_resp, timestamp = _team_matrix_cache[cache_key]
+        if now - timestamp < _CACHE_TTL_SECONDS:
+            logger.info(f"[team-matrix] Cache hit! Returning pre-computed team matrix for key {cache_key[:8]}")
+            return cached_resp
+
     active_roles = await fetch_active_roles_from_supabase()
     if not active_roles:
         active_roles = DEFAULT_BENCHMARK_ROLES
@@ -591,7 +632,7 @@ async def evaluate_team_skill_matrix(
                         title=request.targetRoleTitle,
                         user_skills=user_skill_sample,
                     ),
-                    timeout=25.0,
+                    timeout=20.0,
                 )
                 if synth_role:
                     target_role_dict = synth_role
@@ -959,7 +1000,7 @@ async def evaluate_team_skill_matrix(
         executiveInsightLocalized=exec_insight_loc,
     )
 
-    return TeamSkillMatrixResponse(
+    response = TeamSkillMatrixResponse(
         targetRoleId=role_id,
         targetRoleTitle=title_loc.get(locale, role_title),
         targetRoleTitleLocalized=title_loc,
@@ -971,3 +1012,12 @@ async def evaluate_team_skill_matrix(
         cohortSummary=cohort_summary,
         analyzedAt=datetime.now(timezone.utc).isoformat(),
     )
+
+    # Store in cache
+    _team_matrix_cache[cache_key] = (response, now)
+    if len(_team_matrix_cache) > 100:
+        for k in list(_team_matrix_cache.keys()):
+            if now - _team_matrix_cache[k][1] > _CACHE_TTL_SECONDS:
+                _team_matrix_cache.pop(k, None)
+
+    return response
