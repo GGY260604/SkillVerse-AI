@@ -8,12 +8,17 @@ set -e
 echo "=== [1/4] Checking and installing dependencies ==="
 cd "$(dirname "$0")"
 
-# Pin exact compatible versions for PyTorch 2.x
-pip install --no-cache-dir "sentence-transformers<3.5.0" "transformers<4.45.0,>=4.40.0" "huggingface-hub<1.0.0"
+# Install system libraries for OpenCV & PaddleOCR if apt-get is available
+if command -v apt-get &> /dev/null; then
+    apt-get update -qq && apt-get install -y -qq libgl1 libglib2.0-0 > /dev/null 2>&1 || true
+fi
+
+pip install --no-cache-dir --upgrade pip
 pip install --no-cache-dir -r requirements.txt
 
-echo "=== [2/4] Pre-caching BAAI/bge-m3 on GPU ==="
+echo "=== [2/4] Pre-caching BAAI/bge-m3 and GLiNER on GPU ==="
 python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
+python -c "from gliner import GLiNER; GLiNER.from_pretrained('urchade/gliner_multi-v2.1')" || true
 
 echo "=== [3/4] Terminating any stale uvicorn instances ==="
 pkill -f uvicorn || true

@@ -2,18 +2,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (including libgomp1 for PyTorch / ONNX Runtime)
+# Install system dependencies (including libgomp1, libgl1, libglib2.0-0 for OpenCV / PaddleOCR / PyTorch)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
     libgomp1 \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     ENABLE_LOCAL_BGE_M3=true \
+    ENABLE_LOCAL_GLINER=true \
     HF_HOME=/app/cache/huggingface \
     PORT=8000
 
@@ -22,8 +25,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Pre-download BAAI/bge-m3 model weights into container image to eliminate runtime cold-start timeouts
+# Pre-download BAAI/bge-m3 and GLiNER model weights into container image to eliminate runtime cold-start timeouts
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
+RUN python -c "from gliner import GLiNER; GLiNER.from_pretrained('urchade/gliner_multi-v2.1')"
 
 # Copy source code into app root (excluded .venv and cache via .dockerignore)
 COPY . /app

@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     RUNPOD_API_KEY: str = os.getenv("RUNPOD_API_KEY", "")
     ENABLE_LOCAL_BGE_M3: bool = os.getenv("ENABLE_LOCAL_BGE_M3", "false").lower() in ["1", "true", "yes"]
 
+    # Local LLM Inference Engine (Ollama / vLLM / OpenAI-compatible endpoint)
+    ENABLE_LOCAL_LLM: bool = os.getenv("ENABLE_LOCAL_LLM", "true").lower() in ["1", "true", "yes"]
+    LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1")
+    LOCAL_LLM_MODEL: str = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b")
+    LOCAL_LLM_API_KEY: str = os.getenv("LOCAL_LLM_API_KEY", "ollama")
+
+    # Local PII Sanitization via GLiNER (Zero-shot Named Entity Recognition)
+    ENABLE_LOCAL_GLINER: bool = os.getenv("ENABLE_LOCAL_GLINER", "true").lower() in ["1", "true", "yes"]
+    GLINER_MODEL_NAME: str = os.getenv("GLINER_MODEL_NAME", "urchade/gliner_multi-v2.1")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Collect all populated GEMINI_API_KEY_* keys from environment
