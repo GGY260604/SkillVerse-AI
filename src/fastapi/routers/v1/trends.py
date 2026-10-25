@@ -178,7 +178,8 @@ async def trigger_live_trend_sync():
     Actively triggers a live synchronization pipeline:
     1. Ingests fresh real-time research abstracts from ArXiv (cs.AI).
     2. Ingests live tech job postings from RemoteOK.
-    3. Uses Gemini 1.5 Flash batch extraction to compute skill velocities.
+    3. Uses 3-Tier LLM Intelligence (Tier 1: Local Qwen 2.5 -> Tier 2: Gemini API -> Tier 3: Deterministic Fallback)
+       to extract emerging vs. declining skill velocities and occupational roles.
     4. Upserts fresh trend signals and explicit capture timestamps into Supabase.
     Can be invoked manually or scheduled via Supabase pg_cron.
     """

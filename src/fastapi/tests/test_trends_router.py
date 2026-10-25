@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch, AsyncMock
 from starlette.testclient import TestClient
 from routers.v1.trends import invalidate_trends_cache, _trends_cache
@@ -114,3 +115,145 @@ def test_sync_trends_endpoint(mock_sync, client: TestClient):
     data = response.json()
     assert data["success"] is True
     assert data["syncedCount"] == 10
+
+
+@pytest.mark.asyncio
+async def test_sync_live_trend_signals_tier1_qwen(monkeypatch):
+    """Verifies sync_live_trend_signals_to_supabase uses Tier 1 Local Qwen 2.5 when available."""
+    from services.trends.trend_sync_service import sync_live_trend_signals_to_supabase
+
+    mock_feed_items = [
+        {"source": "ArXiv cs.AI", "title": "Paper on Agents", "snippet": "Autonomous agents using RAG", "url": "https://arxiv.org/1", "publishedAt": "2026-10-25"},
+        {"source": "RemoteOK Job Feed", "title": "AI Engineer", "snippet": "Active tags: python, agents", "url": "https://remoteok.com/1", "publishedAt": "2026-10-25"},
+    ]
+
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_arxiv_signals", AsyncMock(return_value=mock_feed_items[:1]))
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_remoteok_signals", AsyncMock(return_value=mock_feed_items[1:]))
+
+    qwen_called = False
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=35.0):
+        nonlocal qwen_called
+        qwen_called = True
+        return {
+            "trendSignals": [
+                {
+                    "skillName": "agentic ai systems",
+                    "skillName_ms": "sistem ai berautonomi",
+                    "skillName_zh": "自主 AI 智能体系统",
+                    "category": "Artificial Intelligence",
+                    "status": "emerging",
+                    "velocityVs": 0.70,
+                    "sourceName": "ArXiv cs.AI",
+                    "sourceUrl": "https://arxiv.org/1",
+                    "citation": "Surge in multi-agent orchestration.",
+                }
+            ],
+            "emergingRoles": [],
+        }
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+
+    mock_resp = AsyncMock()
+    mock_resp.status_code = 200
+    mock_resp.json = lambda: []
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+    mock_client.post.return_value = mock_resp
+    monkeypatch.setattr("services.trends.trend_sync_service.get_shared_client", lambda timeout=None: mock_client)
+
+    result = await sync_live_trend_signals_to_supabase()
+    assert qwen_called is True
+    assert result["success"] is True
+    assert result["tierUsed"] == "qwen"
+    assert result["syncedCount"] == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_live_trend_signals_tier2_gemini_fallback(monkeypatch):
+    """Verifies sync_live_trend_signals_to_supabase falls back to Tier 2 Gemini when Qwen fails."""
+    from services.trends.trend_sync_service import sync_live_trend_signals_to_supabase
+
+    mock_feed_items = [
+        {"source": "ArXiv cs.AI", "title": "Paper on Agents", "snippet": "Autonomous agents", "url": "https://arxiv.org/1", "publishedAt": "2026-10-25"},
+    ]
+
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_arxiv_signals", AsyncMock(return_value=mock_feed_items))
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_remoteok_signals", AsyncMock(return_value=[]))
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=35.0):
+        raise ConnectionError("Ollama offline")
+
+    gemini_called = False
+
+    async def mock_call_gemini_with_fallback(contents, **kwargs):
+        nonlocal gemini_called
+        gemini_called = True
+        return {
+            "trendSignals": [
+                {
+                    "skillName": "retrieval-augmented generation",
+                    "category": "Artificial Intelligence",
+                    "status": "emerging",
+                    "velocityVs": 0.60,
+                    "sourceName": "ArXiv cs.AI",
+                    "sourceUrl": "https://arxiv.org/1",
+                    "citation": "Gemini fallback extracted citation.",
+                }
+            ],
+            "emergingRoles": [],
+        }
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.trends.trend_sync_service.call_gemini_with_fallback", mock_call_gemini_with_fallback)
+
+    mock_resp = AsyncMock()
+    mock_resp.status_code = 200
+    mock_resp.json = lambda: []
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+    mock_client.post.return_value = mock_resp
+    monkeypatch.setattr("services.trends.trend_sync_service.get_shared_client", lambda timeout=None: mock_client)
+
+    result = await sync_live_trend_signals_to_supabase()
+    assert gemini_called is True
+    assert result["success"] is True
+    assert result["tierUsed"] == "gemini"
+    assert result["syncedCount"] == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_live_trend_signals_tier3_deterministic_fallback(monkeypatch):
+    """Verifies sync_live_trend_signals_to_supabase falls back to Tier 3 deterministic floor when both LLMs fail."""
+    from services.trends.trend_sync_service import sync_live_trend_signals_to_supabase
+
+    mock_feed_items = [
+        {"source": "ArXiv cs.AI", "title": "Paper on Agents", "snippet": "Autonomous agents", "url": "https://arxiv.org/1", "publishedAt": "2026-10-25"},
+    ]
+
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_arxiv_signals", AsyncMock(return_value=mock_feed_items))
+    monkeypatch.setattr("services.trends.trend_sync_service.fetch_live_remoteok_signals", AsyncMock(return_value=[]))
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=35.0):
+        raise ConnectionError("Ollama offline")
+
+    async def mock_call_gemini_with_fallback(contents, **kwargs):
+        raise RuntimeError("Gemini quota exhausted")
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.trends.trend_sync_service.call_gemini_with_fallback", mock_call_gemini_with_fallback)
+    monkeypatch.setattr("services.trends.trend_sync_service.generate_embeddings_batch", AsyncMock(return_value=[[0.1] * 1024]))
+
+    mock_resp = AsyncMock()
+    mock_resp.status_code = 200
+    mock_resp.json = lambda: []
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+    mock_client.post.return_value = mock_resp
+    monkeypatch.setattr("services.trends.trend_sync_service.get_shared_client", lambda timeout=None: mock_client)
+
+    result = await sync_live_trend_signals_to_supabase()
+    assert result["success"] is True
+    assert result["tierUsed"] == "deterministic"
+    assert result["syncedCount"] >= 1
+    assert result["syncedRolesCount"] >= 1
