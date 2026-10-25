@@ -57,3 +57,4 @@ class SkillSearchResponse(BaseModel):
     visualization: SkillTrendVisualization = Field(description="Visualization metrics and time-series points")
     suggestedRoles: List[EscoRoleSuggested] = Field(default_factory=list, description="Top 5 closest occupational roles in ESCO format")
     locale: str = Field(default="en", description="Response target language locale")
+    tierUsed: Optional[str] = Field(default=None, description="Inference tier used: qwen, gemini, deterministic, or database")

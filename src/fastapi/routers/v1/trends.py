@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, HTTPException
 from config import settings
 from services.trends import sync_live_trend_signals_to_supabase, search_and_analyze_skill
 from services.http_client import get_shared_client
-from schemas.trends import SkillSearchRequest, SkillSearchResponse
+from schemas.trends import SkillSearchResponse
 
 router = APIRouter()
 
@@ -188,27 +188,6 @@ async def trigger_live_trend_sync():
     invalidate_trends_cache()
     return result
 
-
-@router.post("/trends/search", response_model=SkillSearchResponse)
-async def search_skill_trend_post(payload: SkillSearchRequest):
-    """
-    Analyzes a user-searched skill or competency:
-    1. First uses BAAI/bge-m3 dense semantic embeddings + lexical match to find the skill in trend_signals.
-    2. If found, returns its velocity score, market trend, 7-period visualization curve, and 5 closest ESCO roles.
-    3. If not found, prompts Gemini Flash to synthesize the skill trend in trilingual format and 5 suggested roles,
-       persists the new skill into trend_signals, embeds and persists the new roles into esco_roles, and returns them.
-    """
-    try:
-        response = await search_and_analyze_skill(
-            query=payload.query,
-            locale=payload.locale or "en",
-        )
-        if response.isNewSkillSynthesized:
-            invalidate_trends_cache()
-        return response
-    except Exception as e:
-        print(f"[trends_router] Error searching skill '{payload.query}': {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/trends/search", response_model=SkillSearchResponse)

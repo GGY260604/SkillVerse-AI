@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchWithFastApiFallback } from "@/app/api/_lib/fastapi/client";
 
 // --- Route Handler ---
-// Endpoint: GET /api/home/skilltrend & POST /api/home/skilltrend
+// Endpoint: GET /api/home/skilltrend
 // Target Service: Proxies requests to FastAPI backend service (/api/v1/trends/search).
 // Data Source: Evaluates skill velocity, predictive time series, and aligned ESCO roles.
 // Parameters: Accepts skill search query and locale parameter for trilingual localization.
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       headers: {
         Accept: "application/json",
       },
-    }, { timeoutMs: 25000 });
+    }, { timeoutMs: 70000 });
 
     // 4. Response Parsing
     // Parse JSON payload returned by upstream Python analytics engine.
@@ -64,76 +64,6 @@ export async function GET(request: NextRequest) {
     // Catch unhandled exceptions and return structured gateway error payload.
     const errorMessage = error instanceof Error ? error.message : "Internal server error.";
     console.error("[/api/home/skilltrend] Internal route error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: errorMessage,
-      },
-      { status: 502 }
-    );
-  }
-}
-
-// --- POST Request Handler ---
-// Analyze skill trajectory using JSON payload body for complex or long query structures.
-export async function POST(request: NextRequest) {
-  try {
-    // 1. Request Body Parsing
-    // Extract JSON payload from incoming POST request.
-    const body = await request.json().catch(() => ({}));
-    const query = (body.query || "").toString().trim();
-    const locale = (body.locale || "en").toString().trim();
-
-    // 2. Input Validation
-    // Validate that query string exists and has length greater than zero.
-    if (!query) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Skill query is required.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // 3. Telemetry Ingestion from Upstream Service with Multi-Tier Failover
-    // Send POST payload to FastAPI backend trends search service.
-    const endpoint = "/api/v1/trends/search";
-    const response = await fetchWithFastApiFallback(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ query, locale }),
-    }, { timeoutMs: 25000 });
-
-    // 4. Response Parsing
-    // Verify HTTP status code from upstream engine.
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json(
-        {
-          success: false,
-          error: errorText || `FastAPI backend returned HTTP ${response.status}.`,
-        },
-        { status: response.status }
-      );
-    }
-
-    const payload = await response.json();
-
-    // 5. Successful Response Dispatch
-    // Return unified analysis payload to frontend client.
-    return NextResponse.json({
-      success: true,
-      ...payload,
-    });
-  } catch (error: unknown) {
-    // 6. Internal Route Error Handling
-    // Capture runtime exceptions and respond with gateway failure code.
-    const errorMessage = error instanceof Error ? error.message : "Internal server error.";
-    console.error("[/api/home/skilltrend] POST internal route error:", error);
     return NextResponse.json(
       {
         success: false,

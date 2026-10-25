@@ -3,7 +3,7 @@ import math
 import re
 import time
 import uuid
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Set
 
 from config import settings
 from services.http_client import get_shared_client
@@ -464,43 +464,94 @@ Return strictly valid JSON with this exact structure:
 
 async def synthesize_skill_and_roles_on_demand(query: str) -> Dict[str, Any]:
     """
-    Invokes Gemini Flash with automatic API key rotation and model fallback
-    to synthesize a novel skill entity, its market trend, and 5 related ESCO roles.
+    Synthesizes a novel skill entity, its market trend, and 5 related ESCO roles.
+    Uses 3-Tier LLM Architecture:
+      - Tier 1: Local Qwen 2.5 (via Ollama/vLLM)
+      - Tier 2: Gemini Flash API Fallback
+      - Tier 3: Zero-Failure Deterministic Fallback Floor
     """
     prompt = ON_DEMAND_SKILL_PROMPT.format(query=query)
-    contents = [{"parts": [{"text": prompt}]}]
+    sys_instruction = "You are the Market Intelligence & ESCO Taxonomy Engine. Return strictly valid JSON."
 
+    # Tier 1: Local Qwen 2.5 via Ollama
     try:
+        from services.local_llm_service import call_local_llm_json
+        print(f"[skill_search] Tier 1: Synthesizing novel skill '{query}' and roles via Local Qwen 2.5...")
+        qwen_res = await call_local_llm_json(
+            prompt=prompt,
+            system_instruction=sys_instruction,
+            timeout=55.0,
+        )
+        if qwen_res and isinstance(qwen_res, dict) and qwen_res.get("skill"):
+            print(f"[skill_search] Tier 1 Success: Qwen 2.5 synthesized skill and {len(qwen_res.get('suggestedRoles', []))} roles.")
+            qwen_res["tierUsed"] = "qwen"
+            return qwen_res
+    except Exception as qwen_err:
+        print(f"[skill_search] Tier 1 Qwen failed: {qwen_err}. Switching to Tier 2 Gemini fallback...")
+
+    # Tier 2: Gemini Flash Fallback
+    try:
+        print(f"[skill_search] Tier 2: Invoking Gemini Flash fallback for novel skill '{query}'...")
+        contents = [{"parts": [{"text": prompt}]}]
         data = await call_gemini_with_fallback(
             contents=contents,
-            system_instruction="You are the Market Intelligence & ESCO Taxonomy Engine. Return strictly valid JSON.",
+            system_instruction=sys_instruction,
             max_output_tokens=5500,
         )
-        return data
+        if data and isinstance(data, dict) and data.get("skill"):
+            print(f"[skill_search] Tier 2 Success: Gemini synthesized skill and {len(data.get('suggestedRoles', []))} roles.")
+            data["tierUsed"] = "gemini"
+            return data
     except Exception as e:
-        print(f"[skill_search] Error during Gemini on-demand synthesis: {e}")
-        # Construct heuristic fallback if Gemini is completely unavailable
-        canonical_name = query.strip().lower()
-        return {
-            "skill": {
-                "skillName": canonical_name,
-                "skillName_ms": canonical_name,
-                "skillName_zh": query.strip(),
-                "category": "Software Development",
-                "category_ms": "Pembangunan Perisian",
-                "category_zh": "软件工程与开发",
-                "status": "emerging",
-                "velocityVs": 0.35,
-                "currentWindowC": 15.0,
-                "pastWindowC": 11.0,
-                "sourceName": "Live Tech Market Feed",
-                "sourceUrl": "https://remoteok.com",
-                "citation": "Identified through live tech workforce telemetry.",
-                "citation_ms": "Dikenal pasti melalui telemetri tenaga kerja teknologi terkini.",
-                "citation_zh": "通过实时技术人才市场需求数据捕获。",
-            },
-            "suggestedRoles": [],
-        }
+        print(f"[skill_search] Tier 2 Gemini failed: {e}. Falling back to Tier 3 deterministic fallback...")
+
+    # Tier 3: Zero-Failure Deterministic Fallback Floor
+    canonical_name = query.strip().lower()
+    clean_title = query.strip().title()
+    clean_slug = re.sub(r"[^a-z0-9]+", "-", canonical_name).strip("-") or "tech-skill"
+
+    return {
+        "tierUsed": "deterministic",
+        "skill": {
+            "skillName": canonical_name,
+            "skillName_ms": canonical_name,
+            "skillName_zh": query.strip(),
+            "category": "Software Development",
+            "category_ms": "Pembangunan Perisian",
+            "category_zh": "软件工程与开发",
+            "status": "emerging",
+            "velocityVs": 0.38,
+            "currentWindowC": 18.0,
+            "pastWindowC": 13.0,
+            "sourceName": "Live Tech Market Feed",
+            "sourceUrl": "https://remoteok.com",
+            "citation": f"Rising adoption and hiring velocity for {clean_title} across technical engineering workflows.",
+            "citation_ms": f"Peningkatan pengambilan pekerja bagi {clean_title} merentas aliran kerja kejuruteraan teknikal.",
+            "citation_zh": f"{clean_title} 在现代软件架构与技术团队招聘需求中呈持续上升趋势。",
+        },
+        "suggestedRoles": [
+            {
+                "roleId": f"{clean_slug}-specialist",
+                "title": f"{clean_title} Specialist",
+                "title_ms": f"Pakar {clean_title}",
+                "title_zh": f"{clean_title} 技术专家",
+                "industry": "Responsible AI & Digital Transformation",
+                "description": f"Designs, deploys, and optimizes systems leveraging {clean_title} and modern software engineering practices.",
+                "requiredSkills": [clean_title, "System Architecture", "Cloud Infrastructure", "API Design", "Performance Optimization"],
+                "requiredSkills_ms": [clean_title, "Seni Bina Sistem", "Infrastruktur Awan", "Reka Bentuk API", "Pengoptimuman Prestasi"],
+                "requiredSkills_zh": [clean_title, "系统架构设计", "云基础设施", "API 接口设计", "系统性能优化"],
+                "sdgAlignment": "SDG 8.2",
+                "sdgTitle": "Technological upgrading & productivity",
+                "radarRequirements": {
+                    "Technical Aptitude": 85,
+                    "Domain Operations": 75,
+                    "Automation Resilience": 85,
+                    "Learning Agility": 85,
+                    "Strategic Leadership": 70,
+                },
+            }
+        ],
+    }
 
 
 async def persist_new_skill_to_supabase(skill_data: Dict[str, Any]) -> None:
@@ -557,86 +608,255 @@ async def persist_new_skill_to_supabase(skill_data: Dict[str, Any]) -> None:
         print(f"[skill_search] Warning: Failed to insert new skill to Supabase: {e}")
 
 
+def normalize_role_title(t: str) -> str:
+    """Normalizes role title for case-insensitive, punctuation-resilient matching."""
+    if not t:
+        return ""
+    cleaned = re.sub(r"[^\w\s]", " ", t.lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def slugify_role_title(t: str) -> str:
+    """Derives a clean, canonical slug from a role title."""
+    if not t:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
+
+
 async def persist_new_roles_to_supabase(
     roles: List[Dict[str, Any]],
     skill_embedding: Optional[List[float]] = None,
 ) -> List[EscoRoleSuggested]:
     """
-    Checks Supabase esco_roles table for existing roles, computes 1024-dim BGE-M3
-    dense embeddings for newly created roles, and batch-persists them into Supabase.
+    Checks Supabase esco_roles and active catalog for existing roles,
+    ensures strict deduplication across IDs, slugs, and trilingual titles,
+    computes 1024-dim BGE-M3 dense embeddings only for genuinely new roles,
+    and batch-persists them into Supabase.
     Returns standardized EscoRoleSuggested items.
     """
     if not roles:
         return []
 
-    base_url = settings.SUPABASE_URL.rstrip("/")
+    base_url = settings.SUPABASE_URL.rstrip("/") if settings.SUPABASE_URL else ""
     if base_url.endswith("/rest/v1"):
         base_url = base_url[:-8]
 
     headers = {
-        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY or "",
+        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY or ''}",
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates",
     }
 
     client = get_shared_client(timeout=15.0)
 
-    # Check which role IDs already exist in Supabase
-    existing_role_ids = set()
-    try:
-        role_ids_query = ",".join([r.get("roleId", "") for r in roles if r.get("roleId")])
-        if role_ids_query:
-            check_resp = await client.get(
-                f"{base_url}/rest/v1/esco_roles?role_id=in.({role_ids_query})&select=role_id",
-                headers=headers,
-            )
-            if check_resp.status_code == 200:
-                for row in check_resp.json():
-                    existing_role_ids.add(row.get("role_id"))
-    except Exception as e:
-        print(f"[skill_search] Warning: Could not check existing roles in Supabase: {e}")
+    # 1. Fetch active roles catalog from in-memory / Supabase (cached for 300s)
+    active_catalog = await fetch_active_roles_from_supabase()
 
-    # Prepare embeddings for new roles
-    roles_to_embed = []
+    catalog_by_id: Dict[str, Dict[str, Any]] = {}
+    catalog_by_slug: Dict[str, Dict[str, Any]] = {}
+    catalog_by_title_en: Dict[str, Dict[str, Any]] = {}
+    catalog_by_title_ms: Dict[str, Dict[str, Any]] = {}
+    catalog_by_title_zh: Dict[str, Dict[str, Any]] = {}
+
+    for r in active_catalog:
+        rid = (r.get("roleId") or r.get("role_id") or "").strip()
+        title_en = (r.get("title") or "").strip()
+        title_loc = r.get("titleLocalized", {})
+        title_ms = (title_loc.get("ms") or r.get("title_ms") or "").strip()
+        title_zh = (title_loc.get("zh") or r.get("title_zh") or "").strip()
+
+        if rid:
+            catalog_by_id[rid.lower()] = r
+        if title_en:
+            slug = slugify_role_title(title_en)
+            if slug:
+                catalog_by_slug[slug] = r
+            norm_en = normalize_role_title(title_en)
+            if norm_en:
+                catalog_by_title_en[norm_en] = r
+        if title_ms:
+            norm_ms = normalize_role_title(title_ms)
+            if norm_ms:
+                catalog_by_title_ms[norm_ms] = r
+        if title_zh:
+            norm_zh = normalize_role_title(title_zh)
+            if norm_zh:
+                catalog_by_title_zh[norm_zh] = r
+
+    # 2. Defense-in-depth: query Supabase directly for candidate IDs / slugs / titles
+    candidate_ids: Set[str] = set()
+    candidate_titles: Set[str] = set()
     for r in roles:
-        rid = r.get("roleId") or f"custom-{uuid.uuid4().hex[:8]}"
-        title = r.get("title", "Emerging Professional")
-        skills_en = r.get("requiredSkills", [])
-        desc = r.get("description", "")
-        embed_text = f"Role: {title}. Description: {desc}. Competencies: {', '.join(skills_en)}."
-        roles_to_embed.append((rid, embed_text))
+        t = (r.get("title") or "").strip()
+        if t:
+            candidate_titles.add(t)
+            slug = slugify_role_title(t)
+            if slug:
+                candidate_ids.add(slug)
+        raw_rid = (r.get("roleId") or "").strip()
+        if raw_rid:
+            candidate_ids.add(raw_rid)
 
-    role_texts = [item[1] for item in roles_to_embed]
-    role_vectors = await generate_embeddings_batch(role_texts)
+    if base_url and settings.SUPABASE_SERVICE_ROLE_KEY and (candidate_ids or candidate_titles):
+        try:
+            filters = []
+            if candidate_ids:
+                ids_param = ",".join(list(candidate_ids)[:20])
+                filters.append(f"role_id=in.({ids_param})")
+            if candidate_titles:
+                titles_param = ",".join([f'"{t}"' for t in list(candidate_titles)[:20]])
+                filters.append(f"title=in.({titles_param})")
 
-    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    new_db_payloads = []
+            if filters:
+                check_endpoint = (
+                    f"{base_url}/rest/v1/esco_roles"
+                    f"?or=({','.join(filters)})"
+                    "&select=role_id,title,title_ms,title_zh,industry,required_skills,required_skills_localized,sdg_alignments,scenario_multipliers,radar_requirements"
+                )
+                check_resp = await client.get(check_endpoint, headers=headers)
+                if check_resp.status_code == 200:
+                    for row in check_resp.json():
+                        row_rid = (row.get("role_id") or "").strip()
+                        row_title = (row.get("title") or "").strip()
+                        row_ms = (row.get("title_ms") or row_title).strip()
+                        row_zh = (row.get("title_zh") or row_title).strip()
+                        row_entry = {
+                            "roleId": row_rid,
+                            "title": row_title,
+                            "titleLocalized": {"en": row_title, "ms": row_ms, "zh": row_zh},
+                            "industry": row.get("industry", "Responsible AI & Digital Transformation"),
+                            "requiredSkills": row.get("required_skills", []),
+                            "requiredSkillsLocalized": row.get("required_skills_localized") or localize_skill_list_trilingual(row.get("required_skills", [])),
+                            "sdgAlignments": row.get("sdg_alignments", []),
+                            "scenarioMultipliers": row.get("scenario_multipliers", {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10}),
+                            "radarRequirement": row.get("radar_requirements", {
+                                "Technical Aptitude": 85, "Domain Operations": 75, "Automation Resilience": 85, "Learning Agility": 85, "Strategic Leadership": 70
+                            }),
+                        }
+                        if row_rid:
+                            catalog_by_id[row_rid.lower()] = row_entry
+                        if row_title:
+                            s = slugify_role_title(row_title)
+                            if s:
+                                catalog_by_slug[s] = row_entry
+                            catalog_by_title_en[normalize_role_title(row_title)] = row_entry
+                        if row_ms:
+                            catalog_by_title_ms[normalize_role_title(row_ms)] = row_entry
+                        if row_zh:
+                            catalog_by_title_zh[normalize_role_title(row_zh)] = row_entry
+        except Exception as e:
+            print(f"[skill_search] Warning: PostgREST check for existing roles encountered: {e}")
+
+    # 3. Classify candidate roles: deduplicate in-batch and against existing catalog
+    seen_in_batch_ids: Set[str] = set()
+    seen_in_batch_titles: Set[str] = set()
+
+    roles_to_insert: List[Dict[str, Any]] = []
     result_roles: List[EscoRoleSuggested] = []
 
-    for i, r in enumerate(roles):
-        rid = roles_to_embed[i][0]
-        title_en = r.get("title", "Professional Role")
-        title_ms = r.get("title_ms", title_en)
-        title_zh = r.get("title_zh", title_en)
-        industry = r.get("industry", "Responsible AI & Digital Transformation")
-        skills_en = r.get("requiredSkills", [])
-        skills_ms = r.get("requiredSkills_ms") or [localize_skill_name(s, "ms") for s in skills_en]
-        skills_zh = r.get("requiredSkills_zh") or [localize_skill_name(s, "zh") for s in skills_en]
+    for r in roles:
+        title_en = (r.get("title") or "").strip()
+        if not title_en:
+            continue
 
-        # Register skill translations into dynamic dictionary
-        for s_idx, s_name in enumerate(skills_en):
-            zh_trans = skills_zh[s_idx] if s_idx < len(skills_zh) else s_name
-            ms_trans = skills_ms[s_idx] if s_idx < len(skills_ms) else s_name
-            register_skill_translation(s_name, zh_trans, ms_trans)
+        norm_title = normalize_role_title(title_en)
+        derived_slug = slugify_role_title(title_en)
+        raw_rid = (r.get("roleId") or "").strip()
+        canonical_rid = derived_slug or raw_rid or f"role-{uuid.uuid4().hex[:8]}"
 
-        vec = role_vectors[i] if i < len(role_vectors) else None
-        sim = 0.85
-        if vec and skill_embedding:
-            sim = round(max(0.1, min(0.99, cosine_similarity(skill_embedding, vec))), 4)
+        # Deduplicate within candidate batch
+        if norm_title in seen_in_batch_titles or canonical_rid.lower() in seen_in_batch_ids:
+            continue
+        seen_in_batch_titles.add(norm_title)
+        seen_in_batch_ids.add(canonical_rid.lower())
 
-        is_new = rid not in existing_role_ids
-        if is_new:
+        # Match against existing catalog
+        existing_match = (
+            (catalog_by_id.get(raw_rid.lower()) if raw_rid else None)
+            or (catalog_by_id.get(canonical_rid.lower()) if canonical_rid else None)
+            or (catalog_by_slug.get(derived_slug) if derived_slug else None)
+            or catalog_by_title_en.get(norm_title)
+            or (catalog_by_title_ms.get(normalize_role_title(r.get("title_ms", ""))) if r.get("title_ms") else None)
+            or (catalog_by_title_zh.get(normalize_role_title(r.get("title_zh", ""))) if r.get("title_zh") else None)
+        )
+
+        if existing_match:
+            # Existing role found in catalog - adopt canonical record without duplicate insert
+            ex_id = existing_match.get("roleId") or existing_match.get("role_id") or canonical_rid
+            ex_title = existing_match.get("title", title_en)
+            ex_loc_title = existing_match.get("titleLocalized") or {
+                "en": ex_title,
+                "ms": r.get("title_ms") or ex_title,
+                "zh": r.get("title_zh") or ex_title,
+            }
+            ex_skills = existing_match.get("requiredSkills") or existing_match.get("required_skills", [])
+            ex_loc_skills = existing_match.get("requiredSkillsLocalized") or existing_match.get("required_skills_localized") or localize_skill_list_trilingual(ex_skills)
+            ex_radar = existing_match.get("radarRequirement") or existing_match.get("radar_requirements") or r.get("radarRequirements", {})
+            ex_sdg = existing_match.get("sdgAlignments") or existing_match.get("sdg_alignments") or []
+            ex_mult = existing_match.get("scenarioMultipliers") or existing_match.get("scenario_multipliers") or {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10}
+
+            result_roles.append(
+                EscoRoleSuggested(
+                    roleId=ex_id,
+                    title=ex_title,
+                    titleLocalized=ex_loc_title,
+                    industry=existing_match.get("industry", r.get("industry", "Responsible AI & Digital Transformation")),
+                    similarityScore=0.88,
+                    requiredSkills=ex_skills,
+                    requiredSkillsLocalized=ex_loc_skills,
+                    sdgAlignments=ex_sdg,
+                    radarRequirements=ex_radar,
+                    scenarioMultipliers=ex_mult,
+                    isNewlyCreated=False,
+                )
+            )
+        else:
+            # Genuinely new role -> stage for embedding computation and DB insertion
+            roles_to_insert.append({
+                "raw_dict": r,
+                "canonical_rid": canonical_rid,
+                "title_en": title_en,
+            })
+
+    # 4. Process genuinely new roles (generate embeddings and persist to Supabase)
+    if roles_to_insert:
+        roles_to_embed = []
+        for item in roles_to_insert:
+            r = item["raw_dict"]
+            title = item["title_en"]
+            skills_en = r.get("requiredSkills", [])
+            desc = r.get("description", "")
+            embed_text = f"Role: {title}. Description: {desc}. Competencies: {', '.join(skills_en)}."
+            roles_to_embed.append(embed_text)
+
+        role_vectors = await generate_embeddings_batch(roles_to_embed)
+
+        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        new_db_payloads = []
+
+        for i, item in enumerate(roles_to_insert):
+            r = item["raw_dict"]
+            rid = item["canonical_rid"]
+            title_en = item["title_en"]
+            title_ms = r.get("title_ms") or title_en
+            title_zh = r.get("title_zh") or title_en
+            industry = r.get("industry", "Responsible AI & Digital Transformation")
+            skills_en = r.get("requiredSkills", [])
+            skills_ms = r.get("requiredSkills_ms") or [localize_skill_name(s, "ms") for s in skills_en]
+            skills_zh = r.get("requiredSkills_zh") or [localize_skill_name(s, "zh") for s in skills_en]
+
+            # Register skill translations into dynamic dictionary
+            for s_idx, s_name in enumerate(skills_en):
+                zh_trans = skills_zh[s_idx] if s_idx < len(skills_zh) else s_name
+                ms_trans = skills_ms[s_idx] if s_idx < len(skills_ms) else s_name
+                register_skill_translation(s_name, zh_trans, ms_trans)
+
+            vec = role_vectors[i] if i < len(role_vectors) else None
+            sim = 0.85
+            if vec and skill_embedding:
+                sim = round(max(0.1, min(0.99, cosine_similarity(skill_embedding, vec))), 4)
+
             new_db_payloads.append({
                 "id": str(uuid.uuid4()),
                 "role_id": rid,
@@ -672,49 +892,56 @@ async def persist_new_roles_to_supabase(
                 "updated_at": now_iso,
             })
 
-        result_roles.append(
-            EscoRoleSuggested(
-                roleId=rid,
-                title=title_en,
-                titleLocalized={"en": title_en, "ms": title_ms, "zh": title_zh},
-                industry=industry,
-                similarityScore=sim,
-                requiredSkills=skills_en,
-                requiredSkillsLocalized={
-                    "en": skills_en,
-                    "ms": skills_ms,
-                    "zh": skills_zh,
-                },
-                sdgAlignments=[
-                    {
-                        "targetCode": r.get("sdgAlignment", "SDG 8.2"),
-                        "targetTitle": r.get("sdgTitle", "Technological upgrading & productivity"),
-                        "affinityScore": 0.90,
-                    }
-                ],
-                radarRequirements=r.get("radarRequirements", {
-                    "Technical Aptitude": 85,
-                    "Domain Operations": 75,
-                    "Automation Resilience": 85,
-                    "Learning Agility": 85,
-                    "Strategic Leadership": 70,
-                }),
-                scenarioMultipliers={"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10},
-                isNewlyCreated=is_new,
+            result_roles.append(
+                EscoRoleSuggested(
+                    roleId=rid,
+                    title=title_en,
+                    titleLocalized={"en": title_en, "ms": title_ms, "zh": title_zh},
+                    industry=industry,
+                    similarityScore=sim,
+                    requiredSkills=skills_en,
+                    requiredSkillsLocalized={
+                        "en": skills_en,
+                        "ms": skills_ms,
+                        "zh": skills_zh,
+                    },
+                    sdgAlignments=[
+                        {
+                            "targetCode": r.get("sdgAlignment", "SDG 8.2"),
+                            "targetTitle": r.get("sdgTitle", "Technological upgrading & productivity"),
+                            "affinityScore": 0.90,
+                        }
+                    ],
+                    radarRequirements=r.get("radarRequirements", {
+                        "Technical Aptitude": 85,
+                        "Domain Operations": 75,
+                        "Automation Resilience": 85,
+                        "Learning Agility": 85,
+                        "Strategic Leadership": 70,
+                    }),
+                    scenarioMultipliers={"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10},
+                    isNewlyCreated=True,
+                )
             )
-        )
 
-    # Batch insert new roles into Supabase
-    if new_db_payloads and settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
-        try:
-            endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
-            resp = await client.post(endpoint, json=new_db_payloads, headers=headers)
-            if resp.status_code in [200, 201, 204]:
-                print(f"[skill_search] Successfully inserted {len(new_db_payloads)} new roles into Supabase esco_roles.")
-        except Exception as e:
-            print(f"[skill_search] Warning: Failed to batch insert new roles: {e}")
+        # Batch insert new roles into Supabase
+        if new_db_payloads and settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+            try:
+                endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
+                resp = await client.post(endpoint, json=new_db_payloads, headers=headers)
+                if resp.status_code in [200, 201, 204]:
+                    print(f"[skill_search] Successfully inserted {len(new_db_payloads)} new roles into Supabase esco_roles.")
+                    # Invalidate active roles cache so subsequent queries reflect new roles
+                    try:
+                        import services.analyze.matching_service as ms_mod
+                        ms_mod._last_active_roles_fetch_time = 0.0
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(f"[skill_search] Warning: Failed to batch insert new roles: {e}")
 
     return result_roles
+
 
 
 async def match_closest_esco_roles_via_bge(
@@ -977,10 +1204,11 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
             ),
             suggestedRoles=matched_roles,
             locale=loc,
+            tierUsed="database",
         )
 
-    # 5. Handle Case 2: Skill is NOT Found -> Gemini Flash Dynamic Expansion
-    print(f"[skill_search] Skill '{clean_query}' not found in database. Synthesizing on-demand via Gemini Flash...")
+    # 5. Handle Case 2: Skill is NOT Found -> 3-Tier Dynamic Synthesis
+    print(f"[skill_search] Skill '{clean_query}' not found in database. Synthesizing on-demand via 3-Tier Intelligence (Qwen 2.5 -> Gemini Flash -> Deterministic)...")
     synthesized = await synthesize_skill_and_roles_on_demand(clean_query)
     skill_synth = synthesized.get("skill", {})
     roles_synth = synthesized.get("suggestedRoles", [])
@@ -1012,16 +1240,21 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
         skill_embedding=query_vector,
     )
 
-    # If Gemini returned fewer than 5 roles, supplement with closest existing roles
+    # If synthesis returned fewer than 5 unique roles, supplement with closest existing roles
     if len(persisted_roles) < 5:
         supplemental = await match_closest_esco_roles_via_bge(
             skill_embedding=query_vector,
             skill_name=canonical_name,
         )
-        existing_ids = {r.roleId for r in persisted_roles}
+        existing_ids = {r.roleId.lower() for r in persisted_roles}
+        existing_titles = {normalize_role_title(r.title) for r in persisted_roles}
         for s_role in supplemental:
-            if s_role.roleId not in existing_ids:
+            s_norm = normalize_role_title(s_role.title)
+            s_id = s_role.roleId.lower()
+            if s_id not in existing_ids and s_norm not in existing_titles:
                 persisted_roles.append(s_role)
+                existing_ids.add(s_id)
+                existing_titles.add(s_norm)
                 if len(persisted_roles) >= 5:
                     break
 
@@ -1099,4 +1332,5 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
         ),
         suggestedRoles=persisted_roles[:5],
         locale=loc,
+        tierUsed=synthesized.get("tierUsed", "deterministic"),
     )

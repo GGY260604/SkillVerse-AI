@@ -69,12 +69,6 @@ def test_search_skill_get_validation_error(client: TestClient):
     assert response.status_code == 422
 
 
-def test_search_skill_post_validation_error(client: TestClient):
-    """Calling POST /api/v1/trends/search with empty body should return 422."""
-    response = client.post("/api/v1/trends/search", json={})
-    assert response.status_code == 422
-
-
 @patch("routers.v1.trends.search_and_analyze_skill")
 def test_search_skill_get_success(mock_search, client: TestClient):
     """Test successful GET /api/v1/trends/search with mocked analysis."""
@@ -89,16 +83,10 @@ def test_search_skill_get_success(mock_search, client: TestClient):
     assert data["visualization"]["status"] == "emerging"
 
 
-@patch("routers.v1.trends.search_and_analyze_skill")
-def test_search_skill_post_success(mock_search, client: TestClient, sample_skill_search_request):
-    """Test successful POST /api/v1/trends/search with valid payload."""
-    mock_search.return_value = _create_mock_skill_search_response("Kubernetes Orchestration")
-
-    response = client.post("/api/v1/trends/search", json=sample_skill_search_request)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["matchedSkillName"] == "Docker Containerization"
+def test_search_skill_post_method_not_allowed(client: TestClient):
+    """Calling POST /api/v1/trends/search should return 405 Method Not Allowed."""
+    response = client.post("/api/v1/trends/search", json={"query": "Docker"})
+    assert response.status_code == 405
 
 
 @patch("routers.v1.trends.sync_live_trend_signals_to_supabase")
@@ -257,3 +245,165 @@ async def test_sync_live_trend_signals_tier3_deterministic_fallback(monkeypatch)
     assert result["tierUsed"] == "deterministic"
     assert result["syncedCount"] >= 1
     assert result["syncedRolesCount"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_synthesize_skill_and_roles_tier1_qwen(monkeypatch):
+    """Verifies synthesize_skill_and_roles_on_demand uses Local Qwen 2.5 as primary Tier 1."""
+    from services.trends.skill_search_service import synthesize_skill_and_roles_on_demand
+
+    mock_qwen_output = {
+        "skill": {
+            "skillName": "agentic ai architecture",
+            "category": "Artificial Intelligence",
+            "status": "emerging",
+            "velocityVs": 0.65,
+        },
+        "suggestedRoles": [
+            {
+                "roleId": "agentic-ai-architect",
+                "title": "Agentic AI Architect",
+                "requiredSkills": ["Agentic AI", "Python", "LangChain"],
+            }
+        ],
+    }
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        return mock_qwen_output
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+
+    res = await synthesize_skill_and_roles_on_demand("Agentic AI")
+    assert res["tierUsed"] == "qwen"
+    assert res["skill"]["skillName"] == "agentic ai architecture"
+    assert len(res["suggestedRoles"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_synthesize_skill_and_roles_tier2_gemini(monkeypatch):
+    """Verifies synthesize_skill_and_roles_on_demand falls back to Tier 2 Gemini Flash when Qwen fails."""
+    from services.trends.skill_search_service import synthesize_skill_and_roles_on_demand
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        raise ConnectionError("Ollama daemon offline")
+
+    mock_gemini_output = {
+        "skill": {
+            "skillName": "agentic ai architecture",
+            "category": "Artificial Intelligence",
+            "status": "emerging",
+            "velocityVs": 0.58,
+        },
+        "suggestedRoles": [
+            {
+                "roleId": "agentic-ai-architect",
+                "title": "Agentic AI Architect",
+                "requiredSkills": ["Agentic AI"],
+            }
+        ],
+    }
+
+    async def mock_call_gemini_with_fallback(contents, **kwargs):
+        return mock_gemini_output
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.trends.skill_search_service.call_gemini_with_fallback", mock_call_gemini_with_fallback)
+
+    res = await synthesize_skill_and_roles_on_demand("Agentic AI")
+    assert res["tierUsed"] == "gemini"
+    assert res["skill"]["skillName"] == "agentic ai architecture"
+
+
+@pytest.mark.asyncio
+async def test_synthesize_skill_and_roles_tier3_deterministic(monkeypatch):
+    """Verifies synthesize_skill_and_roles_on_demand falls back to Tier 3 deterministic floor when both fail."""
+    from services.trends.skill_search_service import synthesize_skill_and_roles_on_demand
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        raise ConnectionError("Ollama daemon offline")
+
+    async def mock_call_gemini_with_fallback(contents, **kwargs):
+        raise RuntimeError("Gemini quota exceeded")
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.trends.skill_search_service.call_gemini_with_fallback", mock_call_gemini_with_fallback)
+
+    res = await synthesize_skill_and_roles_on_demand("Vector DB Scaling")
+    assert res["tierUsed"] == "deterministic"
+    assert "vector db scaling" in res["skill"]["skillName"]
+    assert len(res["suggestedRoles"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_persist_new_roles_deduplication(monkeypatch):
+    """Verifies persist_new_roles_to_supabase deduplicates against active catalog and candidate batch."""
+    from services.trends.skill_search_service import persist_new_roles_to_supabase
+
+    # Mock active catalog with existing role "AI Engineer"
+    mock_catalog = [
+        {
+            "roleId": "ai-engineer-existing",
+            "title": "AI Engineer",
+            "titleLocalized": {"en": "AI Engineer", "ms": "Jurutera AI", "zh": "AI 工程师"},
+            "industry": "Artificial Intelligence",
+            "requiredSkills": ["Python", "TensorFlow"],
+            "requiredSkillsLocalized": {"en": ["Python", "TensorFlow"], "ms": ["Python", "TensorFlow"], "zh": ["Python", "TensorFlow"]},
+            "sdgAlignments": [],
+            "scenarioMultipliers": {"moderate": 1.0},
+            "radarRequirements": {},
+        }
+    ]
+    monkeypatch.setattr("services.trends.skill_search_service.fetch_active_roles_from_supabase", AsyncMock(return_value=mock_catalog))
+    monkeypatch.setattr("services.trends.skill_search_service.generate_embeddings_batch", AsyncMock(return_value=[[0.05] * 1024]))
+
+    # Mock HTTP client
+    mock_resp = AsyncMock()
+    mock_resp.status_code = 200
+    mock_resp.json = lambda: []
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+    mock_client.post.return_value = mock_resp
+    monkeypatch.setattr("services.trends.skill_search_service.get_shared_client", lambda timeout=None: mock_client)
+
+    candidate_roles = [
+        # Candidate 1: Same title as existing role, different roleId -> Should match existing and NOT be marked newly created
+        {
+            "roleId": "novel-ai-engineer-slug",
+            "title": "ai engineer",
+            "industry": "Tech",
+            "requiredSkills": ["Python", "PyTorch"],
+        },
+        # Candidate 2: In-batch duplicate of Candidate 1 -> Should be collapsed/ignored
+        {
+            "roleId": "another-ai-engineer",
+            "title": "AI Engineer",
+            "industry": "Tech",
+            "requiredSkills": ["Python"],
+        },
+        # Candidate 3: Truly novel role -> Should be created with canonical slug and marked newly created
+        {
+            "roleId": "custom-uuid-12345",
+            "title": "Quantum Algorithm Researcher",
+            "title_ms": "Penyelidik Algoritma Kuantum",
+            "title_zh": "量子算法研究员",
+            "industry": "Deep Tech & Computing",
+            "requiredSkills": ["Quantum Computing", "Linear Algebra"],
+        },
+    ]
+
+    result = await persist_new_roles_to_supabase(candidate_roles)
+
+    # Should contain exactly 2 roles (the duplicate was collapsed)
+    assert len(result) == 2
+
+    # First role: Matched existing AI Engineer
+    r1 = result[0]
+    assert r1.title == "AI Engineer"
+    assert r1.roleId == "ai-engineer-existing"
+    assert r1.isNewlyCreated is False
+
+    # Second role: Truly novel role
+    r2 = result[1]
+    assert r2.title == "Quantum Algorithm Researcher"
+    assert r2.roleId == "quantum-algorithm-researcher"
+    assert r2.isNewlyCreated is True
