@@ -392,29 +392,29 @@ You are the Chief Occupational Taxonomist and Market Intelligence Engine for Ski
 A user is searching for a skill, competency, or framework that is not yet indexed in our real-time database:
 USER QUERY: "{query}"
 
+MANDATORY TRANSLATION FIDELITY:
+Provide genuine, professional, domain-accurate industry translations in Simplified Chinese (zh) and Bahasa Melayu (ms) for all skill names and role titles (no literal or robotic translations).
+
 TASK:
 1. Canonicalize the searched skill in trilingual format (English, Bahasa Melayu, Simplified Chinese).
 2. Determine its labor market trend:
-   - status: "emerging" (high growth, Vs between +0.25 and +0.85), "declining" (automation risk, Vs between -0.15 and -0.50), or "stable" (-0.10 to +0.20)
-   - velocityVs: Realistic float score
-   - currentWindowC: Estimated current posting volume (e.g. 18.0 to 45.0)
-   - pastWindowC: Estimated baseline volume
+   - status: "emerging" (velocityVs +0.25 to +0.85), "declining" (-0.15 to -0.50), or "stable" (-0.10 to +0.20)
+   - velocityVs: float score
+   - currentWindowC: float (e.g. 26.0)
+   - pastWindowC: float (e.g. 16.5)
    - category: One of "Artificial Intelligence", "Cloud & DevOps", "Data Engineering", "Cybersecurity", "Clean Tech & ESG", "Digital Marketing", "Operations", or "Software Development"
-   - trilingual citations explaining the trend drivers
-3. Synthesize 5 Suggested or Closest Occupational Roles directly related to this skill, strictly conforming to the ESCO occupational roles taxonomy.
-   Each role must have:
-   - roleId: Unique canonical slug (e.g. "ai-workflow-automation-engineer")
+   - citation: Trend driver explanation
+3. Synthesize 5 Suggested Occupational Roles directly related to this skill conforming to ESCO taxonomy:
+   - roleId: Clean canonical slug (e.g. "ai-workflow-automation-engineer")
    - title: Professional English Title
    - title_ms: Bahasa Melayu Title
    - title_zh: Simplified Chinese Title (简体中文)
    - industry: Sector name (e.g. "Responsible AI & Digital Transformation", "Clean Energy & ESG")
-   - description: 1-2 sentence description
-   - requiredSkills: 6 to 8 essential skills in English (MUST include the searched skill or its direct parent)
-   - requiredSkills_ms: Matching Bahasa Melayu translations for all 6-8 skills
-   - requiredSkills_zh: Matching Simplified Chinese translations for all 6-8 skills
+   - description: 1 concise sentence describing the role
+   - requiredSkills: 5 essential skills in English (MUST include the searched skill or direct variant)
+   - requiredSkills_ms: Matching authentic Bahasa Melayu translations for each of the 5 skills
+   - requiredSkills_zh: Matching authentic Simplified Chinese translations for each of the 5 skills
    - sdgAlignment: Target code, e.g. "SDG 8.2"
-   - sdgTitle: Target title, e.g. "Technological upgrading & productivity"
-   - radarRequirements: Five competency dimensions (Technical Aptitude, Domain Operations, Automation Resilience, Learning Agility, Strategic Leadership) scored 65-90.
 
 OUTPUT FORMAT:
 Return strictly valid JSON with this exact structure:
@@ -424,17 +424,11 @@ Return strictly valid JSON with this exact structure:
     "skillName_ms": "nama kemahiran dalam Bahasa Melayu",
     "skillName_zh": "中文技能名称",
     "category": "Artificial Intelligence",
-    "category_ms": "Kecerdasan Buatan (AI)",
-    "category_zh": "人工智能 (AI)",
     "status": "emerging",
     "velocityVs": 0.58,
     "currentWindowC": 26.0,
     "pastWindowC": 16.5,
-    "sourceName": "Global Labor Market Intelligence / ArXiv cs.AI",
-    "sourceUrl": "https://arxiv.org",
-    "citation": "Surging adoption across modern enterprise architectures.",
-    "citation_ms": "Penerimaan pesat merentasi seni bina perusahaan moden.",
-    "citation_zh": "在现代企业数字化与智能化架构中迎来爆发式应用。"
+    "citation": "Surging adoption across modern enterprise architectures."
   }},
   "suggestedRoles": [
     {{
@@ -444,18 +438,10 @@ Return strictly valid JSON with this exact structure:
       "title_zh": "职位名称 (Simplified Chinese)",
       "industry": "Responsible AI & Digital Transformation",
       "description": "Clear description of the role.",
-      "requiredSkills": ["skill 1", "skill 2", "skill 3", "skill 4", "skill 5", "skill 6"],
-      "requiredSkills_ms": ["kemahiran 1", "kemahiran 2", "kemahiran 3", "kemahiran 4", "kemahiran 5", "kemahiran 6"],
-      "requiredSkills_zh": ["技能1", "技能2", "技能3", "技能4", "技能5", "技能6"],
-      "sdgAlignment": "SDG 8.2",
-      "sdgTitle": "Technological upgrading & productivity",
-      "radarRequirements": {{
-        "Technical Aptitude": 85,
-        "Domain Operations": 75,
-        "Automation Resilience": 85,
-        "Learning Agility": 85,
-        "Strategic Leadership": 70
-      }}
+      "requiredSkills": ["skill 1", "skill 2", "skill 3", "skill 4", "skill 5"],
+      "requiredSkills_ms": ["kemahiran 1", "kemahiran 2", "kemahiran 3", "kemahiran 4", "kemahiran 5"],
+      "requiredSkills_zh": ["技能1", "技能2", "技能3", "技能4", "技能5"],
+      "sdgAlignment": "SDG 8.2"
     }}
   ]
 }}
@@ -687,18 +673,26 @@ async def persist_new_roles_to_supabase(
     # 2. Defense-in-depth: query Supabase directly for candidate IDs / slugs / titles
     candidate_ids: Set[str] = set()
     candidate_titles: Set[str] = set()
+    candidate_titles_ms: Set[str] = set()
+    candidate_titles_zh: Set[str] = set()
     for r in roles:
         t = (r.get("title") or "").strip()
+        t_ms = (r.get("title_ms") or "").strip()
+        t_zh = (r.get("title_zh") or "").strip()
         if t:
             candidate_titles.add(t)
             slug = slugify_role_title(t)
             if slug:
                 candidate_ids.add(slug)
+        if t_ms:
+            candidate_titles_ms.add(t_ms)
+        if t_zh:
+            candidate_titles_zh.add(t_zh)
         raw_rid = (r.get("roleId") or "").strip()
         if raw_rid:
             candidate_ids.add(raw_rid)
 
-    if base_url and settings.SUPABASE_SERVICE_ROLE_KEY and (candidate_ids or candidate_titles):
+    if base_url and settings.SUPABASE_SERVICE_ROLE_KEY and (candidate_ids or candidate_titles or candidate_titles_ms or candidate_titles_zh):
         try:
             filters = []
             if candidate_ids:
@@ -707,6 +701,12 @@ async def persist_new_roles_to_supabase(
             if candidate_titles:
                 titles_param = ",".join([f'"{t}"' for t in list(candidate_titles)[:20]])
                 filters.append(f"title=in.({titles_param})")
+            if candidate_titles_ms:
+                titles_ms_param = ",".join([f'"{t}"' for t in list(candidate_titles_ms)[:20]])
+                filters.append(f"title_ms=in.({titles_ms_param})")
+            if candidate_titles_zh:
+                titles_zh_param = ",".join([f'"{t}"' for t in list(candidate_titles_zh)[:20]])
+                filters.append(f"title_zh=in.({titles_zh_param})")
 
             if filters:
                 check_endpoint = (
@@ -721,13 +721,25 @@ async def persist_new_roles_to_supabase(
                         row_title = (row.get("title") or "").strip()
                         row_ms = (row.get("title_ms") or row_title).strip()
                         row_zh = (row.get("title_zh") or row_title).strip()
+                        row_skills_en = row.get("required_skills", [])
+                        row_skills_loc = row.get("required_skills_localized")
+                        if not row_skills_loc:
+                            if row.get("required_skills_ms") and row.get("required_skills_zh"):
+                                row_skills_loc = {
+                                    "en": row_skills_en,
+                                    "ms": row.get("required_skills_ms"),
+                                    "zh": row.get("required_skills_zh"),
+                                }
+                            else:
+                                row_skills_loc = localize_skill_list_trilingual(row_skills_en)
+
                         row_entry = {
                             "roleId": row_rid,
                             "title": row_title,
                             "titleLocalized": {"en": row_title, "ms": row_ms, "zh": row_zh},
                             "industry": row.get("industry", "Responsible AI & Digital Transformation"),
-                            "requiredSkills": row.get("required_skills", []),
-                            "requiredSkillsLocalized": row.get("required_skills_localized") or localize_skill_list_trilingual(row.get("required_skills", [])),
+                            "requiredSkills": row_skills_en,
+                            "requiredSkillsLocalized": row_skills_loc,
                             "sdgAlignments": row.get("sdg_alignments", []),
                             "scenarioMultipliers": row.get("scenario_multipliers", {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10}),
                             "radarRequirement": row.get("radar_requirements", {
@@ -791,7 +803,16 @@ async def persist_new_roles_to_supabase(
                 "zh": r.get("title_zh") or ex_title,
             }
             ex_skills = existing_match.get("requiredSkills") or existing_match.get("required_skills", [])
-            ex_loc_skills = existing_match.get("requiredSkillsLocalized") or existing_match.get("required_skills_localized") or localize_skill_list_trilingual(ex_skills)
+            ex_loc_skills = existing_match.get("requiredSkillsLocalized") or existing_match.get("required_skills_localized")
+            if not ex_loc_skills:
+                if existing_match.get("required_skills_ms") and existing_match.get("required_skills_zh"):
+                    ex_loc_skills = {
+                        "en": ex_skills,
+                        "ms": existing_match.get("required_skills_ms"),
+                        "zh": existing_match.get("required_skills_zh"),
+                    }
+                else:
+                    ex_loc_skills = localize_skill_list_trilingual(ex_skills)
             ex_radar = existing_match.get("radarRequirement") or existing_match.get("radar_requirements") or r.get("radarRequirements", {})
             ex_sdg = existing_match.get("sdgAlignments") or existing_match.get("sdg_alignments") or []
             ex_mult = existing_match.get("scenarioMultipliers") or existing_match.get("scenario_multipliers") or {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10}
@@ -944,6 +965,10 @@ async def persist_new_roles_to_supabase(
 
 
 
+# In-memory cache for closest ESCO roles per skill name
+_skill_roles_cache: Dict[str, List[EscoRoleSuggested]] = {}
+
+
 async def match_closest_esco_roles_via_bge(
     skill_embedding: List[float],
     skill_name: str,
@@ -952,7 +977,12 @@ async def match_closest_esco_roles_via_bge(
     Finds the 5 closest ESCO occupational roles related to the searched skill using:
     1. Supabase match_roles pgvector stored procedure (HNSW Cosine Similarity).
     2. Fallback to active in-memory / Supabase role catalog with exact skill overlap boosting.
+    Cached in-memory per skill name for sub-millisecond retrieval.
     """
+    clean_k = skill_name.lower().strip()
+    if clean_k in _skill_roles_cache:
+        return _skill_roles_cache[clean_k]
+
     base_url = settings.SUPABASE_URL.rstrip("/") if settings.SUPABASE_URL else ""
     if base_url.endswith("/rest/v1"):
         base_url = base_url[:-8]
@@ -980,7 +1010,16 @@ async def match_closest_esco_roles_via_bge(
                     results: List[EscoRoleSuggested] = []
                     for r in rows[:5]:
                         skills_en = r.get("required_skills", [])
-                        loc_skills = localize_skill_list_trilingual(skills_en)
+                        loc_skills = r.get("required_skills_localized")
+                        if not loc_skills:
+                            if r.get("required_skills_ms") and r.get("required_skills_zh"):
+                                loc_skills = {
+                                    "en": skills_en,
+                                    "ms": r.get("required_skills_ms"),
+                                    "zh": r.get("required_skills_zh"),
+                                }
+                            else:
+                                loc_skills = localize_skill_list_trilingual(skills_en)
                         results.append(
                             EscoRoleSuggested(
                                 roleId=r["role_id"],
@@ -1008,6 +1047,7 @@ async def match_closest_esco_roles_via_bge(
                                 isNewlyCreated=False,
                             )
                         )
+                    _skill_roles_cache[clean_k] = results
                     return results
         except Exception as e:
             print(f"[skill_search] Warning: Supabase match_roles RPC call bypassed ({e}). Using active catalog fallback.")
@@ -1019,6 +1059,15 @@ async def match_closest_esco_roles_via_bge(
     scored_roles = []
     for r in active_roles:
         skills = [s.lower().strip() for s in r.get("requiredSkills", [])]
+        loc = r.get("requiredSkillsLocalized") or r.get("required_skills_localized") or {}
+        if isinstance(loc, dict):
+            skills.extend([s.lower().strip() for s in loc.get("ms", [])])
+            skills.extend([s.lower().strip() for s in loc.get("zh", [])])
+        if r.get("required_skills_ms"):
+            skills.extend([s.lower().strip() for s in r.get("required_skills_ms", [])])
+        if r.get("required_skills_zh"):
+            skills.extend([s.lower().strip() for s in r.get("required_skills_zh", [])])
+
         base_score = 0.60
         if norm_skill in skills:
             base_score += 0.35
@@ -1033,7 +1082,16 @@ async def match_closest_esco_roles_via_bge(
     results: List[EscoRoleSuggested] = []
     for score, r in top_5:
         skills_en = r.get("requiredSkills", [])
-        loc_skills = r.get("requiredSkillsLocalized") or localize_skill_list_trilingual(skills_en)
+        loc_skills = r.get("requiredSkillsLocalized") or r.get("required_skills_localized")
+        if not loc_skills:
+            if r.get("required_skills_ms") and r.get("required_skills_zh"):
+                loc_skills = {
+                    "en": skills_en,
+                    "ms": r.get("required_skills_ms"),
+                    "zh": r.get("required_skills_zh"),
+                }
+            else:
+                loc_skills = localize_skill_list_trilingual(skills_en)
         title_loc = r.get("titleLocalized", {
             "en": r["title"],
             "ms": r["title"],
@@ -1064,6 +1122,7 @@ async def match_closest_esco_roles_via_bge(
             )
         )
 
+    _skill_roles_cache[clean_k] = results
     return results
 
 
@@ -1084,43 +1143,40 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
     clean_query = query.strip()
     loc = (locale or "en").lower().strip()
 
-    # 1. Generate 1024-dim dense embedding for user query
-    query_vector = await generate_embedding(clean_query)
-
-    # 2. Fetch active trend signals from Supabase
+    # 1. Fetch active trend signals from Supabase (sub-millisecond in-memory cache)
     signals = await fetch_trend_signals_from_supabase()
 
-    # Pre-embed trend signals if any are not yet in memory
-    if signals:
-        await ensure_trend_skills_embedded(signals)
-
-    # 3. Match against trend signals
-    # Pass A: Lexical exact match prioritizing the frontend active language
+    # 2. Fast-Path: Lexical exact match prioritizing the frontend active language (0.05ms)
     lexical_match = find_lexical_skill_match(clean_query, signals, locale=loc)
-
-    # Pass B: BGE Semantic cosine similarity match
-    best_semantic_signal = None
-    best_sim = 0.0
-
-    if query_vector and _trend_skills_embeddings:
-        for s in signals:
-            name = (s.get("skillName") or "").strip().lower()
-            sig_vec = _trend_skills_embeddings.get(name)
-            if sig_vec:
-                sim = cosine_similarity(query_vector, sig_vec)
-                if sim > best_sim:
-                    best_sim = sim
-                    best_semantic_signal = s
-
+    query_vector = None
     is_found = False
     matched_signal: Optional[Dict[str, Any]] = None
 
     if lexical_match:
         matched_signal = lexical_match
         is_found = True
-    elif best_semantic_signal and best_sim >= 0.70:
-        matched_signal = best_semantic_signal
-        is_found = True
+    else:
+        # Pass B: BGE Semantic cosine similarity match (only if lexical match misses)
+        query_vector = await generate_embedding(clean_query)
+        if signals:
+            await ensure_trend_skills_embedded(signals)
+
+        best_semantic_signal = None
+        best_sim = 0.0
+
+        if query_vector and _trend_skills_embeddings:
+            for s in signals:
+                name = (s.get("skillName") or "").strip().lower()
+                sig_vec = _trend_skills_embeddings.get(name)
+                if sig_vec:
+                    sim = cosine_similarity(query_vector, sig_vec)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_semantic_signal = s
+
+        if best_semantic_signal and best_sim >= 0.70:
+            matched_signal = best_semantic_signal
+            is_found = True
 
     # 4. Handle Case 1: Skill is Found in Database
     if is_found and matched_signal:
@@ -1138,11 +1194,17 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
         cat_ms = src0.get("category_ms") or CATEGORY_TRANSLATIONS.get(cat, {}).get("ms", cat)
         cat_zh = src0.get("category_zh") or CATEGORY_TRANSLATIONS.get(cat, {}).get("zh", cat)
 
-        # Match top 5 closest roles via BGE
-        matched_roles = await match_closest_esco_roles_via_bge(
-            skill_embedding=query_vector,
-            skill_name=canonical_name,
-        )
+        # Match top 5 closest roles (sub-millisecond in-memory cache hit)
+        clean_k = canonical_name.lower().strip()
+        if clean_k in _skill_roles_cache:
+            matched_roles = _skill_roles_cache[clean_k]
+        else:
+            if query_vector is None:
+                query_vector = await generate_embedding(canonical_name)
+            matched_roles = await match_closest_esco_roles_via_bge(
+                skill_embedding=query_vector,
+                skill_name=canonical_name,
+            )
 
         # Generate 7-period visualization curve
         time_series = generate_time_series_points(
@@ -1233,6 +1295,9 @@ async def search_and_analyze_skill(query: str, locale: str = "en") -> SkillSearc
     # Invalidate signals cache so fresh skill is immediately searchable
     global _last_trend_signals_fetch_time
     _last_trend_signals_fetch_time = 0.0
+
+    if query_vector is None:
+        query_vector = await generate_embedding(clean_query)
 
     # Persist and return the 5 suggested roles in trilingual ESCO format
     persisted_roles = await persist_new_roles_to_supabase(

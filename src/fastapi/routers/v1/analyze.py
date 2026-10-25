@@ -1,8 +1,10 @@
 import json
 import uuid
 import asyncio
+import hashlib
+import time
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from schemas.analysis import (
@@ -20,6 +22,10 @@ from services.analyze import evaluate_roles, synthesize_pathway, evaluate_team_s
 
 router = APIRouter()
 
+# In-memory TTL cache for workforce profile analysis (15 minutes TTL)
+_analysis_cache: Dict[str, Tuple[AnalyzeResponsePayload, float]] = {}
+_ANALYSIS_CACHE_TTL = 900.0  # 15 minutes TTL
+
 
 @router.post("/analyze", response_model=AnalyzeResponsePayload)
 async def analyze_workforce_profile(request: AnalyzeRequestPayload):
@@ -29,9 +35,28 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
     If autoSynthesizeRoadmap is True, also generates the 3-phase reskilling roadmap and persists to Supabase.
     If autoSynthesizeRoadmap is False, returns the Top 5 matched roles immediately (~1.2s)
     so the user can review and select their preferred career path.
+    Cached in-memory with SHA-256 for sub-millisecond repeat evaluations.
     """
     session_id = request.sessionId or f"sess-{uuid.uuid4().hex[:12]}"
     assessment_id = str(uuid.uuid4())
+
+    # High-performance in-memory cache lookup (< 1ms)
+    cache_key = hashlib.sha256(
+        f"{request.profile.model_dump_json()}:{request.macroScenario}:{request.locale}:{request.targetRoleId}:{request.autoSynthesizeRoadmap}".encode()
+    ).hexdigest()
+    now = time.time()
+
+    if cache_key in _analysis_cache:
+        cached_resp, ts = _analysis_cache[cache_key]
+        if now - ts < _ANALYSIS_CACHE_TTL:
+            if not request.autoSynthesizeRoadmap or (
+                cached_resp.selectedRoleRoadmap and len(cached_resp.selectedRoleRoadmap.milestones) >= 3
+            ):
+                res_dict = cached_resp.model_dump()
+                res_dict["sessionId"] = session_id
+                res_dict["assessmentId"] = assessment_id
+                res_dict["generatedAt"] = datetime.now(timezone.utc).isoformat()
+                return AnalyzeResponsePayload(**res_dict)
 
     # 1. Deterministic Role Matching & Radar Chart computation
     matched_roles, radar_data, scenario_roles = await evaluate_roles(
@@ -92,7 +117,7 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
                 if roadmap.skillsToAcquireLocalized:
                     target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
 
-    return AnalyzeResponsePayload(
+    response = AnalyzeResponsePayload(
         assessmentId=assessment_id,
         sessionId=session_id,
         generatedAt=datetime.now(timezone.utc).isoformat(),
@@ -102,6 +127,8 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
         scenarioRoles=scenario_roles,
         selectedRoleRoadmap=roadmap,
     )
+    _analysis_cache[cache_key] = (response, now)
+    return response
 
 
 @router.post("/analyze/stream")
