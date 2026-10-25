@@ -45,22 +45,52 @@ async def analyze_workforce_profile(request: AnalyzeRequestPayload):
 
     if request.autoSynthesizeRoadmap:
         # Determine target role (either requested targetRoleId or top matched role)
-        target_role = top_5_roles[0]
+        target_role = top_5_roles[0] if top_5_roles else None
         if request.targetRoleId:
+            found = False
             for r in matched_roles:
                 if r.roleId == request.targetRoleId:
                     target_role = r
+                    found = True
                     break
+            if not found:
+                from services.analyze.matching_service import synthesize_on_demand_role
+                clean_target_title = request.targetRoleId.replace("custom-", "").replace("-", " ").title()
+                synthesized_entry = await synthesize_on_demand_role(
+                    title=clean_target_title,
+                    industry=request.profile.industry,
+                    user_skills=[s.name for s in request.profile.skills],
+                )
+                if synthesized_entry:
+                    user_skills_set = set(s.name.lower().strip() for s in request.profile.skills)
+                    req_skills = synthesized_entry.get("requiredSkills", [])
+                    matched_s = [s for s in req_skills if s.lower().strip() in user_skills_set]
+                    gap_s = [s for s in req_skills if s.lower().strip() not in user_skills_set]
+                    target_role = MatchedRole(
+                        roleId=synthesized_entry["roleId"],
+                        title=synthesized_entry["title"],
+                        titleLocalized=synthesized_entry.get("titleLocalized") or {"en": synthesized_entry["title"], "ms": synthesized_entry["title"], "zh": synthesized_entry["title"]},
+                        industry=synthesized_entry.get("industry", request.profile.industry or "Cross-Industry"),
+                        matchScore=0.88,
+                        scenarioMultiplierApplied=1.0,
+                        sdgAlignments=synthesized_entry.get("sdgAlignments", []),
+                        matchedStrengths=matched_s,
+                        skillsGap=gap_s,
+                    )
 
-        roadmap = await synthesize_pathway(
-            target_role=target_role,
-            profile=request.profile,
-            locale=request.locale,
-        )
-        if not target_role.skillsGap and roadmap and roadmap.skillsToAcquire:
-            target_role.skillsGap = list(roadmap.skillsToAcquire)
-            if roadmap.skillsToAcquireLocalized:
-                target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
+        if not target_role and top_5_roles:
+            target_role = top_5_roles[0]
+
+        if target_role:
+            roadmap = await synthesize_pathway(
+                target_role=target_role,
+                profile=request.profile,
+                locale=request.locale,
+            )
+            if not target_role.skillsGap and roadmap and roadmap.skillsToAcquire:
+                target_role.skillsGap = list(roadmap.skillsToAcquire)
+                if roadmap.skillsToAcquireLocalized:
+                    target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
 
     return AnalyzeResponsePayload(
         assessmentId=assessment_id,
@@ -125,6 +155,25 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
             session_id = request.sessionId or f"sess-{uuid.uuid4().hex[:12]}"
             assessment_id = str(uuid.uuid4())
 
+            roadmap = None
+            if request.autoSynthesizeRoadmap and top_5_roles:
+                target_role = top_5_roles[0]
+                if request.targetRoleId:
+                    for r in matched_roles:
+                        if r.roleId == request.targetRoleId:
+                            target_role = r
+                            break
+                if target_role:
+                    roadmap = await synthesize_pathway(
+                        target_role=target_role,
+                        profile=request.profile,
+                        locale=request.locale,
+                    )
+                    if not target_role.skillsGap and roadmap and roadmap.skillsToAcquire:
+                        target_role.skillsGap = list(roadmap.skillsToAcquire)
+                        if roadmap.skillsToAcquireLocalized:
+                            target_role.skillsGapLocalized = dict(roadmap.skillsToAcquireLocalized)
+
             result_payload = AnalyzeResponsePayload(
                 assessmentId=assessment_id,
                 sessionId=session_id,
@@ -133,7 +182,7 @@ async def analyze_workforce_profile_stream(request: AnalyzeRequestPayload):
                 radarData=radar_data,
                 topRoles=top_5_roles,
                 scenarioRoles=scenario_roles,
-                selectedRoleRoadmap=None,
+                selectedRoleRoadmap=roadmap,
             )
 
             yield f"data: {json.dumps({'phase': 5, 'title': 'Discovery Complete', 'detail': 'Discovered top 5 future-ready roles', 'percent': 100, 'result': result_payload.model_dump()})}\n\n"
@@ -182,6 +231,30 @@ async def synthesize_selected_role_roadmap(request: SynthesizeRoadmapRequest):
             if r.roleId == request.targetRoleId:
                 target_role = r
                 break
+        if not target_role and request.targetRoleId:
+            from services.analyze.matching_service import synthesize_on_demand_role
+            clean_target_title = request.targetRoleId.replace("custom-", "").replace("-", " ").title()
+            synthesized_entry = await synthesize_on_demand_role(
+                title=clean_target_title,
+                industry=request.profile.industry,
+                user_skills=[s.name for s in request.profile.skills],
+            )
+            if synthesized_entry:
+                user_skills_set = set(s.name.lower().strip() for s in request.profile.skills)
+                req_skills = synthesized_entry.get("requiredSkills", [])
+                matched_s = [s for s in req_skills if s.lower().strip() in user_skills_set]
+                gap_s = [s for s in req_skills if s.lower().strip() not in user_skills_set]
+                target_role = MatchedRole(
+                    roleId=synthesized_entry["roleId"],
+                    title=synthesized_entry["title"],
+                    titleLocalized=synthesized_entry.get("titleLocalized") or {"en": synthesized_entry["title"], "ms": synthesized_entry["title"], "zh": synthesized_entry["title"]},
+                    industry=synthesized_entry.get("industry", request.profile.industry or "Cross-Industry"),
+                    matchScore=0.88,
+                    scenarioMultiplierApplied=1.0,
+                    sdgAlignments=synthesized_entry.get("sdgAlignments", []),
+                    matchedStrengths=matched_s,
+                    skillsGap=gap_s,
+                )
         if not target_role and matched_roles:
             target_role = matched_roles[0]
         top_roles_to_save = matched_roles[:5]

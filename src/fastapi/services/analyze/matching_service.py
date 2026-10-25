@@ -2,8 +2,11 @@ import asyncio
 import math
 import time
 import httpx
+import logging
 from typing import List, Dict, Any, Tuple, Optional
 from config import settings
+
+logger = logging.getLogger("matching_service")
 from services.http_client import get_shared_client
 from services.embedding_service import generate_embedding, generate_embeddings_batch, cosine_similarity, persist_embedding_cache
 from schemas.analysis import (
@@ -420,6 +423,83 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
     return FALLBACK_ROLES_CATALOG
 
 
+def _generate_deterministic_fallback_cohort(
+    primary_title: str,
+    industry: str,
+    target_count: int = 5,
+    existing_titles: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Zero-failure deterministic fallback role generator when both Qwen and Gemini
+    are offline or rate-limited. Ensures the system never halts.
+    """
+    clean_title = primary_title.strip() if primary_title and len(primary_title.strip()) > 2 else "Technology Specialist"
+    existing_lower = [t.lower().strip() for t in (existing_titles or [])]
+
+    templates = [
+        (clean_title, clean_title, clean_title),
+        (f"Senior {clean_title} Architect", f"Arkitek {clean_title} Kanan", f"高级 {clean_title} 架构师"),
+        (f"{clean_title} Operations Lead", f"Ketua Operasi {clean_title}", f"{clean_title} 运营主管"),
+        (f"Sustainable {clean_title} Specialist", f"Pakar {clean_title} Mampan", f"可持续 {clean_title} 专家"),
+        (f"{clean_title} Automation Engineer", f"Jurutera Automasi {clean_title}", f"{clean_title} 自动化工程师"),
+        (f"Digital {clean_title} Consultant", f"Perunding {clean_title} Digital", f"数字化 {clean_title} 顾问"),
+    ]
+
+    generated = []
+    for en_t, ms_t, zh_t in templates:
+        if len(generated) >= target_count:
+            break
+        if existing_titles and en_t.lower().strip() in existing_lower:
+            continue
+
+        generated.append({
+            "title": en_t,
+            "title_ms": ms_t,
+            "title_zh": zh_t,
+            "industry": industry,
+            "required_skills": [
+                f"{clean_title} Core Principles",
+                "Workflow Automation",
+                "Digital Systems Architecture",
+                "Cross-Functional Collaboration",
+                "Data Analysis & Reporting",
+                "Problem Solving & Optimization",
+                "Quality & Compliance Assurance",
+            ],
+            "required_skills_ms": [
+                f"Prinsip Teras {clean_title}",
+                "Automasi Aliran Kerja",
+                "Seni Bina Sistem Digital",
+                "Kerjasama Silang Fungsi",
+                "Analisis & Pelaporan Data",
+                "Penyelesaian Masalah & Pengoptimuman",
+                "Jaminan Kualiti & Pematuhan",
+            ],
+            "required_skills_zh": [
+                f"{clean_title} 核心技术规范",
+                "自动化工作流优化",
+                "数字系统架构设计",
+                "跨部门团队协同",
+                "数据分析与绩效洞察",
+                "复杂问题分析与解决",
+                "质量合规与标准保障",
+            ],
+            "sdg_alignments": [
+                {"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90},
+                {"targetCode": "SDG 9.4", "targetTitle": "Infrastructure retrofit & sustainability", "affinityScore": 0.85},
+            ],
+            "radar_requirements": {
+                "AI & Digital Tools": 80,
+                "Data Literacy & Analytics": 75,
+                "Domain Operations": 80,
+                "Human Communication": 75,
+                "ESG & Sustainability": 70,
+            },
+        })
+
+    return {"roles": generated}
+
+
 async def synthesize_on_demand_cohort(
     primary_title: str,
     industry: Optional[str] = None,
@@ -433,6 +513,7 @@ async def synthesize_on_demand_cohort(
     - If existing titles: Synthesizes `target_count` non-duplicate complementary sibling roles
       in the exact same domain to complete a 5-role cohort.
 
+    Tier 1: Local Qwen 2.5 (Ollama) -> Tier 2: Gemini API -> Tier 3: Deterministic Floor.
     Generates trilingual titles and competencies, calibrated macro-scenario multipliers,
     1024-dim ML embeddings via batch vectorization, and registers them into the active catalog.
     """
@@ -493,9 +574,48 @@ async def synthesize_on_demand_cohort(
         f"Return ONLY valid JSON."
     )
 
+    data = None
+
+    # Tier 1: Local Qwen 2.5 via Ollama
     try:
-        contents = [{"role": "user", "parts": [{"text": prompt}]}]
-        data = await call_gemini_json(contents=contents)
+        from services.local_llm_service import call_local_llm_json
+        logger.info(f"[role_synthesis] Tier 1: Querying Local Qwen 2.5 for '{primary_title}' ({target_count} roles)...")
+        data = await call_local_llm_json(
+            prompt=prompt,
+            system_instruction="You are an expert occupational taxonomist and future-workforce strategist for the UN Sustainable Development Goals. Output valid JSON only.",
+            timeout=45.0,
+        )
+        if data and isinstance(data, (dict, list)):
+            logger.info(f"[role_synthesis] Tier 1 Success: Qwen 2.5 synthesized role cohort for '{primary_title}'.")
+        else:
+            data = None
+    except Exception as qwen_err:
+        logger.warning(f"[role_synthesis] Tier 1 Qwen failed: {qwen_err}. Switching to Tier 2 Gemini fallback...")
+        data = None
+
+    # Tier 2: Gemini API Fallback
+    if not data:
+        try:
+            logger.info(f"[role_synthesis] Tier 2: Invoking Gemini API fallback for role cohort '{primary_title}'...")
+            contents = [{"role": "user", "parts": [{"text": prompt}]}]
+            data = await call_gemini_json(contents=contents)
+            if data and isinstance(data, (dict, list)):
+                logger.info(f"[role_synthesis] Tier 2 Success: Gemini synthesized role cohort for '{primary_title}'.")
+        except Exception as gemini_err:
+            logger.warning(f"[role_synthesis] Tier 2 Gemini failed: {gemini_err}. Invoking Tier 3 deterministic fallback...")
+            data = None
+
+    # Tier 3: Zero-Failure Deterministic Fallback Floor
+    if not data:
+        logger.info(f"[role_synthesis] Tier 3: Generating deterministic fallback cohort for '{primary_title}'...")
+        data = _generate_deterministic_fallback_cohort(
+            primary_title=primary_title,
+            industry=target_industry,
+            target_count=target_count,
+            existing_titles=existing_titles,
+        )
+
+    try:
         raw_roles = []
         if isinstance(data, dict):
             raw_roles = data.get("roles") or [data]
@@ -963,16 +1083,22 @@ async def evaluate_roles(
             "is_cohort_sibling": is_cohort_sibling,
         })
 
-    # Phase 1.5: Adaptive Cohort Completion (if fewer than 5 strong matches exist in catalog)
+    # Phase 1.5: Adaptive Cohort Completion (ensures at least 5 roles are always available)
+    # Triggered if total evaluated roles < 5 OR if strong matches < 5 and no cohort was synthesized yet
     strong_matches = [r for r in raw_evaluations if r["base_match"] >= 0.48]
-    if len(strong_matches) < 5 and not synthesized_cohort_ids:
-        needed = 5 - len(strong_matches)
-        existing_match_titles = [r["role_def"]["title"] for r in strong_matches] if strong_matches else None
+    if len(raw_evaluations) < 5 or (len(strong_matches) < 5 and not synthesized_cohort_ids):
+        needed = max(5 - len(raw_evaluations), 5 - len(strong_matches))
+        existing_match_titles = [r["role_def"]["title"] for r in raw_evaluations] if raw_evaluations else None
 
         candidate_seed = None
         candidate_ind = profile.industry
-        if profile.currentJobTitle and len(profile.currentJobTitle.strip()) >= 2 and profile.currentJobTitle.strip().lower() not in DISALLOWED_TARGET_TITLES:
+        if profile.targetJobTitle and len(profile.targetJobTitle.strip()) >= 2 and profile.targetJobTitle.strip().lower() not in DISALLOWED_TARGET_TITLES:
+            candidate_seed = profile.targetJobTitle.strip()
+        elif profile.currentJobTitle and len(profile.currentJobTitle.strip()) >= 2 and profile.currentJobTitle.strip().lower() not in DISALLOWED_TARGET_TITLES:
             candidate_seed = profile.currentJobTitle.strip()
+        elif profile.targetSectors and len(profile.targetSectors) > 0:
+            candidate_seed = f"{profile.targetSectors[0]} Specialist"
+            candidate_ind = candidate_ind or profile.targetSectors[0]
         elif strong_matches:
             candidate_seed = strong_matches[0]["role_def"]["title"]
             candidate_ind = candidate_ind or strong_matches[0]["role_def"]["industry"]
@@ -983,6 +1109,7 @@ async def evaluate_roles(
         else:
             candidate_seed = "Modern Digital Transformation Lead"
 
+        logger.info(f"[evaluate_roles] Found {len(raw_evaluations)} roles (needed: {needed}). Synthesizing complementary roles for seed '{candidate_seed}' via LLM (Qwen -> Gemini)...")
         threshold_cohort = await synthesize_on_demand_cohort(
             primary_title=candidate_seed,
             industry=candidate_ind,

@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 from typing import List, Dict, Any, Tuple
 from schemas.analysis import (
     SelectedRoleRoadmap,
@@ -9,6 +10,8 @@ from schemas.analysis import (
     AnalyzeProfileData,
 )
 from services.gemini_service import call_gemini_with_fallback
+
+logger = logging.getLogger("pathway_service")
 
 # In-memory TTL cache for synthesized reskilling roadmaps (30 minutes TTL)
 _pathway_cache: Dict[str, Tuple[SelectedRoleRoadmap, float]] = {}
@@ -23,9 +26,21 @@ CANDIDATE CONTEXT:
 - Target Role: {target_role_title} ({target_industry})
 - Target Role SDGs: {target_sdgs}
 - Skills to Acquire (Gap): {skills_gap}
-- Matched Strengths (Already Mastered): {matched_strengths}
+- Matched Strengths (ALREADY MASTERED - DO NOT TEACH): {matched_strengths}
 - Weekly Availability: {weekly_hours} hours per week
-(NOTE: If the candidate already possesses all baseline skills, you MUST synthesize 3 progressive, future-ready frontier competencies/leadership skills into "skillsToAcquire" and "skillsToAcquireLocalized" (trilingual en, ms, zh) and design the milestones around these advanced topics so Skills to Acquire is never null or 0.)
+
+CRITICAL CURRICULUM CONSTRAINTS:
+1. STRICT EXCLUSION OF MASTERED SKILLS:
+   - The candidate ALREADY possesses strong proficiency in "{matched_strengths}".
+   - DO NOT include, teach, review, or recommend courses for ANY skill listed under "Matched Strengths (ALREADY MASTERED)".
+   - Reskilling roadmaps must respect candidate seniority: NEVER waste their time reviewing concepts they have already mastered!
+2. PHASE 1 MUST TARGET THE PRIMARY SKILLS GAP:
+   - Phase 1 MUST immediately begin bridging the candidate's highest-priority missing competencies from "{skills_gap}".
+   - Phase 1 is NOT a generic beginner/101 digital literacy primer. It is "Phase 1: Gap Foundations & Architecture", focusing directly on the foundational theoretical principles of their missing gap skills.
+   - Phase 2 focuses on hands-on tools, modern frameworks, and production automation for the remaining gap skills.
+   - Phase 3 is the Capstone & Industry Readiness project integrating these newly acquired competencies.
+3. ZERO GAP HANDLING:
+   - If the candidate already possesses all baseline skills (gap is null or 0), you MUST synthesize 3 progressive, future-ready frontier competencies/leadership skills into "skillsToAcquire" and "skillsToAcquireLocalized" (trilingual en, ms, zh) and design all 3 milestones around these advanced topics so every single phase teaches genuinely new, future-ready capabilities.
 
 MANDATORY REQUIREMENTS:
 1. TRILINGUAL SUPPORT (CRITICAL):
@@ -34,17 +49,18 @@ MANDATORY REQUIREMENTS:
    - "ms": Natural Bahasa Melayu
    - "zh": Simplified Chinese (简体中文)
 2. STRUCTURED PHASES:
-   - Around 3 progressive phases are recommended:
-     * Phase 1: Foundation Core (fundamental concepts & digital compliance)
-     * Phase 2: Applied Tools & Workflows (hands-on modern stack & automation)
-     * Phase 3: Capstone & Industry Readiness (end-to-end portfolio project & certification)
-   - Assign sequential phaseIndex starting from 1 (1, 2, 3, ...).
+   - 3 progressive phases:
+     * Phase 1: Gap Foundations & Core Architecture (theoretical basis of gap skills)
+     * Phase 2: Applied Toolchains & Production Workflows (hands-on stack & automation)
+     * Phase 3: Capstone Integration & Industry Readiness (end-to-end portfolio & certification)
+   - Assign sequential phaseIndex starting from 1 (1, 2, 3).
 3. RECOMMENDED COURSES:
    - Recommend 1-2 realistic courses per phase (e.g. Coursera, edX, freeCodeCamp, DeepLearning.AI, HRD Corp Malaysia).
+   - Courses MUST teach the candidate's gap skills, NOT their already mastered strengths.
    - Mark whether isHrdCorpClaimable (boolean) and isFree (boolean).
 4. UN SDG GOAL RELATION EXPLANATION (CRITICAL):
-   For EACH phase/milestone, you MUST identify the primary UN Sustainable Development Goal it aligns with (e.g. "SDG 4.4", "SDG 8.2", "SDG 9.4", "SDG 12.2") and provide a motivating, clear trilingual explanation in "sdgExplanationLocalized" with keys "en", "ms", and "zh":
-   - Explicitly connect the specific skills acquired in this milestone (e.g. data ingestion, production tools, or capstone architecture) to that SDG target.
+   For EACH phase/milestone, identify the primary UN Sustainable Development Goal it aligns with (e.g. "SDG 4.4", "SDG 8.2", "SDG 9.4", "SDG 12.2") and provide a motivating, clear trilingual explanation in "sdgExplanationLocalized" with keys "en", "ms", and "zh":
+   - Explicitly connect the specific skills acquired in this milestone to that SDG target.
    - Explain how this phase shields the candidate from routine automation risk and elevates them to higher-productivity, sustainable economic work.
    - Include "sdgGoal" (e.g. "SDG 4.4 & 8.2"), "sdgTitle", and "sdgExplanation" (canonical English summary).
 5. Output MUST be ONLY valid JSON matching this schema:
@@ -59,45 +75,45 @@ MANDATORY REQUIREMENTS:
   "milestones": [
     {{
       "phaseIndex": 1,
-      "phaseTitle": "Phase 1: Foundation Core",
+      "phaseTitle": "Phase 1: Gap Foundations & Architecture",
       "titleLocalized": {{
-        "en": "Phase 1: Foundation Core",
-        "ms": "Fasa 1: Teras Asas",
-        "zh": "第一阶段：核心基础"
+        "en": "Phase 1: Gap Foundations & Architecture",
+        "ms": "Fasa 1: Asas Jurang & Seni Bina",
+        "zh": "第一阶段：技能差距核心架构与理论底座"
       }},
-      "description": "Master the core theoretical fundamentals and industry standards.",
+      "description": "Master the core theoretical fundamentals of your targeted gap competencies.",
       "descriptionLocalized": {{
-        "en": "Master the core theoretical fundamentals and industry standards.",
-        "ms": "Kuasai asas teori teras dan piawaian industri.",
-        "zh": "掌握核心理论基础与行业标准知识架构。"
+        "en": "Master the core theoretical fundamentals of your targeted gap competencies.",
+        "ms": "Kuasai asas teori teras kemahiran jurang yang disasarkan.",
+        "zh": "系统掌握目标差距技能的核心理论基础与前沿标准。"
       }},
       "durationWeeks": 3,
       "estimatedHours": 15,
       "learningObjectives": [
-        "Master the theoretical fundamentals of key gap skills",
-        "Analyze industry best practices and compliance"
+        "Master the foundational theory and systems architecture of target gap skills",
+        "Analyze enterprise standards, performance benchmarks, and regulatory compliance"
       ],
       "objectivesLocalized": {{
         "en": [
-          "Master the theoretical fundamentals of key gap skills",
-          "Analyze industry best practices and compliance standards"
+          "Master the foundational theory and systems architecture of target gap skills",
+          "Analyze enterprise standards, performance benchmarks, and regulatory compliance"
         ],
         "ms": [
-          "Kuasai asas teori kemahiran jurang utama",
-          "Analisis amalan terbaik industri dan piawaian pematuhan"
+          "Kuasai teori asas dan seni bina sistem kemahiran jurang sasaran",
+          "Analisis standard perusahaan, tanda aras prestasi, dan pematuhan peraturan"
         ],
         "zh": [
-          "掌握关键技能差距的核心理论基础",
-          "分析行业最佳实践与国际合规标准"
+          "系统掌握目标差距技能的底层理论架构与高可用设计原则",
+          "分析行业企业级技术规范、性能基准及行业合规标准"
         ]
       }},
       "recommendedCourses": [
         {{
-          "title": "Introduction to Digital Skills",
+          "title": "Core Architecture for Emerging Tech Specializations",
           "titleLocalized": {{
-            "en": "Introduction to Digital Skills",
-            "ms": "Pengenalan kepada Kemahiran Digital",
-            "zh": "数字技能核心基础课程"
+            "en": "Core Architecture for Emerging Tech Specializations",
+            "ms": "Seni Bina Teras bagi Pengkhususan Teknologi Muncul",
+            "zh": "前沿技术核心架构与系统级专项实训"
           }},
           "platform": "Coursera",
           "url": "https://www.coursera.org",
@@ -108,11 +124,11 @@ MANDATORY REQUIREMENTS:
       ],
       "sdgGoal": "SDG 4.4 & 8.2",
       "sdgTitle": "Technical & Vocational Skills for Decent Work",
-      "sdgExplanation": "Mastering the fundamental concepts directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient digital literacy.",
+      "sdgExplanation": "Mastering high-value gap competencies directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient technical mastery.",
       "sdgExplanationLocalized": {{
-        "en": "Mastering the fundamental concepts directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient digital literacy, shielding you from routine automation.",
-        "ms": "Menguasai kemahiran asas fasa ini memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin berisiko kepada literasi digital berdaya tahan.",
-        "zh": "掌握本阶段核心底层技术，直接契合联合国 SDG 4.4 与 SDG 8.2，将传统机械常规经验重塑为抗自动化替代的前沿数字素养。"
+        "en": "Mastering high-value gap competencies directly advances UN SDG 4.4 and SDG 8.2 by converting vulnerable manual routines into resilient technical mastery, shielding you from routine automation.",
+        "ms": "Menguasai kemahiran jurang bernilai tinggi memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin berisiko kepada penguasaan teknikal berdaya tahan.",
+        "zh": "深入掌握高价值技术差距核心底座，直接契合联合国 SDG 4.4 与 SDG 8.2，将常规经验重塑为抗自动化替代的高附加值技术掌控力。"
       }}
     }}
   ]
@@ -146,9 +162,9 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
     )
 
     m1_title_loc = {
-        "en": "Phase 1: Foundation Core",
-        "ms": "Fasa 1: Teras Asas",
-        "zh": "第一阶段：核心基础",
+        "en": f"Phase 1: {first_gap} Foundations",
+        "ms": f"Fasa 1: Asas {first_gap}",
+        "zh": f"第一阶段：{first_gap} 核心理论基础",
     }
     m1_desc_loc = {
         "en": f"Master the core theoretical fundamentals of {first_gap} and industry compliance standards.",
@@ -408,7 +424,29 @@ async def synthesize_pathway(
     contents = [{"parts": [{"text": prompt}]}]
 
     try:
-        json_data = await call_gemini_with_fallback(contents)
+        json_data = None
+
+        # Tier 1: Local Qwen 2.5 (via Ollama)
+        try:
+            from services.local_llm_service import call_local_llm_json
+            logger.info(f"[synthesize_pathway] Tier 1: Generating 3-phase reskilling pathway for '{target_role.title}' via Local Qwen 2.5...")
+            json_data = await call_local_llm_json(
+                prompt=prompt,
+                system_instruction="You are an expert workforce reskilling intelligence strategist. Output strictly valid JSON matching the requested roadmap schema.",
+                timeout=55.0,
+            )
+            if json_data and isinstance(json_data, dict) and json_data.get("milestones"):
+                logger.info(f"[synthesize_pathway] Tier 1 Success: Qwen 2.5 generated {len(json_data.get('milestones', []))} roadmap phases.")
+            else:
+                json_data = None
+        except Exception as qwen_err:
+            logger.warning(f"[synthesize_pathway] Tier 1 Qwen failed: {qwen_err}. Switching to Tier 2 Gemini fallback...")
+            json_data = None
+
+        # Tier 2: Gemini API Fallback
+        if not json_data:
+            logger.info(f"[synthesize_pathway] Tier 2: Fallback to Gemini API for '{target_role.title}' roadmap...")
+            json_data = await call_gemini_with_fallback(contents)
         total_weeks = int(json_data.get("totalWeeks", 10))
         raw_milestones = json_data.get("milestones", [])
 
