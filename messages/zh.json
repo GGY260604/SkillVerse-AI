@@ -147,6 +147,10 @@
       "coming_soon": "分析功能正在开发中。"
     },
     "attribution_sources_note": "所有分析均基于 <esco>Esco Roles</esco>、<arxiv>Arxiv</arxiv> 和 <remoteok>RemoteOK</remoteok>。",
+    "loading": {
+      "title": "正在读取个人技能路线图...",
+      "subtitle": "从数据库同步您的当前规划与历史版本..."
+    },
     "empty": {
       "title": "目前没有任何规划",
       "desc": "您当前尚未生成任何 AI 职业转型规划路线图。立即开启职业诊断，获取专属技能进阶方案。",

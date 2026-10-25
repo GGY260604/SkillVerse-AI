@@ -8,8 +8,20 @@ import { useExpGain } from "@/context/auth/ExpGainContext";
 import Logo from "@/components/Logo";
 import { getAvatarInitials } from "@/lib/avatar";
 
-// --- Profile Overlay Modal ---
-// Load the latest profile, save display-name edits, and synchronize the authenticated user state.
+/**
+ * ProfileModal Component
+ * Load the latest profile attributes, save display name edits, and synchronize the authenticated user state.
+ *
+ * Component Requirements:
+ * - Profile hydration: Prefill from auth context and synchronize with database profile.
+ * - Profile persistence: Update display name and broadcast state to auth context.
+ *
+ * Workflow:
+ * 1. Hydrate user identity details from session cache and server API.
+ * 2. Validate display name mutations and submit updates to /api/profile.
+ * 3. Synchronize updated user profile and level across the application.
+ * 4. Render modal dialog with level badge, UID copy action, and edit form.
+ */
 export default function ProfileModal() {
   const tNav = useTranslations("layout.nav");
   const tProfile = useTranslations("auth.profile");
@@ -17,7 +29,10 @@ export default function ProfileModal() {
   const { logout, user, setUser, checkAuth } = useAuth();
   const { level, currentLevelExp, progressPercent } = useExpGain();
 
-  // --- Form State ---
+  // ==========================================
+  // Step 1: Initialize Form State and Hydrate User Attributes
+  // ==========================================
+  // Track editable display name, optimistic update states, feedback alerts, and UID copy flags.
   const [name, setName] = useState("");
   const [initialName, setInitialName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -27,8 +42,7 @@ export default function ProfileModal() {
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // --- Profile Hydration ---
-  // 1. Prefill from AuthContext immediately, then replace it with the latest /api/profile value.
+  // Ingest profile attributes from local auth context and remote API.
   useEffect(() => {
     if (isProfileModalOpen) {
       const currentName =
@@ -40,7 +54,7 @@ export default function ProfileModal() {
       setInitialName(currentName);
       setStatus(null);
 
-      // The API reads the database profile; ignore late responses after closing or switching users.
+      // Ingest latest profile record from database API.
       let isMounted = true;
       fetch("/api/profile", { cache: "no-store" })
         .then((res) => res.json())
@@ -52,7 +66,7 @@ export default function ProfileModal() {
         })
         .catch(() => {});
 
-      // Autofocus editable name input
+      // Autofocus editable name input field.
       setTimeout(() => {
         inputRef.current?.focus();
       }, 150);
@@ -63,7 +77,7 @@ export default function ProfileModal() {
     }
   }, [isProfileModalOpen, user]);
 
-  // Auto-close ProfileModal when user session expires or logs out.
+  // Automatically dismiss modal when user session expires or logs out.
   useEffect(() => {
     if (isProfileModalOpen && !user) {
       closeProfileModal();
@@ -83,7 +97,9 @@ export default function ProfileModal() {
 
   if (!isProfileModalOpen) return null;
 
-  // --- Profile Update ---
+  // ==========================================
+  // Step 2: Validate Display Name and Submit Profile Updates
+  // ==========================================
   const isDirty = name.trim() !== initialName.trim();
   const canSave = isDirty && name.trim().length > 0 && !isSaving;
 
@@ -103,6 +119,9 @@ export default function ProfileModal() {
 
       const data = await res.json();
 
+      // ==========================================
+      // Branch A: Unsuccessful Profile Update Response
+      // ==========================================
       if (!res.ok || !data.success) {
         setStatus({
           type: "error",
@@ -111,10 +130,15 @@ export default function ProfileModal() {
         return;
       }
 
+      // ==========================================
+      // Branch B: Successful Profile Update Response
+      // ==========================================
       const updatedName = name.trim();
       setInitialName(updatedName);
 
-      // 2. Reflect the saved name immediately, then refresh the authenticated session from the API.
+      // ==========================================
+      // Step 3: Synchronize Updated Profile Across Application
+      // ==========================================
       if (user) {
         setUser({
           ...user,
@@ -134,7 +158,7 @@ export default function ProfileModal() {
         text: tProfile("save_success"),
       });
 
-      // Auto-hide success message after 3 seconds
+      // Auto-hide success message after 3 seconds.
       setTimeout(() => {
         setStatus((prev) => (prev?.type === "success" ? null : prev));
       }, 3000);
@@ -151,7 +175,9 @@ export default function ProfileModal() {
   const currentDisplayName = name.trim() || initialName.trim() || user?.email || "User";
   const avatarLetter = getAvatarInitials(name.trim() || initialName.trim() || user?.email);
 
-  // --- UI ---
+  // ==========================================
+  // Step 4: Render Profile Modal Dialog and Identity Controls
+  // ==========================================
   return (
     <div
       role="dialog"

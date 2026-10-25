@@ -3,14 +3,29 @@ import { supabase } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// --- Route Handler ---
-// Endpoint: POST /api/auth/reset-password
-// Purpose: Validate 6-digit recovery OTP, securely update account password, and establish user session.
-// Target Service: Supabase Auth & Supabase Auth Admin
+/**
+ * POST /api/auth/reset-password
+ * Verifies recovery code, updates user password via Supabase Admin, and signs the user in.
+ *
+ * Request Requirements:
+ * - Authentication: None (public recovery verification endpoint).
+ * - Query Parameters: None.
+ * - Request Body:
+ *   - email (required): String. User email address.
+ *   - token (required): String. 6-digit recovery code.
+ *   - newPassword (required): String. New password of at least 6 characters.
+ *
+ * Workflow:
+ * 1. Validate payload format and password length requirements.
+ * 2. Verify recovery code with Supabase Auth.
+ * 3. Update password via Supabase Admin service.
+ * 4. Sign in with new credentials and attach session cookies.
+ */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Request Body Parsing and Format Validation
-    // Validate email, OTP token format, and password length requirements.
+    // ==========================================
+    // Step 1: Validate Payload Format and Password Length Requirements
+    // ==========================================
     const body = await request.json();
     const { email, token, newPassword } = body;
 
@@ -38,8 +53,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Recovery OTP Verification
-    // Verify the one-time code against Supabase authentication service.
+    // ==========================================
+    // Step 2: Verify Recovery Code with Supabase Auth
+    // ==========================================
     const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
       token: cleanToken,
@@ -53,8 +69,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Secure Password Update via Admin Client
-    // Apply the new password directly via privileged admin service.
+    // ==========================================
+    // Step 3: Update Password via Supabase Admin Service
+    // ==========================================
     const admin = createAdminClient();
     const { error: updateError } = await admin.auth.admin.updateUserById(
       otpData.user.id,
@@ -65,8 +82,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    // 4. Session Establishment and Cookie Attachment
-    // Sign in with new credentials and attach session cookies to the response.
+    // ==========================================
+    // Step 4: Sign in with New Credentials and Attach Session Cookies
+    // ==========================================
     const { data: sessionData, error: loginError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: newPassword,
@@ -92,8 +110,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    // 5. Internal Error Handling
-    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

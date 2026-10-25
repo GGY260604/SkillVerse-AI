@@ -2,15 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// --- Route Handler ---
-// Endpoint: POST /api/auth/login
-// Purpose: Authenticate user credentials and establish session cookies.
-// Target Service: Supabase Auth & Prisma Database
+/**
+ * POST /api/auth/login
+ * Authenticates user credentials against Supabase Auth, ensures user record synchronization,
+ * and attaches session cookies to the response.
+ *
+ * Request Requirements:
+ * - Authentication: None (public login endpoint).
+ * - Query Parameters: None.
+ * - Request Body:
+ *   - email (required): String. User email address.
+ *   - password (required): String. User account password.
+ *   - rememberMe (optional): Boolean. Extends session cookie duration to 30 days.
+ *
+ * Workflow:
+ * 1. Validate request body credentials.
+ * 2. Authenticate user credentials with Supabase Auth.
+ * 3. Synchronize user record in database.
+ * 4. Dispatch response and attach session cookies.
+ */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Request Body Parsing and Validation
-    // Extract user credentials and remember-me preference from JSON payload.
-    // Validate that both email and password are provided.
+    // ==========================================
+    // Step 1: Validate Request Body Credentials
+    // ==========================================
     const body = await request.json();
     const { email, password, rememberMe } = body;
 
@@ -21,8 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Supabase Authentication
-    // Authenticate user credentials against the Supabase Auth service.
+    // ==========================================
+    // Step 2: Authenticate User Credentials with Supabase Auth
+    // ==========================================
     const normalizedEmail = email.trim().toLowerCase();
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
@@ -40,8 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. User Synchronization
-    // Ensure user record exists in Prisma database for relation mapping.
+    // ==========================================
+    // Step 3: Synchronize User Record in Database
+    // ==========================================
     if (data.user?.id && data.user.email) {
       try {
         const { prisma } = await import("@/lib/supabase/prisma");
@@ -59,8 +76,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Response Dispatch and Cookie Attachment
-    // Build user profile payload and attach authentication cookies.
+    // ==========================================
+    // Step 4: Dispatch Response and Attach Session Cookies
+    // ==========================================
     const name =
       (data.user.user_metadata?.name ||
         data.user.user_metadata?.full_name ||
@@ -84,8 +102,6 @@ export async function POST(request: NextRequest) {
       expiresIn
     );
   } catch (err: unknown) {
-    // 5. Internal Error Handling
-    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

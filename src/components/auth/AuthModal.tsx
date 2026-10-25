@@ -59,8 +59,21 @@ function PasswordEyeToggle({
   );
 }
 
-// --- Authentication Overlay Modal Component ---
-// Supports Email/Password Login, Registration with 6-digit OTP, and Password Recovery with 6-digit OTP.
+/**
+ * AuthModal Component
+ * Overlay modal orchestrating authentication flows: Login, Registration with OTP, and Recovery with OTP.
+ *
+ * Component Requirements:
+ * - Multi-view orchestration: Support login, register, forgot-password, and 6-digit OTP verification views.
+ * - Credential persistence: Remember credentials via localStorage when user selects rememberMe.
+ * - Error mapping: Provide localized user feedback for server authentication errors.
+ *
+ * Workflow:
+ * 1. Initialize form state and synchronize remembered credentials from localStorage.
+ * 2. Route authentication requests across supported workflows (login, register, verify-otp, forgot, reset).
+ * 3. Update session credentials and refresh application state upon authentication success.
+ * 4. Render modal dialog with view-specific authentication forms.
+ */
 export default function AuthModal() {
   const t = useTranslations("auth");
   const locale = useLocale();
@@ -79,7 +92,10 @@ export default function AuthModal() {
     setUser,
   } = useAuth();
 
-  // --- Form State ---
+  // ==========================================
+  // Step 1: Initialize Modal Form State and Credential Effects
+  // ==========================================
+  // Track credentials, OTP inputs, visibility toggles, and status messages across view transitions.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -87,13 +103,13 @@ export default function AuthModal() {
   const [otpToken, setOtpToken] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
 
-  // --- Password Visibility State ---
+  // Track visibility toggles for password fields.
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
 
-  // --- Request Status State ---
+  // Track async operation status and user feedback notices.
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -101,8 +117,7 @@ export default function AuthModal() {
 
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // --- Modal Effects ---
-  // Reset password visibility when switching views or modal opens
+  // Reset password visibility when switching views or modal opens.
   useEffect(() => {
     setShowPassword(false);
     setShowConfirmPassword(false);
@@ -166,7 +181,6 @@ export default function AuthModal() {
 
   if (!isAuthModalOpen) return null;
 
-  // --- Error Message Mapping ---
   // Map server error codes and fallback messages to localized strings.
   const getLocalizedError = (code?: string, rawMsg?: string): string => {
     if (code === "invalid_credentials") return t("common.errors.invalid_credentials");
@@ -191,8 +205,13 @@ export default function AuthModal() {
     return rawMsg || t("common.errors.unexpected");
   };
 
-  // --- Form Submission Handlers ---
-  // 1. Submit Handler: Email & Password Login
+  // ==========================================
+  // Step 2: Route Authentication Requests Across Supported Workflows
+  // ==========================================
+
+  // ==========================================
+  // Branch A: Submit Email and Password Login
+  // ==========================================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -237,7 +256,9 @@ export default function AuthModal() {
     }
   };
 
-  // 2. Submit Handler: Account Registration (Dispatches 6-Digit OTP)
+  // ==========================================
+  // Branch B: Submit Account Registration with 6-Digit OTP Dispatch
+  // ==========================================
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -278,7 +299,9 @@ export default function AuthModal() {
     }
   };
 
-  // 3. Submit Handler: Verify Registration 6-Digit OTP
+  // ==========================================
+  // Branch C: Verify Registration 6-Digit OTP
+  // ==========================================
   const handleVerifyRegisterOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -320,7 +343,9 @@ export default function AuthModal() {
     }
   };
 
-  // 4. Submit Handler: Send Forgot Password 6-Digit OTP
+  // ==========================================
+  // Branch D: Dispatch Password Recovery 6-Digit OTP
+  // ==========================================
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -356,7 +381,9 @@ export default function AuthModal() {
     }
   };
 
-  // 5. Submit Handler: Verify Forgot OTP & Set New Password
+  // ==========================================
+  // Branch E: Verify Recovery OTP and Set New Password
+  // ==========================================
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -408,7 +435,9 @@ export default function AuthModal() {
     }
   };
 
-  // Resend OTP code action for registration or recovery flows.
+  // ==========================================
+  // Branch F: Resend Fresh Verification Code Action
+  // ==========================================
   const handleResendCode = async () => {
     if (resendCooldown > 0) return;
     setErrorMsg("");
@@ -446,7 +475,9 @@ export default function AuthModal() {
     }
   };
 
-  // --- UI ---
+  // ==========================================
+  // Step 3: Render Modal Backdrop and Dialog Shell
+  // ==========================================
   return (
     <div
       role="dialog"
@@ -481,7 +512,13 @@ export default function AuthModal() {
           <Logo size="md" />
         </div>
 
-        {/* View 1: Sign In View */}
+        {/* ========================================== */}
+        {/* Step 4: Render View-Specific Authentication Forms */}
+        {/* ========================================== */}
+
+        {/* ========================================== */}
+        {/* Branch A: Sign In Form View */}
+        {/* ========================================== */}
         {authModalView === "login" && (
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("login.title")}</h2>
@@ -585,7 +622,9 @@ export default function AuthModal() {
           </div>
         )}
 
-        {/* View 2: Registration View */}
+        {/* ========================================== */}
+        {/* Branch B: Registration Form View */}
+        {/* ========================================== */}
         {authModalView === "register" && (
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("register.title")}</h2>
@@ -675,7 +714,9 @@ export default function AuthModal() {
           </div>
         )}
 
-        {/* View 3: Registration 6-Digit OTP Verification View */}
+        {/* ========================================== */}
+        {/* Branch C: Registration 6-Digit OTP Verification View */}
+        {/* ========================================== */}
         {authModalView === "verify-register" && (
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("verify_registration.title")}</h2>
@@ -742,7 +783,9 @@ export default function AuthModal() {
           </div>
         )}
 
-        {/* View 4: Forgot Password Request View */}
+        {/* ========================================== */}
+        {/* Branch D: Password Recovery Request View */}
+        {/* ========================================== */}
         {authModalView === "forgot" && (
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("forgot_password.title")}</h2>
@@ -791,7 +834,9 @@ export default function AuthModal() {
           </div>
         )}
 
-        {/* View 5: Verify Recovery OTP & Reset Password View */}
+        {/* ========================================== */}
+        {/* Branch E: Verify Recovery OTP and Reset Password View */}
+        {/* ========================================== */}
         {authModalView === "verify-forgot" && (
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-1.5">{t("reset_password.title")}</h2>

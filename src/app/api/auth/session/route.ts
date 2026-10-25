@@ -5,18 +5,38 @@ import {
   clearAuthCookies,
 } from "@/lib/supabase/cookies";
 
-// --- Route Handler ---
-// Endpoint: GET /api/auth/session
-// Purpose: Validate session cookies, refresh credentials transparently if needed, and return user profile.
+/**
+ * GET /api/auth/session
+ * Validates session cookies, refreshes credentials transparently if needed, and returns the current user profile.
+ *
+ * Request Requirements:
+ * - Authentication: Supabase session cookie required.
+ * - Query Parameters: None.
+ * - Request Body: None.
+ *
+ * Workflow:
+ * 1. Resolve authenticated user from session cookies.
+ * 2. Clear cookies and return unauthenticated payload if invalid.
+ * 3. Dispatch authenticated user payload and refresh cookies.
+ */
 export async function GET() {
   try {
+    // ==========================================
+    // Step 1: Resolve Authenticated User from Session Cookies
+    // ==========================================
     const { user, newTokens } = await getAuthenticatedUser();
 
+    // ==========================================
+    // Step 2: Clear Cookies and Return Unauthenticated Payload if Invalid
+    // ==========================================
     if (!user) {
       const response = NextResponse.json({ authenticated: false, user: null });
       return clearAuthCookies(response);
     }
 
+    // ==========================================
+    // Step 3: Dispatch Authenticated User Payload and Refresh Cookies
+    // ==========================================
     const response = NextResponse.json({
       authenticated: true,
       user,
@@ -29,4 +49,3 @@ export async function GET() {
     return clearAuthCookies(response);
   }
 }
-

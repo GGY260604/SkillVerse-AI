@@ -14,8 +14,19 @@ export interface LogoProps {
   onClick?: () => void;
 }
 
-// --- Reusable Brand Logo Component ---
-// Renders the official SkillVerse mark with customizable text, beta pill, and sizing.
+/**
+ * Logo Component
+ * Render the official SkillVerse brand mark with configurable typography, sizing, and beta indicator.
+ *
+ * Component Requirements:
+ * - Brand presentation: Display emblem and optional typography.
+ * - Interactive navigation: Render next/link anchor if href is provided, or static container otherwise.
+ *
+ * Workflow:
+ * 1. Compute icon dimensions and typography tokens from size presets.
+ * 2. Build inner emblem image, typography label, and optional beta badge.
+ * 3. Render either an interactive Link navigation container or a standard division.
+ */
 export default function Logo({
   showText = true,
   text = "SkillVerse AI",
@@ -28,11 +39,13 @@ export default function Logo({
   imageClassName = "",
   onClick,
 }: LogoProps) {
-  // Compute default icon dimensions based on size preset.
+  // ==========================================
+  // Step 1: Compute Icon Dimensions and Typography Tokens
+  // ==========================================
+  // Determine pixel size based on preset and calculate typography scaling classes.
   const resolvedIconSize =
     iconSize ?? (size === "sm" ? 20 : size === "lg" ? 24 : 22);
 
-  // Compute text typography classes based on size preset.
   const defaultTextClasses =
     size === "sm"
       ? "text-xs sm:text-sm font-bold text-text-primary tracking-tight"
@@ -40,7 +53,10 @@ export default function Logo({
       ? "text-lg font-bold text-text-primary tracking-tight"
       : "text-sm sm:text-base font-bold text-text-primary tracking-tight";
 
-  // Inner logo content block.
+  // ==========================================
+  // Step 2: Build Emblem Image, Typography Label, and Beta Badge
+  // ==========================================
+  // Assemble brand favicon image, customizable text title, and optional beta status pill.
   const content = (
     <>
       <img
@@ -65,6 +81,12 @@ export default function Logo({
     href ? "no-underline cursor-pointer" : ""
   } ${className}`;
 
+  // ==========================================
+  // Step 3: Render Interactive Link or Division Container
+  // ==========================================
+  // ==========================================
+  // Branch A: Interactive Link Navigation
+  // ==========================================
   if (href) {
     return (
       <Link href={href} onClick={onClick} className={containerClasses}>
@@ -73,7 +95,9 @@ export default function Logo({
     );
   }
 
-  // --- UI ---
+  // ==========================================
+  // Branch B: Static Division Container
+  // ==========================================
   return (
     <div onClick={onClick} className={containerClasses}>
       {content}

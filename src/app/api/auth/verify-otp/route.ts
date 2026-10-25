@@ -2,14 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/client";
 import { attachAuthCookies } from "@/lib/supabase/cookies";
 
-// --- Route Handler ---
-// Endpoint: POST /api/auth/verify-otp
-// Purpose: Confirm 6-digit verification code for signup confirmation or password recovery.
-// Target Service: Supabase Auth
+/**
+ * POST /api/auth/verify-otp
+ * Verifies 6-digit one-time code for signup confirmation or password recovery,
+ * synchronizes the user profile in the database, and establishes session cookies.
+ *
+ * Request Requirements:
+ * - Authentication: None (public OTP verification endpoint).
+ * - Query Parameters: None.
+ * - Request Body:
+ *   - email (required): String. User email address.
+ *   - token (required): String. 6-digit verification code.
+ *   - type (optional): String ('signup' | 'recovery'). Defaults to 'signup'.
+ *
+ * Workflow:
+ * 1. Validate payload format and 6-digit pattern.
+ * 2. Verify one-time code with Supabase Auth.
+ * 3. Synchronize user profile in database.
+ * 4. Dispatch response and attach session cookies.
+ */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Request Body Parsing and Format Validation
-    // Validate email presence and enforce strict 6-digit numeric pattern.
+    // ==========================================
+    // Step 1: Validate Payload Format and 6-Digit Pattern
+    // ==========================================
     const body = await request.json();
     const { email, token, type } = body;
 
@@ -30,8 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Token Verification with Supabase
-    // Verify the one-time code against Supabase authentication service.
+    // ==========================================
+    // Step 2: Verify One-Time Code with Supabase Auth
+    // ==========================================
     const otpType = type === "recovery" ? "recovery" : "signup";
     const { data, error } = await supabase.auth.verifyOtp({
       email: normalizedEmail,
@@ -43,8 +60,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, errorCode: "invalid_otp" }, { status: 400 });
     }
 
-    // 3. Database User Synchronization
-    // Ensure the verified user record exists in the local database.
+    // ==========================================
+    // Step 3: Synchronize User Profile in Database
+    // ==========================================
     if (data.user?.id && data.user.email) {
       try {
         const { prisma } = await import("@/lib/supabase/prisma");
@@ -62,8 +80,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Session Cookie Attachment and Response Dispatch
-    // Create success response and attach authentication cookies if session exists.
+    // ==========================================
+    // Step 4: Dispatch Response and Attach Session Cookies
+    // ==========================================
     const response = NextResponse.json({
       success: true,
       message: "Verification successful.",
@@ -81,8 +100,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    // 5. Internal Error Handling
-    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

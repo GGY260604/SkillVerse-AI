@@ -1,15 +1,17 @@
-// --- Authentication Cookie Manager ---
-// Manage secure HTTP-only session cookies for Supabase authentication tokens.
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase/client";
 
 export const ACCESS_TOKEN_COOKIE = "sb_access_token";
 export const REFRESH_TOKEN_COOKIE = "sb_refresh_token";
 
-// Standard session expiration fallback: 7 days in seconds.
+// Standard session expiration fallback of seven days in seconds.
 const DEFAULT_MAX_AGE = 60 * 60 * 24 * 7;
 
-// Step 1: Attach Session Cookies
+// ==========================================
+// Session Cookie Attachment
+// ==========================================
+
 // Attach authentication access and refresh tokens to server response cookies.
 export function attachAuthCookies(
   response: NextResponse,
@@ -26,7 +28,7 @@ export function attachAuthCookies(
   };
 
   const accessMaxAge = typeof maxAge === "number" ? maxAge : DEFAULT_MAX_AGE;
-  // Refresh token must retain long session capability (at least 30 days) for silent refresh on Vercel
+  // Refresh token retains long session capability for silent token renewal.
   const refreshMaxAge = Math.max(accessMaxAge, 60 * 60 * 24 * 30);
 
   response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
@@ -41,29 +43,32 @@ export function attachAuthCookies(
   return response;
 }
 
-// Step 2: Clear Session Cookies
+// ==========================================
+// Session Cookie Invalidation
+// ==========================================
+
 // Remove authentication session cookies upon logout or token invalidation.
 export function clearAuthCookies(response: NextResponse) {
-  response.cookies.set(ACCESS_TOKEN_COOKIE, "", {
+  const isProd = process.env.NODE_ENV === "production";
+  const expireOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: "lax" as const,
     path: "/",
     maxAge: 0,
-  });
+    expires: new Date(0),
+  };
 
-  response.cookies.set(REFRESH_TOKEN_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set(ACCESS_TOKEN_COOKIE, "", expireOptions);
+  response.cookies.set(REFRESH_TOKEN_COOKIE, "", expireOptions);
 
   return response;
 }
 
-// Step 3: Retrieve Session Tokens
+// ==========================================
+// Token Ingestion from Request Headers
+// ==========================================
+
 // Read authentication tokens from current incoming request cookies.
 export async function getAuthTokensFromCookies() {
   const cookieStore = await cookies();
@@ -82,8 +87,8 @@ export interface AuthenticatedUser {
   id: string;
   email?: string;
   name?: string | null;
-  metadata?: Record<string, any>;
-  user_metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+  user_metadata?: Record<string, unknown>;
 }
 
 export interface AuthenticatedUserResult {
@@ -91,13 +96,15 @@ export interface AuthenticatedUserResult {
   newTokens: AuthenticatedUserTokens | null;
 }
 
-// Step 4: Resolve Authenticated User with Transparent Silent Refresh
-// Verifies accessToken first; if expired, seamlessly refreshes credentials via refreshToken.
+// ==========================================
+// Authenticated User Resolution
+// ==========================================
+
+// Verifies access token first and seamlessly refreshes credentials via refresh token if expired.
 export async function getAuthenticatedUser(): Promise<AuthenticatedUserResult> {
   const { accessToken, refreshToken } = await getAuthTokensFromCookies();
-  const { supabase } = await import("@/lib/supabase/client");
 
-  // 1. Fast Path: verify current accessToken against Supabase
+  // Fast path: verify current access token directly against the Supabase authentication server.
   if (accessToken) {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
@@ -117,28 +124,32 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUserResult> {
           newTokens: null,
         };
       }
-    } catch {}
+    } catch {
+      // Proceed to silent token renewal when access token verification fails.
+    }
   }
 
-  // 2. Silent Refresh Path: if accessToken expired but refreshToken is valid, refresh session
+  // Silent refresh path: renew session when access token has expired and refresh token is present.
   if (refreshToken) {
     try {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
         refresh_token: refreshToken,
       });
 
-      if (!refreshError && refreshData.session && refreshData.user) {
-        const name = (refreshData.user.user_metadata?.name ||
-          refreshData.user.user_metadata?.full_name ||
+      const refreshedUser = refreshData?.user || refreshData?.session?.user;
+
+      if (!refreshError && refreshData?.session && refreshedUser) {
+        const name = (refreshedUser.user_metadata?.name ||
+          refreshedUser.user_metadata?.full_name ||
           null) as string | null;
 
         return {
           user: {
-            id: refreshData.user.id,
-            email: refreshData.user.email,
+            id: refreshedUser.id,
+            email: refreshedUser.email,
             name,
-            metadata: refreshData.user.user_metadata,
-            user_metadata: refreshData.user.user_metadata,
+            metadata: refreshedUser.user_metadata,
+            user_metadata: refreshedUser.user_metadata,
           },
           newTokens: {
             accessToken: refreshData.session.access_token,
@@ -147,13 +158,18 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUserResult> {
           },
         };
       }
-    } catch {}
+    } catch {
+      // Return unauthenticated result when token renewal fails.
+    }
   }
 
   return { user: null, newTokens: null };
 }
 
-// Step 5: Attach Refreshed Credentials
+// ==========================================
+// Refreshed Credentials Application
+// ==========================================
+
 // Automatically attaches new auth cookies to server responses if a silent refresh occurred.
 export function applyAuthCookies(
   response: NextResponse,
@@ -170,8 +186,11 @@ export function applyAuthCookies(
   return response;
 }
 
-// Step 6: Create Standardized Unauthorized Response
-// Clears stale cookies and returns a 401 response with sessionExpired flag.
+// ==========================================
+// Standardized Unauthorized Response Dispatch
+// ==========================================
+
+// Clears stale cookies and returns an HTTP 401 unauthorized response with expiration metadata.
 export function createUnauthorizedResponse(message: string = "Unauthorized"): NextResponse {
   const response = NextResponse.json(
     {
@@ -184,4 +203,3 @@ export function createUnauthorizedResponse(message: string = "Unauthorized"): Ne
   );
   return clearAuthCookies(response);
 }
-

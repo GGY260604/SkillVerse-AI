@@ -1,18 +1,17 @@
-import type { QuizResponseData } from "@/components/analysis/quiz/PhaseQuizModal";
+import type { QuizResponseData } from "@/components/page-analysis/quiz/PhaseQuizModal";
 
-// -------------------------------------------------------------
-// Debugging / Testing Only (Quiz)
-// -------------------------------------------------------------
-
+// ==========================================
+// Step 1: Define Environment Testing Feature Flags
+// ==========================================
 // Keep this constant false for live deployments.
 export const USE_PHASE_QUIZ_MODAL_TESTING = false;
 
 // Keep this constant false to request quizzes from the API.
 export const USE_QUIZ_MOCK_DATA = false;
 
-// -------------------------------------------------------------
-
-// --- Mock Quiz Data ---
+// ==========================================
+// Step 2: Define Multilingual Offline Assessment Datasets
+// ==========================================
 // Every mock quiz question uses option A as the correct answer.
 export const MOCK_QUIZ_BY_LOCALE: Record<string, QuizResponseData> = {
   en: {
@@ -407,7 +406,9 @@ export const MOCK_QUIZ_BY_LOCALE: Record<string, QuizResponseData> = {
   }
 };
 
-// --- Mock Quiz Data Lookup ---
+// ==========================================
+// Step 3: Construct Dynamic Local Mock Quiz Payload
+// ==========================================
 // Return locale-specific mock quiz data with phase-specific EXP rewards.
 export function getMockQuizData(params?: {
   phaseIndex?: number;

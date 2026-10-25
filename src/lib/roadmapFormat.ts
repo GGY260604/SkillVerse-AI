@@ -1,6 +1,17 @@
-// --- Roadmap Data Formatter ---
-// Transform database roadmap records into typed frontend PlanData structures.
-import { PlanData, PlanPhase, CourseItem } from "@/components/analysis/planCard/planData";
+/**
+ * Roadmap Data Formatter Utilities
+ * Transform database roadmap records and associated phase milestones into typed frontend PlanData structures.
+ *
+ * Requirements:
+ * - Attribute mapping: Normalize database fields into camelCase frontend PlanData schema.
+ * - Trilingual preservation: Propagate localized role titles, descriptions, and skill taxonomies.
+ *
+ * Workflow:
+ * 1. Convert database entity attributes and timestamps into standard date representations.
+ * 2. Parse recommended learning courses and normalize chronological phase milestones.
+ * 3. Assemble and return formatted PlanData object consumed by frontend components.
+ */
+import { PlanData, PlanPhase, CourseItem } from "@/components/page-analysis/planCard/planData";
 
 export interface DatabaseRoadmap {
   id: string;
@@ -53,8 +64,9 @@ export interface DatabaseRoadmap {
   }>;
 }
 
-// Step 1: Format Database Roadmap to Plan Data
-// Convert database entity attributes and associated phases into typed frontend plan structures.
+// ==========================================
+// Step 1: Format Database Entity Attributes and Timestamps
+// ==========================================
 export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
   const isCurrent = roadmap.status === "current";
   const createdRaw = roadmap.createdAt || (roadmap as any).created_at;
@@ -77,7 +89,9 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
     (a, b) => (a.phaseIndex ?? a.phase_index ?? 0) - (b.phaseIndex ?? b.phase_index ?? 0)
   );
 
+  // ==========================================
   // Step 2: Phase Normalization and Recommended Course Parsing
+  // ==========================================
   const phases: PlanPhase[] = sortedPhases.map((p: any) => {
     // Parse recommended courses array from JSON or direct object array.
     let courses: CourseItem[] = [];
@@ -136,7 +150,9 @@ function pickArray(...candidates: any[]): string[] {
   return [];
 }
 
-  // Step 3: Assemble Plan Data
+  // ==========================================
+  // Step 3: Assemble Formatted Plan Data Structure
+  // ==========================================
   // Build and return final plan data object consumed by frontend components.
   return {
     id: roadmap.id,

@@ -1,5 +1,3 @@
-// --- Database Client ---
-// Configure PostgreSQL connection pool, adapter, and Prisma client singleton.
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -12,10 +10,12 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Database connection string resolved from environment variables.
-// Prioritize pooled DATABASE_URL at runtime to prevent IPv6/connection exhaustion on Vercel Serverless.
 const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
 
-// Step 1: PostgreSQL Connection Pool
+// ==========================================
+// PostgreSQL Connection Pool Instantiation
+// ==========================================
+
 // Initialize or reuse existing pool to avoid resource exhaustion during hot reloads.
 const pool =
   globalForPrisma.pool ??
@@ -25,12 +25,14 @@ const pool =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
 
-// Step 2: Prisma Adapter Instantiation
+// ==========================================
+// Prisma Adapter Instantiation
+// ==========================================
+
 // Wrap connection pool into Prisma PostgreSQL adapter.
 const adapter = new PrismaPg(pool);
 
-// Step 3: Prisma Client Singleton
-// Version tag to force client regeneration when schema changes
+// Version tag to force client regeneration when schema changes.
 const CURRENT_SCHEMA_VERSION = "2026-10-22-trilingual-v2";
 
 if (process.env.NODE_ENV !== "production" && globalForPrisma.schemaVersion !== CURRENT_SCHEMA_VERSION) {
@@ -38,12 +40,16 @@ if (process.env.NODE_ENV !== "production" && globalForPrisma.schemaVersion !== C
     try {
       globalForPrisma.prisma.$disconnect();
     } catch {
-      // ignore disconnect errors during HMR
+      // Disregard disconnection errors during hot module replacement.
     }
   }
   globalForPrisma.prisma = undefined;
   globalForPrisma.schemaVersion = CURRENT_SCHEMA_VERSION;
 }
+
+// ==========================================
+// Prisma Client Singleton Export
+// ==========================================
 
 // Initialize Prisma Client with adapter and configured logging levels.
 export const prisma =

@@ -1,10 +1,5 @@
 "use client";
 
-// --- Available State Actions ---
-// addExp(amount, phaseTitle): add EXP, persist it, and open the reward modal.
-// dismissExpModal(): close the EXP reward modal.
-// EXP totals and reward events are updated internally; raw setters are not exposed.
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/auth/AuthContext";
 
@@ -32,13 +27,29 @@ const ExpGainContext = createContext<ExpGainContextType | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = "skillverse_user_total_exp";
 
-// --- Context Provider ---
+/**
+ * ExpGainProvider Component
+ * Coordinate experience points (EXP) accumulation, level calculation, and reward overlay modal events.
+ *
+ * Component Requirements:
+ * - EXP persistence: Store EXP in browser localStorage and synchronize with database profile.
+ * - Dynamic level computation: Calculate level and progress percentage (100 EXP threshold per level).
+ * - Reward event dispatch: Emit ExpGainEvent to trigger visual celebration in ExpGainModal.
+ *
+ * Workflow:
+ * 1. Initialize total EXP from browser localStorage and synchronize with database API.
+ * 2. Calculate derived level metrics (level, currentLevelExp, progressPercent).
+ * 3. Handle EXP awards, persist new totals, and emit reward event.
+ * 4. Provide EXP state and reward actions to consumers.
+ */
 export function ExpGainProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn } = useAuth();
   const userId = user?.id || "guest";
   const storageKey = `${STORAGE_KEY_PREFIX}_${userId}`;
 
-  // --- Initial EXP State ---
+  // ==========================================
+  // Step 1: Initialize User EXP Storage Key and Hydrated State
+  // ==========================================
   // Load cached EXP without changing the server-rendered initial state.
   const [totalExp, setTotalExp] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
@@ -55,7 +66,9 @@ export function ExpGainProvider({ children }: { children: React.ReactNode }) {
 
   const [expGainEvent, setExpGainEvent] = useState<ExpGainEvent | null>(null);
 
-  // --- EXP Synchronization ---
+  // ==========================================
+  // Step 2: Synchronize Authoritative User Experience Points from Remote API
+  // ==========================================
   // Sync local storage and the authoritative database value when the user changes.
   useEffect(() => {
     let resolvedExp = 0;
@@ -102,13 +115,17 @@ export function ExpGainProvider({ children }: { children: React.ReactNode }) {
     }
   }, [storageKey, user, isLoggedIn]);
 
-  // --- Derived Level Stats ---
+  // ==========================================
+  // Step 3: Compute Derived Progression Metrics and Level Thresholds
+  // ==========================================
   // Each level requires 100 EXP.
   const level = Math.floor(totalExp / 100) + 1;
   const currentLevelExp = totalExp % 100;
   const progressPercent = currentLevelExp; // 0% to 99%
 
-  // --- EXP Awarding ---
+  // ==========================================
+  // Step 4: Handle EXP Awarding, Remote Persistence, and Level-Up Event Dispatch
+  // ==========================================
   const addExp = useCallback(
     (amount: number, phaseTitle?: string): ExpGainEvent => {
       // Ensure positive multiple of 5
@@ -161,7 +178,9 @@ export function ExpGainProvider({ children }: { children: React.ReactNode }) {
     setExpGainEvent(null);
   }, []);
 
-  // --- Context Value ---
+  // ==========================================
+  // Step 5: Expose Experience Progression Context Tree to Application
+  // ==========================================
   return (
     <ExpGainContext.Provider
       value={{

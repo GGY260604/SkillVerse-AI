@@ -1,10 +1,5 @@
 "use client";
 
-// --- Available State Actions ---
-// openAuthModal(view, email) / closeAuthModal(): control the authentication modal.
-// setAuthModalView(view) / setPendingEmail(email): update the current auth flow.
-// setUser(user) / checkAuth() / logout(): update or validate the authenticated user.
-
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
@@ -45,10 +40,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_CACHE_KEY = "skillverse_auth_cache";
 
-// --- Context Provider ---
-// Manage authentication state, session validation, proactive heartbeat, and authentication modal visibility.
+/**
+ * AuthProvider Component
+ * Manage user authentication state, session validation, proactive heartbeat, and authentication modal visibility.
+ *
+ * Component Requirements:
+ * - Session validation: Check authentication status against /api/auth/session with session cache.
+ * - Heartbeat keepalive: Periodic heartbeat check to maintain active session.
+ * - Modal orchestration: Control global authentication modal visibility and flow transitions.
+ *
+ * Workflow:
+ * 1. Initialize user session state and hydration flags.
+ * 2. Validate active session on mount and restore cached user state.
+ * 3. Handle session expiration and auto-open authentication modal.
+ * 4. Provide authentication actions (login modal, logout, checkAuth) to consumers.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Initialize user and loading consistently between SSR and client initial hydration to avoid hydration mismatch.
+  // ==========================================
+  // Step 1: Initialize User Session and Authentication Modal States
+  // ==========================================
+  // Initialize user and loading consistently between SSR and client initial hydration.
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -96,7 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     openAuthModal("login", "", "session_expired");
   }, [openAuthModal]);
 
-  // --- Session Validation ---
+  // ==========================================
+  // Step 2: Validate Session and Manage Keepalive Heartbeat Checks
+  // ==========================================
+  // Verify session validity against server endpoint and persist cached user object.
   const checkAuth = useCallback(async (isHeartbeat: boolean = false): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/session", { cache: "no-store" });
@@ -184,7 +198,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [checkAuth]);
 
-  // --- Global 401 Interception (Reactive Detection on User Actions) ---
+  // ==========================================
+  // Step 3: Handle Global 401 Session Interception and Logout Mutations
+  // ==========================================
+  // Intercept unauthorized network responses to prompt login modal.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -276,7 +293,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // --- Context Value ---
+  // ==========================================
+  // Step 4: Expose Authentication State and Provider Context Tree
+  // ==========================================
   return (
     <AuthContext.Provider
       value={{

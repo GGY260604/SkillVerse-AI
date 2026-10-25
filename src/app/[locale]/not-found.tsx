@@ -3,19 +3,35 @@
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
-// --- Localized 404 Not Found Screen ---
-// Display futuristic celestial 404 message with interactive navigation options.
+/**
+ * Localized 404 not found screen.
+ * Display futuristic celestial 404 message with interactive navigation options.
+ */
 export default function NotFound() {
+  // ==========================================
+  // Step 1: Initialize Localized Translations and Navigation
+  // ==========================================
+  // Bind localization dictionary for not found messaging.
   const t = useTranslations("other.status.not_found");
+  // Access localized navigation router.
   const router = useRouter();
 
-  // --- UI ---
+  // ==========================================
+  // Step 2: Render 404 Status Screen and Controls
+  // ==========================================
+  // Display status code, localized explanation, and interactive navigation buttons.
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[75vh] px-4 sm:px-6 relative overflow-hidden select-none animate-fade-in py-16">
-      {/* Background Radial Ambient Glow */}
+      {/* ========================================== */}
+      {/* Background Ambient Glow */}
+      {/* ========================================== */}
+      {/* Render radial backdrop glow. */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-100 bg-[radial-gradient(ellipse_at_center,var(--accent-glow)_0%,transparent_70%)] pointer-events-none" />
 
-      {/* Massive Gradient 404 Display */}
+      {/* ========================================== */}
+      {/* Status Code Display */}
+      {/* ========================================== */}
+      {/* Display oversized monospace 404 code with celestial subtitle. */}
       <div className="relative mb-4">
         <h1 className="text-8xl sm:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-text-primary via-text-secondary to-transparent font-mono select-none drop-shadow-2xl">{t("code")}</h1>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -23,13 +39,19 @@ export default function NotFound() {
         </div>
       </div>
 
+      {/* ========================================== */}
       {/* Narrative Title & Description */}
+      {/* ========================================== */}
+      {/* Present human-readable explanation and navigation guidance. */}
       <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-3 text-center max-w-lg">{t("title")}</h2>
       <p className="text-sm text-text-secondary text-center max-w-md leading-relaxed mb-8">{t("description")}</p>
 
-      {/* Interactive Navigation Action Buttons */}
+      {/* ========================================== */}
+      {/* Interactive Navigation Controls */}
+      {/* ========================================== */}
+      {/* Provide navigation controls to return home or navigate backward. */}
       <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
-        {/* Primary CTA: Return to Platform Home */}
+        {/* Branch A: Return to Platform Home Link */}
         <Link
           href="/"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent text-bg-primary text-xs font-semibold uppercase tracking-wider font-mono hover:opacity-90 hover:shadow-[0_0_25px_var(--accent-glow-strong)] transition-all duration-300 no-underline cursor-pointer"
@@ -38,7 +60,7 @@ export default function NotFound() {
           <span>{t("btn_home")}</span>
         </Link>
 
-        {/* Secondary Action: Go Back in Navigation History */}
+        {/* Branch B: Navigate Backward in History Button */}
         <button
           type="button"
           onClick={() => router.back()}

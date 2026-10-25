@@ -147,6 +147,10 @@
       "coming_soon": "Ciri-ciri analisis sedang dibangunkan."
     },
     "attribution_sources_note": "Semua analisis adalah berdasarkan <esco>Esco Roles</esco>, <arxiv>Arxiv</arxiv>, dan <remoteok>RemoteOK</remoteok>.",
+    "loading": {
+      "title": "Memuatkan Pelan Hala Tuju Kemahiran...",
+      "subtitle": "Menyegerakkan pelan semasa dan sejarah daripada pangkalan data..."
+    },
     "empty": {
       "title": "Tiada Sebarang Pelan Buat Masa Ini",
       "desc": "Anda belum menjana pelan laluan transformasi AI. Mulakan diagnostik untuk membuka laluan peningkatan kemahiran peribadi anda.",

@@ -9,8 +9,19 @@ interface DarkLightSwicherProps {
   showLabel?: boolean;
 }
 
-// --- Dark / Light Mode Switcher Component ---
-// Render an accessible toggle button to seamlessly switch between dark and light themes.
+/**
+ * DarkLightSwicher Component
+ * Render an accessible toggle button to seamlessly switch between dark and light themes.
+ *
+ * Component Requirements:
+ * - Theme context integration: Toggle between dark and light themes with persistence.
+ * - Hydration safety: Prevent hydration mismatch through client-side mounting checks.
+ *
+ * Workflow:
+ * 1. Synchronize mounting state to avoid server/client hydration mismatches.
+ * 2. Resolve active theme state and localized accessibility labels.
+ * 3. Render theme toggle button with animated sun/moon indicators.
+ */
 export default function DarkLightSwicher({
   className = "",
   showLabel = false,
@@ -19,11 +30,16 @@ export default function DarkLightSwicher({
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch by mounting client-side.
+  // ==========================================
+  // Step 1: Synchronize Mounting State to Prevent Hydration Mismatch
+  // ==========================================
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // ==========================================
+  // Branch A: Unmounted Skeleton Placeholder
+  // ==========================================
   if (!mounted) {
     return (
       <div
@@ -32,10 +48,15 @@ export default function DarkLightSwicher({
     );
   }
 
+  // ==========================================
+  // Step 2: Resolve Active Theme State and Accessibility Labels
+  // ==========================================
   const isDark = theme === "dark";
   const labelText = isDark ? t("lightMode") : t("darkMode");
 
-  // --- UI ---
+  // ==========================================
+  // Step 3: Render Theme Toggle Button with Animated Sun/Moon Indicators
+  // ==========================================
   return (
     <button
       type="button"
@@ -46,9 +67,11 @@ export default function DarkLightSwicher({
         showLabel ? "h-10 px-3.5 gap-2 w-full" : "w-9 h-9 shrink-0"
       } ${className}`}
     >
-      {/* Dynamic Sun / Moon Icon with Smooth Transitions */}
+      {/* ========================================== */}
+      {/* Branch B: Active Theme Icon Selection */}
+      {/* ========================================== */}
       {isDark ? (
-        // Sun Icon for Dark Mode (indicating switch to light)
+        // Solar Vector Icon for Dark Theme
         <svg
           className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300"
           fill="none"
@@ -64,7 +87,7 @@ export default function DarkLightSwicher({
           />
         </svg>
       ) : (
-        // Moon Icon for Light Mode (indicating switch to dark)
+        // Lunar Vector Icon for Light Theme
         <svg
           className="w-4 h-4 text-accent group-hover:-rotate-12 transition-transform duration-300"
           fill="none"

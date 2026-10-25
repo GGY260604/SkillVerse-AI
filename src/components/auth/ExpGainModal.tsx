@@ -8,8 +8,20 @@ import {
   USE_EXP_GAIN_MODAL_MOCK_DATA,
 } from "@/constants/testing/expGain";
 
-// --- EXP Reward Overlay ---
-// Present earned EXP, level progress, and level-up feedback from the auth context.
+/**
+ * ExpGainModal Component
+ * Present earned experience points (EXP), level progress, and level-up feedback from the authentication context.
+ *
+ * Component Requirements:
+ * - Experience presentation: Animated numerical counter and progress bar visualization.
+ * - Level-up ceremony: Specialized animation and celebratory visual themes upon rank advancement.
+ *
+ * Workflow:
+ * 1. Synchronize reward modal event and initialize animation timers.
+ * 2. Animate numerical EXP counter with cubic ease-out progression.
+ * 3. Update level progress bar and trigger level-up effects when applicable.
+ * 4. Render modal dialog with level badge, progress metrics, and continuation action.
+ */
 export default function ExpGainModal() {
   const t = useTranslations("auth.exp_gain");
   const { expGainEvent, dismissExpModal } = useExpGain();
@@ -21,8 +33,13 @@ export default function ExpGainModal() {
   const [barProgress, setBarProgress] = useState(0);
   const [showLevelUpEffect, setShowLevelUpEffect] = useState(false);
 
-  // Count up the reward first, then animate the level bar and optional level-up transition.
+  // ==========================================
+  // Step 1: Synchronize Reward Event and Initialize Animation Timers
+  // ==========================================
   useEffect(() => {
+    // ==========================================
+    // Branch A: Inactive Reward Modal State
+    // ==========================================
     if (!modalEvent) {
       setAnimatedExp(0);
       setBarProgress(0);
@@ -34,10 +51,12 @@ export default function ExpGainModal() {
     const oldLevelExp = oldExp % 100;
     const newLevelExp = newExp % 100;
 
-    // Start with old progress
+    // Initialize progress bar with pre-reward EXP progress.
     setBarProgress(oldLevelExp);
 
-    // 1. Ticking up the EXP number
+    // ==========================================
+    // Step 2: Animate Numerical EXP Counter with Cubic Progression
+    // ==========================================
     const duration = 1200; // ms
     const startTime = performance.now();
     let animationFrameId = 0;
@@ -46,7 +65,7 @@ export default function ExpGainModal() {
     const frame = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
+      // Compute ease-out cubic animation curve.
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setAnimatedExp(Math.round(easeOut * expGained));
       if (progress < 1) {
@@ -57,7 +76,13 @@ export default function ExpGainModal() {
     };
     animationFrameId = requestAnimationFrame(frame);
 
+    // ==========================================
+    // Step 3: Animate Progress Bar and Trigger Level-Up Effects
+    // ==========================================
     const timer1 = setTimeout(() => {
+      // ==========================================
+      // Branch B: Level-Up Progression
+      // ==========================================
       if (didLevelUp) {
         setBarProgress(100);
 
@@ -66,6 +91,9 @@ export default function ExpGainModal() {
           setBarProgress(newLevelExp);
         }, 600);
       } else {
+        // ==========================================
+        // Branch C: Standard EXP Increment
+        // ==========================================
         setBarProgress(newLevelExp);
       }
     }, 250);
@@ -82,7 +110,9 @@ export default function ExpGainModal() {
   const { oldLevel, newLevel, didLevelUp, phaseTitle } = modalEvent;
   const currentShownLevel = showLevelUpEffect || !didLevelUp ? newLevel : oldLevel;
 
-  // --- UI ---
+  // ==========================================
+  // Step 4: Render Modal Dialog Container and Reward Ceremony
+  // ==========================================
   return (
     <div
       className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fade-in"

@@ -3,14 +3,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateLocalizedEmail } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/sender";
 
-// --- Route Handler ---
-// Endpoint: POST /api/auth/forgot-password
-// Purpose: Initiate password recovery and dispatch localized email verification codes.
-// Target Service: Supabase Auth Admin & Upstream SMTP Provider
+/**
+ * POST /api/auth/forgot-password
+ * Initiates account password recovery and dispatches localized emails containing recovery codes.
+ *
+ * Request Requirements:
+ * - Authentication: None (public recovery initiation endpoint).
+ * - Query Parameters: None.
+ * - Request Body:
+ *   - email (required): String. User email address.
+ *   - locale (optional): String ('en' | 'ms' | 'zh'). Defaults to 'en'.
+ *   - theme (optional): String ('light' | 'dark'). Defaults to 'dark'.
+ *
+ * Workflow:
+ * 1. Validate payload and email presence.
+ * 2. Generate recovery link with Supabase Admin.
+ * 3. Dispatch localized recovery email with one-time code.
+ * 4. Dispatch confirmation response.
+ */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Request Body Parsing and Validation
-    // Parse incoming payload and verify email presence.
+    // ==========================================
+    // Step 1: Validate Payload and Email Presence
+    // ==========================================
     const body = await request.json();
     const { email, locale, theme } = body;
 
@@ -25,8 +40,9 @@ export async function POST(request: NextRequest) {
     const userLocale = locale || "en";
     const userTheme = theme || "dark";
 
-    // 2. Recovery Link Generation via Admin Client
-    // Generate recovery link and one-time password while bypassing built-in email templates.
+    // ==========================================
+    // Step 2: Generate Recovery Link with Supabase Admin
+    // ==========================================
     const admin = createAdminClient();
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -37,8 +53,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // 3. Localized Recovery Email Dispatch
-    // Format custom localized template and send the recovery code via transactional email.
+    // ==========================================
+    // Step 3: Dispatch Localized Recovery Email with One-Time Code
+    // ==========================================
     const otp = data.properties?.email_otp;
     if (otp) {
       const localizedEmail = await generateLocalizedEmail({
@@ -55,16 +72,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 4. Successful Response Dispatch
-    // Return delivery confirmation for user interface display.
+    // ==========================================
+    // Step 4: Dispatch Confirmation Response
+    // ==========================================
     return NextResponse.json({
       success: true,
       message: "6-digit recovery code has been dispatched to your email.",
       email: normalizedEmail,
     });
   } catch (err: unknown) {
-    // 5. Internal Error Handling
-    // Return structured JSON error message for unexpected failures.
     const message = err instanceof Error ? err.message : "Unexpected server error.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

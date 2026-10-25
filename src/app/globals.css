@@ -3,44 +3,49 @@
 @source "../components";
 @source ".";
 
+/* ========================================== */
+/* Section 1: Dark Theme Design Tokens */
+/* ========================================== */
 :root,
 html.dark,
 html[data-theme="dark"] {
-  /* --- Core Backgrounds: Pure Achromatic Black and Dark Charcoal Neutrals --- */
+  /* Core Backgrounds: Pure Achromatic Black and Dark Charcoal Neutrals */
   --bg-primary: #080808;
   --bg-secondary: #0f0f0f;
   --bg-card: #141414;
   --bg-card-hover: #1f1f1f;
   --bg-elevated: #181818;
 
-  /* --- Accent: Emerald Teal --- */
+  /* Accent: Emerald Teal */
   --accent: #00e5c3;
   --accent-dim: #00c4a7;
   --accent-glow: rgba(0, 229, 195, 0.12);
   --accent-glow-strong: rgba(0, 229, 195, 0.25);
   --accent-gradient-end: #059669;
 
-  /* --- Text: Pure Clean Neutrals --- */
+  /* Text: Pure Clean Neutrals */
   --text-primary: #f5f5f7;
   --text-secondary: #9e9e9e;
   --text-muted: #666666;
 
-  /* --- Borders --- */
+  /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.16);
   --border-accent: rgba(0, 229, 195, 0.35);
 
-  /* --- Status --- */
+  /* Status */
   --positive: #00e5c3;
   --negative: #ef4444;
   --warning: #f59e0b;
 
-  /* --- Fonts --- */
+  /* Fonts */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* --- Light Mode Color System (Comfortable Muted Warm Slate / Sanded Studio Finish) --- */
+/* ========================================== */
+/* Section 2: Light Theme Design Tokens */
+/* ========================================== */
 html.light,
 html[data-theme="light"] {
   /* --- Core Backgrounds: Grounded Soft Slate-Stone Tones --- */
@@ -73,6 +78,9 @@ html[data-theme="light"] {
   --warning: #d97706;
 }
 
+/* ========================================== */
+/* Section 3: Tailwind Theme Configuration and Motion Tokens */
+/* ========================================== */
 @theme inline {
   --color-background: var(--bg-primary);
   --color-foreground: var(--text-primary);
@@ -114,7 +122,9 @@ html[data-theme="light"] {
   --animate-float: float 4s ease-in-out infinite;
 }
 
-/* --- Global Keyframes and Animations --- */
+/* ========================================== */
+/* Section 4: Keyframe Animations and Transitions */
+/* ========================================== */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -162,7 +172,6 @@ html[data-theme="light"] {
   }
 }
 
-/* --- Animation Utility Classes --- */
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out both;
 }
@@ -195,7 +204,9 @@ html[data-theme="light"] {
   animation: float 4s ease-in-out infinite;
 }
 
-/* --- Global UI Components Based on CSS Tokens --- */
+/* ========================================== */
+/* Section 5: Component Surface and Glow Utilities */
+/* ========================================== */
 .glass-card {
   background-color: color-mix(in srgb, var(--bg-card) 85%, transparent);
   backdrop-filter: blur(20px);
@@ -213,6 +224,9 @@ html[data-theme="light"] {
   opacity: 0.95;
 }
 
+/* ========================================== */
+/* Section 6: Base Document Typography and Native Scrollbar Styling */
+/* ========================================== */
 html {
   scroll-behavior: smooth;
 }
@@ -227,7 +241,6 @@ body {
   overflow-x: hidden;
 }
 
-/* --- Scrollbar Styling --- */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -246,7 +259,9 @@ body {
   background: var(--text-muted);
 }
 
-/* --- High-Contrast Skill Itemized Dashboard Theming --- */
+/* ========================================== */
+/* Section 7: Three-Dimensional Skill Matrix Theming */
+/* ========================================== */
 .skill-card-green {
   background-color: rgba(16, 185, 129, 0.05);
   border: 1px solid rgba(16, 185, 129, 0.35) !important;
@@ -401,7 +416,9 @@ html[data-theme="dark"] .skill-empty-text {
   color: #ffffff !important;
 }
 
-/* --- Print Stylesheet for PDF Report Generation --- */
+/* ========================================== */
+/* Section 8: Executive Print and PDF Export Stylesheet */
+/* ========================================== */
 @media print {
   @page {
     size: landscape;

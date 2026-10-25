@@ -49,8 +49,20 @@ const SIZE_CONFIGS = {
   },
 } as const;
 
-// --- Loading Spinner Component ---
-// Render an orbital loading indicator with optional text and progress display.
+/**
+ * LoadingSpinner Component
+ * Render an orbital loading indicator with optional text and progress bar display.
+ *
+ * Component Requirements:
+ * - Sizing presets: Three distinct orbital dimensions ('sm' | 'md' | 'lg').
+ * - Optional progress bar: Deterministic percentage or animated continuous shimmer.
+ *
+ * Workflow:
+ * 1. Resolve size configurations and styling tokens.
+ * 2. Render dual counter-rotating orbital rings and pulsating brand logo.
+ * 3. Render optional headline title and explanatory subtitle.
+ * 4. Render progress bar track with deterministic width or continuous shimmer.
+ */
 export default function LoadingSpinner({
   title,
   subtitle,
@@ -62,14 +74,18 @@ export default function LoadingSpinner({
   subtitleClassName = "",
   progressBarClassName = "",
 }: LoadingSpinnerProps) {
+  // ==========================================
+  // Step 1: Resolve Size Configurations and Styling Tokens
+  // ==========================================
   const cfg = SIZE_CONFIGS[size] || SIZE_CONFIGS.md;
 
-  // --- UI ---
   return (
     <div
       className={`flex flex-col items-center justify-center text-center select-none animate-fade-in ${className}`}
     >
-      {/* Center Quantum Orbital Spinner Container */}
+      {/* ========================================== */}
+      {/* Step 2: Render Dual Orbital Rings and Pulsating Brand Logo */}
+      {/* ========================================== */}
       <div className={`relative flex items-center justify-center ${cfg.containerMargin}`}>
         {/* Outer Pulsing Orbital Ring */}
         <div
@@ -89,21 +105,27 @@ export default function LoadingSpinner({
         </div>
       </div>
 
-      {/* Title (Optional) */}
+      {/* ========================================== */}
+      {/* Step 3: Render Optional Headline Title and Explanatory Subtitle */}
+      {/* ========================================== */}
       {Boolean(title) && (
         <h3 className={`${cfg.title} ${titleClassName}`}>{title}</h3>
       )}
 
-      {/* Subtitle (Optional) */}
       {Boolean(subtitle) && (
         <p className={`${cfg.subtitle} ${subtitleClassName}`}>{subtitle}</p>
       )}
 
-      {/* Bottom Blue Line / Progress Bar Track (Optional) */}
+      {/* ========================================== */}
+      {/* Step 4: Render Progress Bar Track with Deterministic or Continuous Indicator */}
+      {/* ========================================== */}
       {showProgressBar && (
         <div
           className={`rounded-full bg-border-subtle overflow-hidden relative ${cfg.progressBar} ${progressBarClassName}`}
         >
+          {/* ========================================== */}
+          {/* Branch A: Deterministic Progress Percentage */}
+          {/* ========================================== */}
           {progressPercent !== undefined ? (
             <div
               className="bg-accent h-full transition-all duration-500 rounded-full shadow-[0_0_10px_var(--accent-glow)]"
@@ -112,6 +134,9 @@ export default function LoadingSpinner({
               }}
             />
           ) : (
+            /* ========================================== */
+            /* Branch B: Indeterminate Continuous Shimmer */
+            /* ========================================== */
             <div className="absolute inset-0 bg-linear-to-r from-transparent via-accent to-transparent animate-shimmer" />
           )}
         </div>

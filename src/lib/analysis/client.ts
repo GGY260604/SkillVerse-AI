@@ -1,4 +1,4 @@
-import { PlanData, PlanPhase } from "@/components/analysis/planCard/planData";
+import { PlanData, PlanPhase } from "@/components/page-analysis/planCard/planData";
 import {
   AnalyzeRequestPayload,
   AnalyzeResponsePayload,
@@ -9,16 +9,29 @@ import {
   SynthesizeRoadmapResponse,
 } from "./types";
 
-// --- Analysis Client Services ---
-// Purpose: Orchestrate CV document extraction, workforce evaluation, and roadmap synthesis.
+/**
+ * Analysis Client Services
+ * Orchestrate resume extraction, progressive workforce evaluation, and roadmap synthesis.
+ *
+ * Requirements:
+ * - Document intake: Forward uploaded CV files to /api/page-analysis/extract.
+ * - Progressive streaming: Read Server-Sent Events (SSE) telemetry during role matching.
+ * - Multi-phase synthesis: Trigger multi-stage roadmap generation and map response to PlanData.
+ *
+ * Workflow:
+ * 1. Extract candidate profile attributes from resume file via extractProfileDocument.
+ * 2. Execute synchronous or progressive streaming role evaluations via analyzeWorkforceProfile.
+ * 3. Synthesize roadmap learning phases and transform results into typed PlanData via synthesizeSelectedRoadmap.
+ */
 
-// 1. Document Profile Extraction
-// Upload a CV through the server-side extraction route.
+// ==========================================
+// Step 1: Document Profile Extraction from Uploaded CV
+// ==========================================
 export async function extractProfileDocument(file: File): Promise<ExtractionResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("/api/analysis/extract", {
+  const response = await fetch("/api/page-analysis/extract", {
     method: "POST",
     body: formData,
   });
@@ -31,12 +44,13 @@ export async function extractProfileDocument(file: File): Promise<ExtractionResp
   return response.json();
 }
 
-// 2. Workforce Profile Evaluation
-// Execute synchronous workforce profile evaluation through the server-side route.
+// ==========================================
+// Step 2: Synchronous Workforce Profile Evaluation
+// ==========================================
 export async function analyzeWorkforceProfile(
   payload: AnalyzeRequestPayload
 ): Promise<AnalyzeResponsePayload> {
-  const response = await fetch("/api/analysis/analyze", {
+  const response = await fetch("/api/page-analysis/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "analyze", ...payload }),
@@ -50,8 +64,9 @@ export async function analyzeWorkforceProfile(
   return response.json();
 }
 
-// 3. Streaming Profile Evaluation
-// Stream progress events from the server-side role evaluation route.
+// ==========================================
+// Step 3: Progressive Streaming Profile Evaluation
+// ==========================================
 export async function analyzeWorkforceProfileStream(
   payload: AnalyzeRequestPayload,
   onProgress: (event: StreamProgressEvent) => void,
@@ -68,7 +83,7 @@ export async function analyzeWorkforceProfileStream(
   }
 
   try {
-    const response = await fetch("/api/analysis/analyze", {
+    const response = await fetch("/api/page-analysis/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "stream", ...payload }),
@@ -166,12 +181,13 @@ export async function analyzeWorkforceProfileStream(
   }
 }
 
-// 4. Role Roadmap Synthesis
-// Synthesize a personalized reskilling roadmap for the selected candidate role.
+// ==========================================
+// Step 4: Role Roadmap Multi-Phase Synthesis
+// ==========================================
 export async function synthesizeSelectedRoadmap(
   payload: SynthesizeRoadmapRequest
 ): Promise<SynthesizeRoadmapResponse> {
-  const response = await fetch("/api/analysis/analyze", {
+  const response = await fetch("/api/page-analysis/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "synthesize", ...payload }),
@@ -186,8 +202,9 @@ export async function synthesizeSelectedRoadmap(
   return response.json();
 }
 
-// 5. Plan Data Normalization
-// Convert raw assessment payload into user interface PlanData structure.
+// ==========================================
+// Step 5: Convert Assessment Response to Frontend PlanData Structure
+// ==========================================
 export function convertAssessmentToPlanData(
   assessment: SynthesizeRoadmapResponse | AnalyzeResponsePayload,
   selectedRole: MatchedRole

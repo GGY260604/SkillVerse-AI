@@ -1,7 +1,21 @@
-// --- PDF Export Service ---
-// Programmatically render and format team heatmap data directly into a multi-page executive PDF report.
+/**
+ * HeatMap PDF Export Service
+ * Programmatically render and format team heatmap competency data directly into an executive PDF report.
+ *
+ * Requirements:
+ * - High-resolution canvas rendering: Draw vector cards, tables, and typography via HTML Canvas 2D.
+ * - Dynamic pagination: Calculate page splits for large candidate rosters (up to 13 on page 1, 18 on subsequent pages).
+ * - Multi-language layout: Adapt typography and localized label metrics for export documents.
+ *
+ * Workflow:
+ * 1. Load brand assets and initialize jsPDF landscape document.
+ * 2. Calculate aggregate team metrics (average match score, top candidate, and counts).
+ * 3. Partition evaluated candidates into distinct pages based on visual density constraints.
+ * 4. Render canvas layers for each page (header, KPI cards, competency grid, footer).
+ * 5. Embed generated JPEG canvases into PDF pages and trigger client file download.
+ */
 
-import type { TeamSkillMatrixResponse, TeamMemberAnalysis } from "@/components/shared/HeatMapView";
+import type { TeamSkillMatrixResponse, TeamMemberAnalysis } from "@/components/page-shared/HeatMapView";
 import { getAvatarInitials } from "@/lib/avatar";
 
 // --- Schema ---
@@ -616,6 +630,9 @@ export async function exportHeatmapToPdf(
   try {
     onProgress?.("generating");
 
+    // ==========================================
+    // Step 1: Load Brand Assets and Initialize PDF Document
+    // ==========================================
     // Load platform logo asset asynchronously.
     const logoImg = await loadPlatformLogo();
 
@@ -631,6 +648,9 @@ export async function exportHeatmapToPdf(
     const pageWidth = 297;
     const pageHeight = 210;
 
+    // ==========================================
+    // Step 2: Calculate Aggregate Team Match Metrics
+    // ==========================================
     // Calculate team average match score across all candidates.
     const totalCandidates = payload.candidates.length;
     const averageScore =
@@ -645,6 +665,9 @@ export async function exportHeatmapToPdf(
 
     const topCandidate = payload.candidates[0];
 
+    // ==========================================
+    // Step 3: Partition Candidates Across Visual Density Limits
+    // ==========================================
     // Partition candidates across pages (first page fits up to 13 candidates with executive cards).
     const firstPageLimit = 13;
     const subsequentPageLimit = 18;
@@ -663,6 +686,9 @@ export async function exportHeatmapToPdf(
 
     const totalPages = pagesList.length;
 
+    // ==========================================
+    // Step 4: Render High-Resolution Canvas Pages and Embed in Document
+    // ==========================================
     // Render and append each formatted page canvas to the PDF document.
     pagesList.forEach((pageCandidates, idx) => {
       const pageCanvas = renderReportPage(
@@ -684,6 +710,9 @@ export async function exportHeatmapToPdf(
       pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight);
     });
 
+    // ==========================================
+    // Step 5: Save PDF File and Trigger Automatic Download
+    // ==========================================
     // Save and trigger automatic download of the PDF file.
     pdf.save(payload.filename);
     onProgress?.("done");

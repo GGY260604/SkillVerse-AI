@@ -14,32 +14,61 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = "skillverse-theme";
 
+/**
+ * ThemeProvider Component
+ * Manage application theme state (dark and light modes) and synchronize HTML data attributes.
+ *
+ * Component Requirements:
+ * - Persistent theme preferences: Store active theme in localStorage.
+ * - DOM document synchronization: Update documentElement data-theme attribute and CSS classes.
+ *
+ * Workflow:
+ * 1. Read stored theme preference from browser localStorage or default to dark.
+ * 2. Apply theme attributes and styling classes to root document element.
+ * 3. Expose active theme state, setter, and toggle handler to consumers.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
+  // ==========================================
+  // Step 1: Read Stored Theme Preference on Client Mount
+  // ==========================================
   useEffect(() => {
-    // Read persisted theme from localStorage or system preference
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+    // ==========================================
+    // Branch A: Valid Saved Theme Found
+    // ==========================================
     if (savedTheme === "light" || savedTheme === "dark") {
       setThemeState(savedTheme);
       applyTheme(savedTheme);
     } else {
-      // Default to dark as platform base
+      // ==========================================
+      // Branch B: Default Platform Dark Theme
+      // ==========================================
       setThemeState("dark");
       applyTheme("dark");
     }
     setMounted(true);
   }, []);
 
+  // ==========================================
+  // Step 2: Apply Theme Attributes and Classes to Root Document Element
+  // ==========================================
   const applyTheme = (newTheme: Theme) => {
     const root = document.documentElement;
+    // ==========================================
+    // Branch A: Light Theme Application
+    // ==========================================
     if (newTheme === "light") {
       root.classList.remove("dark", "scheme-dark");
       root.classList.add("light");
       root.setAttribute("data-theme", "light");
       root.style.colorScheme = "light";
     } else {
+      // ==========================================
+      // Branch B: Dark Theme Application
+      // ==========================================
       root.classList.remove("light");
       root.classList.add("dark", "scheme-dark");
       root.setAttribute("data-theme", "dark");
@@ -66,6 +95,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // ==========================================
+  // Step 3: Provide Theme Context to Children Components
+  // ==========================================
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
       {children}

@@ -8,8 +8,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/auth/AuthModal";
 import ProfileModal from "@/components/auth/ProfileModal";
-import PlanModals from "@/components/analysis/options/PlanModals";
-import SharedPlansModal from "@/components/analysis/SharedPlansModal";
+import PlanModals from "@/components/page-analysis/options/PlanModals";
+import SharedPlansModal from "@/components/page-analysis/SharedPlansModal";
 import ExpGainModal from "@/components/auth/ExpGainModal";
 import { AuthProvider } from "@/context/auth/AuthContext";
 import { ProfileModalProvider } from "@/context/auth/ProfileModalContext";
@@ -20,26 +20,34 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
 
-// --- Platform Metadata Configuration ---
-// Define global SEO title and description tags for the application.
+// ==========================================
+// Step 1: Define Platform Metadata Configuration
+// ==========================================
+// Configure global SEO titles and descriptive tags for search indexing.
 export const metadata: Metadata = {
   title: "SkillVerse AI | Future-Ready Workforce & SDG Navigation Platform",
   description:
     "AI-powered workforce intelligence platform. Navigate from who you are to where you will lead in the AI era. Powered by real-time labor market signals, cross-lingual skill matching, and UN SDG alignment.",
 };
 
-// --- Static Locale Route Generation ---
-// Pre-render pages for all supported language locales at build time.
+// ==========================================
+// Step 2: Configure Static Locale Route Generation
+// ==========================================
+// Pre-render localized route trees for all supported language configurations.
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-// --- Route Rendering Configuration ---
+// ==========================================
+// Step 3: Configure Route Shell Pre-Rendering
+// ==========================================
 // Disable instant app shell prerendering to allow direct dynamic route parameter access.
 export const instant = false;
 
-// --- Localized Shell Layout ---
-// Provide internationalization context, global header, footer, and font styles.
+/**
+ * Root localized platform layout shell.
+ * Provide internationalization context, global state providers, header navigation, modals, and footer.
+ */
 export default async function LocaleLayout({
   children,
   params,
@@ -47,25 +55,41 @@ export default async function LocaleLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  // Await locale parameter from dynamic route.
+  // ==========================================
+  // Step 4: Resolve and Validate Dynamic Locale Parameter
+  // ==========================================
+  // Await locale parameter from dynamic route parameters promise.
   const { locale } = await params;
 
-  // Trigger 404 if the requested locale is not supported.
+  // Branch A: Unsupported Locale Validation
+  // Trigger 404 response if the requested locale is not registered.
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
 
-  // Enable static rendering by binding locale to current server context.
+  // ==========================================
+  // Step 5: Synchronize Server Locale Context
+  // ==========================================
+  // Enable static rendering by binding locale to current server request context.
   setRequestLocale(locale);
 
-  // Load message catalog for client provider.
+  // ==========================================
+  // Step 6: Load Localized Message Catalog
+  // ==========================================
+  // Fetch translation dictionary messages for client hydration.
   const messages = await getMessages();
 
-  // --- UI ---
+  // ==========================================
+  // Step 7: Render Localized Application Shell and Context Hierarchy
+  // ==========================================
+  // Compose document tree with typography, internationalization, and shared context providers.
   return (
     <html lang={locale} className="dark" data-theme="dark" suppressHydrationWarning>
       <head>
+        {/* ========================================== */}
         {/* Google Fonts Preconnect */}
+        {/* ========================================== */}
+        {/* Preconnect to external Google Fonts CDN. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -74,6 +98,10 @@ export default async function LocaleLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans antialiased">
+        {/* ========================================== */}
+        {/* Client Provider and Context Hierarchy */}
+        {/* ========================================== */}
+        {/* Provide internationalization, theme, and authentication states. */}
         <NextIntlClientProvider messages={messages}>
           <Suspense fallback={<div className="min-h-screen bg-bg-primary" />}>
             <ThemeProvider>
@@ -82,28 +110,40 @@ export default async function LocaleLayout({
                   <ExpGainProvider>
                     <PlanModalProvider>
                       <SharedModalProvider>
-                        {/* Global Header Navigation */}
+                        {/* ========================================== */}
+                        {/* Header Navigation */}
+                        {/* ========================================== */}
+                        {/* Render platform global header with navigation links and controls. */}
                         <Header />
 
-                        {/* Main Content Area */}
+                        {/* ========================================== */}
+                        {/* Main Page Content */}
+                        {/* ========================================== */}
+                        {/* Render active route page child content. */}
                         <main className="flex-1 flex flex-col">{children}</main>
 
-                        {/* Global Footer */}
+                        {/* ========================================== */}
+                        {/* Footer */}
+                        {/* ========================================== */}
+                        {/* Render global footer with branding and SDG alignment links. */}
                         <Footer />
 
-                        {/* Global Auth Overlay Modal */}
+                        {/* ========================================== */}
+                        {/* Global Modal Overlays */}
+                        {/* ========================================== */}
+                        {/* Mount authentication modal overlay. */}
                         <AuthModal />
 
-                        {/* Global Profile Overlay Modal */}
+                        {/* Mount user profile edit modal overlay. */}
                         <ProfileModal />
 
-                        {/* Global Plan & Option Overlay Modals */}
+                        {/* Mount career plan creation and quiz modal overlays. */}
                         <PlanModals />
 
-                        {/* Global Shared Plans Overlay Modal */}
+                        {/* Mount shared community plans modal overlay. */}
                         <SharedPlansModal />
 
-                        {/* Global EXP & Level Up Celebration Modal */}
+                        {/* Mount experience point gain celebration overlay. */}
                         <ExpGainModal />
                       </SharedModalProvider>
                     </PlanModalProvider>

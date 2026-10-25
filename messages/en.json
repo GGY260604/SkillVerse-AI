@@ -147,6 +147,10 @@
       "coming_soon": "Analysis features are under development."
     },
     "attribution_sources_note": "All analyses are based on <esco>Esco Roles</esco>, <arxiv>Arxiv</arxiv>, and <remoteok>RemoteOK</remoteok>.",
+    "loading": {
+      "title": "Loading Career Reskilling Roadmaps...",
+      "subtitle": "Synchronizing your current plan and milestone archives from database..."
+    },
     "empty": {
       "title": "No Career Plans Available Currently",
       "desc": "You haven't generated an AI transformation roadmap yet. Start your diagnostic to unlock personalized reskilling pathways.",

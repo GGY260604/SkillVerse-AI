@@ -1,9 +1,5 @@
 "use client";
 
-// --- Available State Actions ---
-// openSharedPlansModal(roadmapId, roadmapTitle): open the sharing modal for a roadmap.
-// closeSharedPlansModal(): close the sharing modal and clear its roadmap data.
-
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { useAuth } from "@/context/auth/AuthContext";
 
@@ -22,8 +18,23 @@ interface SharedModalState {
 
 const SharedModalContext = createContext<SharedModalContextType | undefined>(undefined);
 
-// --- Context Provider ---
+/**
+ * SharedModalProvider Component
+ * Coordinate peer sharing overlay modal and active roadmap sharing permissions.
+ *
+ * Component Requirements:
+ * - Authentication guarding: Intercept share actions for guests and prompt login.
+ * - Share target context: Store selected roadmap identifier and title for grant mutations.
+ *
+ * Workflow:
+ * 1. Synchronize modal state with user authentication status.
+ * 2. Guard modal opening with authentication check and set target roadmap metadata.
+ * 3. Provide modal state and open/close handlers to consumers.
+ */
 export function SharedModalProvider({ children }: { children: React.ReactNode }) {
+  // ==========================================
+  // Step 1: Synchronize Modal State with User Authentication Status
+  // ==========================================
   const { isLoggedIn, openAuthModal } = useAuth();
   const [modalState, setModalState] = useState<SharedModalState>(() => ({
     isOpen: false,
@@ -39,6 +50,9 @@ export function SharedModalProvider({ children }: { children: React.ReactNode })
     });
   }
 
+  // ==========================================
+  // Step 2: Guard Modal Opening with Authentication and Set Target Metadata
+  // ==========================================
   const openSharedPlansModal = useCallback(
     (roadmapId?: string, roadmapTitle?: string) => {
       if (!isLoggedIn) {
@@ -62,7 +76,9 @@ export function SharedModalProvider({ children }: { children: React.ReactNode })
     }));
   }, []);
 
-  // --- Context Value ---
+  // ==========================================
+  // Step 3: Expose Shared Modal Context Provider to Application Tree
+  // ==========================================
   return (
     <SharedModalContext.Provider
       value={{

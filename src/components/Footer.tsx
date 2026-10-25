@@ -3,23 +3,38 @@ import { useTranslations } from "next-intl";
 import { GITHUB_REPO_URL, LICENSE_URL } from "@/constants/footer";
 import Logo from "@/components/Logo";
 
-// --- Footer Navigation and Copyright Component ---
-// Render platform brand identity, author attribution, open-source links, and legal notice.
+/**
+ * Footer Component
+ * Render platform brand identity, author attribution, open-source repository links, and legal notice.
+ *
+ * Component Requirements:
+ * - Localized branding: Localized copyright, hackathon, and attribution labels.
+ * - External navigation: Direct links to GitHub repository and Apache-2.0 license.
+ *
+ * Workflow:
+ * 1. Load localized strings for layout and branding.
+ * 2. Render platform brand logo and hackathon attribution.
+ * 3. Render GitHub action button and license indicator.
+ * 4. Render platform disclaimer notice and copyright mark.
+ */
 export default function Footer() {
-  // Load localized footer strings for copyright, hackathon, and attribution.
+  // ==========================================
+  // Step 1: Load Localized Strings for Layout and Branding
+  // ==========================================
   const t = useTranslations("layout.footer");
 
-  // --- UI ---
   return (
     <footer className="border-t border-border-subtle bg-bg-secondary mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
-        {/* Main Footer Block */}
+        {/* ========================================== */}
+        {/* Step 2: Render Brand Logo and Hackathon Attribution */}
+        {/* ========================================== */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pb-3.5 border-b border-border-subtle">
-          {/* Brand & Authorship */}
+          {/* Brand Identity and Authorship */}
           <div className="min-w-0 flex-1">
             <Logo text={t("copyright")} size="sm" />
 
-            {/* Hackathon & Author Info */}
+            {/* Hackathon and Author Attribution Metadata */}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-muted">
               <span>{t("hackathon")}</span>
               <span className="hidden text-border-subtle select-none sm:inline">•</span>
@@ -27,7 +42,9 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Embedded GitHub Action & License */}
+          {/* ========================================== */}
+          {/* Step 3: Render GitHub Action Button and License Indicator */}
+          {/* ========================================== */}
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             <a
               href={GITHUB_REPO_URL}
@@ -35,7 +52,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary bg-bg-card hover:text-text-primary hover:bg-bg-card-hover border border-border-subtle hover:border-border-accent transition-all duration-300 group w-auto"
             >
-              {/* GitHub SVG */}
+              {/* GitHub Vector Icon */}
               <svg
                 className="w-3.5 h-3.5 fill-current text-text-secondary group-hover:text-accent transition-colors duration-200 shrink-0"
                 viewBox="0 0 24 24"
@@ -52,7 +69,7 @@ export default function Footer() {
               <span className="text-[10px] text-text-muted transition-colors duration-200 group-hover:text-accent max-[320px]:hidden">↗</span>
             </a>
 
-            {/* License */}
+            {/* Open Source License Reference */}
             <a
               href={LICENSE_URL}
               target="_blank"
@@ -65,7 +82,9 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Disclaimer / Notice Row */}
+        {/* ========================================== */}
+        {/* Step 4: Render Platform Disclaimer Notice and Copyright Mark */}
+        {/* ========================================== */}
         <div className="pt-2.5 flex items-center justify-between gap-3 text-[11px] text-text-muted">
           <p className="min-w-0 max-w-3xl leading-snug">{t("tagline")}</p>
           <p className="shrink-0 whitespace-nowrap text-right">© 2026 SkillVerse AI</p>

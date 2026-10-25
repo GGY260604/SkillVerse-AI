@@ -1,7 +1,18 @@
 import React from "react";
 
-// --- File Format Classification ---
-// Purpose: Detect file types and provide stylized SVG icons with color badges.
+/**
+ * File Format Classification Utilities
+ * Detect uploaded resume and document file categories and render stylized vector SVG icons with color badges.
+ *
+ * Requirements:
+ * - Format taxonomy: Categorize documents into 'pdf', 'word', 'image', 'text', 'spreadsheet', or 'unknown'.
+ * - Design styling: Return tailored Tailwind classes for text colors, backgrounds, and borders.
+ *
+ * Workflow:
+ * 1. Resolve file extension and MIME type to determine category.
+ * 2. Map file category to color tokens and human-readable badges.
+ * 3. Render vector SVG icon representing the specific document format.
+ */
 
 export type FileCategory =
   | "pdf"
@@ -25,17 +36,24 @@ export interface FileFormatIconProps {
   iconClassName?: string;
 }
 
-// 1. File Category Detection
-// Detect category from file extension or MIME type.
+// ==========================================
+// Step 1: Detect Category from File Extension or MIME Type
+// ==========================================
 export function getFileCategory(fileOrName: File | string): FileCategory {
   const filename = typeof fileOrName === "string" ? fileOrName : fileOrName.name;
   const mimeType = typeof fileOrName === "object" && fileOrName.type ? fileOrName.type.toLowerCase() : "";
   const ext = filename.split(".").pop()?.toLowerCase() || "";
 
+  // ==========================================
+  // Branch A: PDF Document Format
+  // ==========================================
   if (ext === "pdf" || mimeType === "application/pdf") {
     return "pdf";
   }
 
+  // ==========================================
+  // Branch B: Microsoft Word Document Format
+  // ==========================================
   if (
     ext === "doc" ||
     ext === "docx" ||
@@ -45,6 +63,9 @@ export function getFileCategory(fileOrName: File | string): FileCategory {
     return "word";
   }
 
+  // ==========================================
+  // Branch C: Raster or Vector Image Format
+  // ==========================================
   if (
     ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "tiff"].includes(ext) ||
     mimeType.startsWith("image/")
@@ -52,10 +73,16 @@ export function getFileCategory(fileOrName: File | string): FileCategory {
     return "image";
   }
 
+  // ==========================================
+  // Branch D: Plain Text Document Format
+  // ==========================================
   if (["txt", "md", "rtf"].includes(ext) || mimeType.startsWith("text/")) {
     return "text";
   }
 
+  // ==========================================
+  // Branch E: Spreadsheet Document Format
+  // ==========================================
   if (
     ["csv", "xls", "xlsx"].includes(ext) ||
     mimeType.includes("csv") ||
@@ -65,11 +92,15 @@ export function getFileCategory(fileOrName: File | string): FileCategory {
     return "spreadsheet";
   }
 
+  // ==========================================
+  // Branch F: Unknown Fallback Document Format
+  // ==========================================
   return "unknown";
 }
 
-// 2. Styling Metadata Resolver
-// Map file category to corresponding Tailwind colors and badge styles.
+// ==========================================
+// Step 2: Map Category to Color Tokens and Badges
+// ==========================================
 export function getFileFormatInfo(category: FileCategory): FileFormatInfo {
   switch (category) {
     case "pdf":
@@ -124,8 +155,9 @@ export function getFileFormatInfo(category: FileCategory): FileFormatInfo {
   }
 }
 
-// 3. File Format Icon Component
-// Render SVG icon corresponding to the categorized file format.
+// ==========================================
+// Step 3: Render Vector SVG Icon for Categorized File Format
+// ==========================================
 export function FileFormatIcon({
   fileOrName,
   className = "w-12 h-12 rounded-xl",

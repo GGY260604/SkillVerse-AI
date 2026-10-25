@@ -20,8 +20,24 @@ const LOCALES = [
   { code: "zh", label: "ZH" },
 ] as const;
 
-// --- Header Navigation Component ---
-// Provide global branding, localized navigation links, language selection, and responsive mobile sidebar.
+/**
+ * Global Header Navigation Component
+ *
+ * Provides persistent top navigation, platform branding, localized route switching,
+ * trilingual language selection, theme toggling, and user profile authentication menus.
+ *
+ * Component Requirements:
+ * - Context Dependencies: AuthContext, ProfileModalContext, ExpGainContext, ThemeContext.
+ * - Localization Scope: layout.nav.
+ *
+ * Workflow:
+ * 1. Initialize active route detection, language switcher, and responsive mobile drawer state.
+ * 2. Render brand identity logo and primary navigation link tabs.
+ * 3. Render utility controls (language selector, theme toggle, and auth session profile trigger).
+ * 4. Mount responsive mobile navigation drawer for small-screen viewports:
+ *    - Branch A: Authenticated user menu displaying avatar, EXP level, and profile settings.
+ *    - Branch B: Guest visitor menu displaying sign-in and sign-up action buttons.
+ */
 export default function Header() {
   const t = useTranslations("layout.nav");
   const locale = useLocale();
@@ -35,6 +51,9 @@ export default function Header() {
   const { level, currentLevelExp } = useExpGain();
   const { theme, toggleTheme } = useTheme();
 
+  // ==========================================
+  // Step 1: Initialize Active Route Detection and Protected Nav Guards
+  // ==========================================
   // Determine whether a given navigation link is currently active.
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
@@ -59,7 +78,6 @@ export default function Header() {
     }
   };
 
-  // --- UI ---
   return (
     <>
       <header
@@ -68,12 +86,14 @@ export default function Header() {
         }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 max-[280px]:px-3 h-16">
-          {/* Brand & Logo */}
+          {/* ========================================== */}
+          {/* Step 2: Render Brand Identity Logo and Navigation Links */}
+          {/* ========================================== */}
           <Link href="/" className="no-underline">
             <Logo showBeta size="lg" />
           </Link>
 
-          {/* Desktop Navigation Links */}
+          {/* Desktop Navigation Link Tabs */}
           <nav className="hidden md:flex items-center gap-8">
             <Link
               href="/"
@@ -111,7 +131,9 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Desktop Right Controls: Theme Switcher, Language Switcher & Auth */}
+          {/* ========================================== */}
+          {/* Step 3: Render Desktop Utility Controls (Theme, Language, Auth) */}
+          {/* ========================================== */}
           <div className="hidden md:flex items-center gap-3">
             {/* Dark / Light Mode Switcher */}
             <DarkLightSwicher />
@@ -134,10 +156,11 @@ export default function Header() {
               ))}
             </div>
 
-            {/* Login / Profile Avatar & Quick Logout Controls */}
+            {/* Branch A: Authentication Loading State */}
             {isLoading ? (
               <div className="h-9 w-20 rounded-lg bg-bg-card/40 animate-pulse border border-border-subtle/50" />
             ) : isLoggedIn ? (
+              /* Branch B: Authenticated User Profile Avatar and Quick Logout */
               <div className="flex items-center gap-2">
                 <div className="relative inline-flex items-center justify-center">
                   <button
@@ -150,7 +173,7 @@ export default function Header() {
                     {getAvatarInitials(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)}
                   </button>
 
-                  {/* Level Badge floating on top right upon the profile icon */}
+                  {/* Level badge floating on top right of the profile icon */}
                   <span
                     className="absolute -bottom-1 -right-1 w-4 h-4 text-[9px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_10px_var(--accent-glow)] pointer-events-none select-none flex items-center justify-center"
                     title={`Level ${level} (${currentLevelExp}/100 EXP)`}
@@ -177,6 +200,7 @@ export default function Header() {
                 </button>
               </div>
             ) : (
+              /* Branch C: Unauthenticated Guest User Login Trigger */
               <button
                 type="button"
                 onClick={() => openAuthModal("login")}
@@ -187,12 +211,15 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile Right Controls: Profile Icon & Hamburger Button */}
+          {/* ========================================== */}
+          {/* Step 4: Render Mobile Top Bar Controls */}
+          {/* ========================================== */}
           <div className="flex items-center gap-3 max-[280px]:gap-2 md:hidden">
-            {/* Mobile Profile Icon / Login Button */}
+            {/* Branch A: Mobile Loading State */}
             {isLoading ? (
               <div className="w-8 h-8 rounded-full bg-bg-card/40 animate-pulse border border-border-subtle/50" />
             ) : isLoggedIn ? (
+              /* Branch B: Mobile Authenticated User Profile Trigger */
               <div className="relative inline-flex items-center justify-center">
                 <button
                   type="button"
@@ -204,7 +231,7 @@ export default function Header() {
                   {getAvatarInitials(user?.name || (user?.metadata?.name as string) || (user?.metadata?.full_name as string) || user?.email)}
                 </button>
 
-                {/* Level Badge floating on top right upon the mobile profile icon */}
+                {/* Level badge floating on top right of the mobile profile icon */}
                 <span
                   className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-[8px] font-extrabold font-mono bg-bg-elevated border border-accent/70 text-accent rounded-full shadow-[0_0_8px_var(--accent-glow)] pointer-events-none select-none flex items-center justify-center"
                   title={`Level ${level} (${currentLevelExp}/100 EXP)`}
@@ -213,6 +240,7 @@ export default function Header() {
                 </span>
               </div>
             ) : (
+              /* Branch C: Mobile Unauthenticated Guest Login Trigger */
               <button
                 type="button"
                 onClick={() => openAuthModal("login")}
@@ -222,7 +250,7 @@ export default function Header() {
               </button>
             )}
 
-            {/* Mobile Hamburger Toggle Button */}
+            {/* Mobile Hamburger Drawer Toggle Button */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -243,7 +271,10 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Sidebar Overlay Backdrop */}
+      {/* ========================================== */}
+      {/* Step 5: Render Mobile Sidebar Overlay Backdrop */}
+      {/* ========================================== */}
+      {/* Click outside to dismiss the mobile slide-out drawer navigation menu. */}
       <div
         onClick={() => setIsMobileMenuOpen(false)}
         className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-md transition-opacity duration-300 md:hidden ${
@@ -251,14 +282,16 @@ export default function Header() {
         }`}
       />
 
-      {/* Mobile Navigation Sidebar Drawer */}
+      {/* ========================================== */}
+      {/* Step 6: Render Mobile Navigation Sidebar Drawer */}
+      {/* ========================================== */}
       <aside
         className={`fixed top-0 right-0 z-60 h-dvh max-h-dvh w-72 max-w-[85vw] overflow-y-auto overscroll-contain bg-bg-secondary/95 backdrop-blur-2xl border-l border-border-subtle p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div>
-          {/* Sidebar Header */}
+          {/* Section A: Mobile Sidebar Header Branding and Close Button */}
           <div className="flex items-center justify-between pb-5 border-b border-border-subtle mb-6">
             <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="no-underline">
               <Logo size="md" />
@@ -272,7 +305,7 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Mobile Nav Links */}
+          {/* Section B: Mobile Navigation Route Links */}
           <nav className="flex flex-col gap-2">
             <Link
               href="/"
@@ -318,9 +351,9 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* Sidebar Bottom Controls */}
+        {/* Section C: Sidebar Utility Controls and Profile Actions */}
         <div className="pt-6 border-t border-border-subtle flex flex-col gap-4">
-          {/* Dark / Light Mode Switcher in Sidebar */}
+          {/* Control 1: Theme Switcher Toggle */}
           <div>
             <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">
               {t("theme") || "Theme"}
@@ -328,7 +361,7 @@ export default function Header() {
             <DarkLightSwicher showLabel className="w-full justify-center" />
           </div>
 
-          {/* Language Switcher in Sidebar */}
+          {/* Control 2: Language Selector Switcher */}
           <div>
             <span className="block text-[11px] font-mono uppercase text-text-muted mb-2 tracking-wider">
               {t("language")}
@@ -354,12 +387,13 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Auth Controls in Mobile Drawer */}
+          {/* Control 3: Authentication and Profile Action Buttons */}
           {isLoading ? (
+            /* Branch A: Mobile Drawer Loading Placeholder */
             <div className="w-full h-12 rounded-xl bg-bg-card/40 animate-pulse border border-border-subtle/50" />
           ) : isLoggedIn ? (
+            /* Branch B: Mobile Drawer Authenticated Profile and Logout */
             <div className="flex items-center gap-2">
-              {/* Profile Button with (S) Avatar & Level Badge */}
               <button
                 type="button"
                 onClick={() => {
@@ -382,7 +416,6 @@ export default function Header() {
                 </div>
               </button>
 
-              {/* Quick Logout Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -404,6 +437,7 @@ export default function Header() {
               </button>
             </div>
           ) : (
+            /* Branch C: Mobile Drawer Guest User Login Trigger */
             <button
               type="button"
               onClick={() => {

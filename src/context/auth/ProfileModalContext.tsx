@@ -1,9 +1,5 @@
 "use client";
 
-// --- Available State Actions ---
-// openProfileModal(): show the profile modal.
-// closeProfileModal(): hide the profile modal.
-
 import React, { createContext, useCallback, useContext, useState } from "react";
 
 interface ProfileModalContextType {
@@ -14,10 +10,27 @@ interface ProfileModalContextType {
 
 const ProfileModalContext = createContext<ProfileModalContextType | undefined>(undefined);
 
-// --- Context Provider ---
+/**
+ * ProfileModalProvider Component
+ * Coordinate global user profile editing modal visibility and controls.
+ *
+ * Component Requirements:
+ * - Modal visibility toggling: Expose openProfileModal and closeProfileModal handlers.
+ *
+ * Workflow:
+ * 1. Initialize modal visibility state flag.
+ * 2. Define open and close callbacks.
+ * 3. Provide profile modal context to consumer components.
+ */
 export function ProfileModalProvider({ children }: { children: React.ReactNode }) {
+  // ==========================================
+  // Step 1: Initialize Profile Modal Visibility State
+  // ==========================================
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // ==========================================
+  // Step 2: Define Modal Open and Close Mutation Callbacks
+  // ==========================================
   const openProfileModal = useCallback(() => {
     setIsProfileModalOpen(true);
   }, []);
@@ -26,7 +39,9 @@ export function ProfileModalProvider({ children }: { children: React.ReactNode }
     setIsProfileModalOpen(false);
   }, []);
 
-  // --- Context Value ---
+  // ==========================================
+  // Step 3: Expose Profile Modal Context Provider Tree
+  // ==========================================
   return (
     <ProfileModalContext.Provider value={{ isProfileModalOpen, openProfileModal, closeProfileModal }}>
       {children}
