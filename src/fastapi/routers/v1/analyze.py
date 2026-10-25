@@ -306,8 +306,8 @@ async def analyze_team_skill_matrix(request: TeamSkillMatrixRequest):
     Manager Workforce Analytics:
     Evaluates and ranks a cohort of candidates against a target role benchmark.
     Uses the 3-Tier Hybrid Matching Pipeline (Exact -> Token Overlap -> BGE-M3 Dense Cosine).
-    Returns ranked candidates (closest candidate = Rank 1), mastery vs deficit breakdown,
-    and HRD Corp claimable cohort reskilling recommendations.
+    Employs 3-Tier LLM Intelligence (Tier 1: Local Qwen 2.5 -> Tier 2: Gemini API -> Tier 3: Deterministic Fallback)
+    for zero-shot benchmark role synthesis, tailored corporate training recommendations, and executive ROI insights.
     """
     return await evaluate_team_skill_matrix(request)
 

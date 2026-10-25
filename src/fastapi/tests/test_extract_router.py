@@ -101,9 +101,10 @@ def test_extract_endpoint_file_too_large(client: TestClient):
     assert "exceeds maximum allowed size" in response.json()["detail"].lower()
 
 
+@patch("routers.v1.extract.normalize_profile_with_local_llm", return_value=None)
 @patch("routers.v1.extract.extract_text_from_pdf")
 @patch("routers.v1.extract.normalize_profile_with_gemini")
-def test_extract_endpoint_pdf_success(mock_gemini, mock_extract_pdf, client: TestClient):
+def test_extract_endpoint_pdf_success(mock_gemini, mock_extract_pdf, mock_local_llm, client: TestClient):
     """Test successful PDF upload and profile extraction flow."""
     mock_extract_pdf.return_value = "Candidate John Doe, Python and Cloud Developer"
     dummy_profile = ProfileIntakePayload(

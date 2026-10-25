@@ -175,6 +175,14 @@ class TeamMatrixCohortSummary(BaseModel):
         default_factory=list,
         description="Actionable group upskilling modules eligible for corporate funding/levy",
     )
+    executiveInsight: Optional[str] = Field(
+        default=None,
+        description="Executive AI strategic diagnostic and reskilling ROI recommendation for management",
+    )
+    executiveInsightLocalized: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Trilingual executive AI strategic diagnostic across en, ms, zh",
+    )
 
 
 class TeamSkillMatrixRequest(BaseModel):

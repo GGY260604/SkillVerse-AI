@@ -31,5 +31,8 @@ async def close_shared_client():
     """Gracefully closes all open persistent connections upon microservice shutdown."""
     global _shared_client
     if _shared_client is not None and not _shared_client.is_closed:
-        await _shared_client.aclose()
+        try:
+            await _shared_client.aclose()
+        except Exception:
+            pass
         _shared_client = None

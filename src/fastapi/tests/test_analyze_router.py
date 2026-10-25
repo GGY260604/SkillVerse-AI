@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch, AsyncMock
 from starlette.testclient import TestClient
 from schemas.analysis import MatchedRole, SdgAlignmentItem
@@ -144,3 +145,156 @@ def test_analyze_team_matrix_endpoint(mock_team_service, client: TestClient):
     assert data["targetRoleTitle"] == "Cloud Infrastructure Engineer"
     assert len(data["candidates"]) == 1
     assert data["candidates"][0]["rank"] == 1
+
+
+@pytest.mark.asyncio
+async def test_team_matrix_intelligence_tier1_qwen(monkeypatch):
+    """Verifies evaluate_team_skill_matrix utilizes Tier 1 Qwen 2.5 when online."""
+    from schemas.team import TeamSkillMatrixRequest
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix
+
+    qwen_called = False
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        nonlocal qwen_called
+        qwen_called = True
+        return {
+            "recommendations": [
+                {
+                    "skillName": "Kubernetes",
+                    "courseTitle": "Advanced Kubernetes Platform Architecture",
+                    "courseTitle_ms": "Seni Bina Platform Kubernetes Lanjutan",
+                    "courseTitle_zh": "高级 Kubernetes 云原生架构实战",
+                    "platform": "Linux Foundation Academy",
+                    "platform_ms": "Akademi Linux Foundation",
+                    "platform_zh": "Linux 基金会企业学院",
+                    "durationHours": 24,
+                    "isHrdCorpClaimable": True,
+                    "isFree": False,
+                }
+            ],
+            "executiveInsight": "The cohort possesses solid systems foundations but requires immediate upskilling in Kubernetes orchestration.",
+            "executiveInsight_ms": "Kohort mempunyai asas sistem yang kukuh tetapi memerlukan peningkatan kemahiran segera dalam orkestrasi Kubernetes.",
+            "executiveInsight_zh": "团队具备扎实的系统底座能力，但亟需在 Kubernetes 编排领域进行重点强化以达成全员角色就绪。",
+        }
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+
+    req = TeamSkillMatrixRequest(
+        targetRoleTitle="Cloud Platform Engineer",
+        customRequiredSkills=["Kubernetes", "Linux", "Terraform", "CI/CD"],
+        teamMembers=[
+            {
+                "userId": "user-1",
+                "name": "Bob Smith",
+                "skills": [{"name": "Linux", "proficiency": "advanced"}],
+            }
+        ],
+        locale="en",
+    )
+
+    result = await evaluate_team_skill_matrix(req)
+    assert qwen_called is True
+    assert result.targetRoleTitle == "Cloud Platform Engineer"
+    assert len(result.cohortSummary.cohortTrainingRecommendations) >= 1
+    rec = result.cohortSummary.cohortTrainingRecommendations[0]
+    assert rec.courseTitle == "Advanced Kubernetes Platform Architecture"
+    assert rec.durationHours == 24
+    assert "Kubernetes" in result.cohortSummary.executiveInsight
+
+
+@pytest.mark.asyncio
+async def test_team_matrix_intelligence_tier2_gemini_fallback(monkeypatch):
+    """Verifies evaluate_team_skill_matrix falls back to Tier 2 Gemini when Qwen fails."""
+    from schemas.team import TeamSkillMatrixRequest
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix
+
+    gemini_called = False
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        raise ConnectionError("Ollama daemon unreachable")
+
+    async def mock_call_gemini_json(contents, **kwargs):
+        nonlocal gemini_called
+        gemini_called = True
+        return {
+            "recommendations": [
+                {
+                    "skillName": "Kubernetes",
+                    "courseTitle": "Certified Kubernetes Administrator (CKA) Intensive",
+                    "courseTitle_ms": "Intensif Pentadbir Kubernetes Bertauliah (CKA)",
+                    "courseTitle_zh": "CKA 认证 Kubernetes 管理员强化营",
+                    "platform": "HRD Corp Claimable (Malaysia)",
+                    "platform_ms": "Boleh Dituntut HRD Corp (Malaysia)",
+                    "platform_zh": "马来西亚 HRD Corp 培训基金可申报",
+                    "durationHours": 32,
+                    "isHrdCorpClaimable": True,
+                    "isFree": False,
+                }
+            ],
+            "executiveInsight": "Gemini: Targeted cohort investment in CKA certification will close 80% of team gaps within 4 weeks.",
+            "executiveInsight_ms": "Gemini: Pelaburan kohort yang disasarkan dalam pensijilan CKA akan menutup 80% jurang pasukan dalam masa 4 minggu.",
+            "executiveInsight_zh": "Gemini: 针对 CKA 认证的定向团队培训将在 4 周内补齐团队 80% 的核心能力缺口。",
+        }
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.gemini_service.call_gemini_json", mock_call_gemini_json)
+
+    req = TeamSkillMatrixRequest(
+        targetRoleTitle="Cloud Platform Engineer",
+        customRequiredSkills=["Kubernetes", "Linux", "Terraform", "CI/CD"],
+        teamMembers=[
+            {
+                "userId": "user-1",
+                "name": "Bob Smith",
+                "skills": [{"name": "Linux", "proficiency": "advanced"}],
+            }
+        ],
+        locale="en",
+    )
+
+    result = await evaluate_team_skill_matrix(req)
+    assert gemini_called is True
+    assert len(result.cohortSummary.cohortTrainingRecommendations) >= 1
+    rec = result.cohortSummary.cohortTrainingRecommendations[0]
+    assert rec.courseTitle == "Certified Kubernetes Administrator (CKA) Intensive"
+    assert rec.durationHours == 32
+    assert "Gemini" in result.cohortSummary.executiveInsight
+
+
+@pytest.mark.asyncio
+async def test_team_matrix_intelligence_tier3_deterministic_fallback(monkeypatch):
+    """Verifies evaluate_team_skill_matrix falls back to Tier 3 deterministic template when both LLMs fail."""
+    from schemas.team import TeamSkillMatrixRequest
+    from services.analyze.team_matrix_service import evaluate_team_skill_matrix
+
+    async def mock_call_local_llm_json(prompt, system_instruction, timeout=25.0):
+        raise ConnectionError("Ollama daemon offline")
+
+    async def mock_call_gemini_json(contents, **kwargs):
+        raise RuntimeError("Gemini quota exhausted")
+
+    monkeypatch.setattr("services.local_llm_service.call_local_llm_json", mock_call_local_llm_json)
+    monkeypatch.setattr("services.gemini_service.call_gemini_json", mock_call_gemini_json)
+
+    req = TeamSkillMatrixRequest(
+        targetRoleTitle="Cloud Platform Engineer",
+        customRequiredSkills=["Kubernetes", "Linux", "Terraform", "CI/CD"],
+        teamMembers=[
+            {
+                "userId": "user-1",
+                "name": "Bob Smith",
+                "skills": [{"name": "Linux", "proficiency": "advanced"}],
+            }
+        ],
+        locale="en",
+    )
+
+    result = await evaluate_team_skill_matrix(req)
+    assert result.targetRoleTitle == "Cloud Platform Engineer"
+    assert len(result.cohortSummary.cohortTrainingRecommendations) >= 1
+    rec = result.cohortSummary.cohortTrainingRecommendations[0]
+    assert "Professional Masterclass" in rec.courseTitle
+    assert rec.durationHours == 16
+    assert result.cohortSummary.executiveInsight is not None
+

@@ -1,8 +1,12 @@
 import asyncio
 import math
 import time
+import logging
+import re
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
+
+logger = logging.getLogger("skillverse.team_matrix")
 
 from schemas.team import (
     SkillMatchStatus,
@@ -266,6 +270,251 @@ def _get_proficiency_multiplier(proficiency: Optional[str]) -> float:
     return 0.70
 
 
+async def _synthesize_cohort_intelligence(
+    target_role_title: str,
+    target_industry: str,
+    top_deficits: List[SkillDeficitMetric],
+    candidates: List[TeamMemberAnalysis],
+    avg_readiness: float,
+    locale: str = "en",
+) -> Tuple[List[CohortTrainingRecommendation], Optional[str], Optional[Dict[str, str]]]:
+    """
+    Synthesizes actionable cohort training recommendations and executive management insights.
+    Uses 3-Tier LLM Architecture:
+      - Tier 1: Local Qwen 2.5 (via Ollama / vLLM)
+      - Tier 2: Gemini API Fallback
+      - Tier 3: Zero-Failure Deterministic Fallback Floor
+    Returns trilingual recommendations and executive insight summary.
+    """
+    loc_code = (locale or "en").lower().strip()
+
+    # Pre-build deterministic fallback
+    deterministic_recommendations: List[CohortTrainingRecommendation] = []
+    for d in top_deficits[:4]:
+        r_skill = d.skillName
+        skill_trilingual = d.skillNameLocalized or get_trilingual_skill(r_skill)
+        target_members = [
+            c.name
+            for c in candidates
+            if c.skillsStatus.get(r_skill)
+            and c.skillsStatus[r_skill].status in [SkillMatchStatus.GAP, SkillMatchStatus.CRITICAL_DEFICIT]
+        ]
+        course_title_loc = {
+            "en": f"Professional Masterclass: {skill_trilingual.get('en', r_skill)}",
+            "ms": f"Masterclass Profesional: {skill_trilingual.get('ms', r_skill)}",
+            "zh": f"专业进阶大师课：{skill_trilingual.get('zh', r_skill)}",
+        }
+        platform_loc = {
+            "en": "HRD Corp Claimable (Malaysia)",
+            "ms": "Boleh Dituntut HRD Corp (Malaysia)",
+            "zh": "马来西亚 HRD Corp 培训基金可申报",
+        }
+        duration_loc = {
+            "en": "16 Hours",
+            "ms": "16 Jam",
+            "zh": "16 学时",
+        }
+        deterministic_recommendations.append(
+            CohortTrainingRecommendation(
+                skillName=skill_trilingual.get(loc_code, r_skill),
+                skillNameLocalized=skill_trilingual,
+                courseTitle=course_title_loc.get(loc_code, course_title_loc["en"]),
+                courseTitleLocalized=course_title_loc,
+                platform=platform_loc.get(loc_code, platform_loc["en"]),
+                platformLocalized=platform_loc,
+                isHrdCorpClaimable=True,
+                isFree=False,
+                durationHours=16,
+                durationHoursLabel=duration_loc.get(loc_code, duration_loc["en"]),
+                durationHoursLabelLocalized=duration_loc,
+                targetTeamMembers=target_members,
+            )
+        )
+
+    if not top_deficits:
+        default_insight_loc = {
+            "en": f"The cohort exhibits complete competency coverage for '{target_role_title}'. All candidates are certified role-ready.",
+            "ms": f"Kohort mempamerkan liputan kompetensi penuh untuk '{target_role_title}'. Semua calon sedia untuk peranan.",
+            "zh": f"团队已全面掌握「{target_role_title}」所需全部核心能力，已具备完全就绪状态。",
+        }
+        return [], default_insight_loc.get(loc_code, default_insight_loc["en"]), default_insight_loc
+
+    primary_deficit = top_deficits[0].skillName
+    default_insight_loc = {
+        "en": f"Cohort readiness averages {avg_readiness:.1f}%. Prioritizing group upskilling in '{primary_deficit}' will accelerate team capability toward full role readiness.",
+        "ms": f"Purata kesediaan kohort ialah {avg_readiness:.1f}%. Mengutamakan peningkatan kemahiran berkumpulan dalam '{primary_deficit}' akan mempercepatkan keupayaan pasukan ke arah kesediaan peranan penuh.",
+        "zh": f"团队基准就绪度平均为 {avg_readiness:.1f}%。优先针对「{primary_deficit}」展开集体进阶培训，将最高效推动团队达成全员能力就绪。",
+    }
+    default_insight = default_insight_loc.get(loc_code, default_insight_loc["en"])
+
+    deficits_summary = "\n".join([
+        f"- {d.skillName}: {d.teamDeficitPercentage:.0f}% deficit ({d.deficitCount + d.gapCount} members requiring training)"
+        for d in top_deficits[:4]
+    ])
+
+    if loc_code.startswith("zh"):
+        lang_mandate = "CRITICAL: Write all titles, platforms, and insights in Simplified Chinese (简体中文)."
+    elif loc_code.startswith("ms"):
+        lang_mandate = "CRITICAL: Write all titles, platforms, and insights in Bahasa Melayu."
+    else:
+        lang_mandate = "CRITICAL: Write all titles, platforms, and insights in professional English. Absolutely no Chinese characters in English fields."
+
+    prompt = f"""
+Candidate Workforce Reskilling Context:
+- Target Horizon Role: {target_role_title}
+- Industry: {target_industry}
+- Cohort Average Readiness: {avg_readiness:.1f}%
+- Identified Top Competency Deficits:
+{deficits_summary}
+- Target Locale: {loc_code}
+
+{lang_mandate}
+
+TASK & CONSTRAINTS:
+1. For each of the top competency deficits above (up to 4), recommend a premier enterprise corporate training module.
+   - Ground courses in Malaysian HRD Corp claimable programs, AWS Academy, Linux Foundation, Coursera Enterprise, or edX.
+   - Provide realistic duration (16, 24, 32, or 40 hours).
+   - Provide exact trilingual translations for courseTitle (en, ms, zh) and platform (en, ms, zh).
+2. Synthesize an executiveInsight: A concise 1-2 sentence workforce diagnosis for engineering and HR leadership on the cohort's upskilling trajectory and business ROI. Provide trilingual executiveInsight (en, ms, zh).
+3. Output strict JSON only matching this schema:
+{{
+  "recommendations": [
+    {{
+      "skillName": "string",
+      "courseTitle": "string",
+      "courseTitle_ms": "string",
+      "courseTitle_zh": "string",
+      "platform": "string",
+      "platform_ms": "string",
+      "platform_zh": "string",
+      "durationHours": 16,
+      "isHrdCorpClaimable": true,
+      "isFree": false
+    }}
+  ],
+  "executiveInsight": "string",
+  "executiveInsight_ms": "string",
+  "executiveInsight_zh": "string"
+}}
+"""
+
+    raw_response = None
+
+    # Tier 1: Local Qwen 2.5 via Ollama
+    try:
+        from services.local_llm_service import call_local_llm_json
+        logger.info(f"[team_matrix] Tier 1: Synthesizing cohort intelligence for '{target_role_title}' via Local Qwen 2.5...")
+        raw_response = await call_local_llm_json(
+            prompt=prompt,
+            system_instruction="You are a Chief Workforce L&D and Human Capital Analytics Strategist for enterprise upskilling programs. Output valid JSON only.",
+            timeout=25.0,
+        )
+        if raw_response and isinstance(raw_response, dict) and raw_response.get("recommendations"):
+            logger.info(f"[team_matrix] Tier 1 Success: Qwen 2.5 synthesized cohort intelligence.")
+        else:
+            raw_response = None
+    except Exception as qwen_err:
+        logger.warning(f"[team_matrix] Tier 1 Qwen failed: {qwen_err}. Switching to Tier 2 Gemini fallback...")
+        raw_response = None
+
+    # Tier 2: Gemini API Fallback
+    if not raw_response:
+        try:
+            from services.gemini_service import call_gemini_json
+            logger.info(f"[team_matrix] Tier 2: Invoking Gemini API fallback for cohort training intelligence on '{target_role_title}'...")
+            contents = [{"role": "user", "parts": [{"text": prompt}]}]
+            raw_response = await call_gemini_json(contents=contents)
+            if raw_response and isinstance(raw_response, dict) and raw_response.get("recommendations"):
+                logger.info(f"[team_matrix] Tier 2 Success: Gemini synthesized cohort intelligence.")
+            else:
+                raw_response = None
+        except Exception as gemini_err:
+            logger.warning(f"[team_matrix] Tier 2 Gemini failed: {gemini_err}. Invoking Tier 3 deterministic fallback...")
+            raw_response = None
+
+    if not raw_response or not isinstance(raw_response, dict):
+        return deterministic_recommendations, default_insight, default_insight_loc
+
+    # Parse and enrich LLM recommendations
+    raw_recs = raw_response.get("recommendations", [])
+    if not isinstance(raw_recs, list) or len(raw_recs) == 0:
+        return deterministic_recommendations, default_insight, default_insight_loc
+
+    parsed_recommendations: List[CohortTrainingRecommendation] = []
+    for item in raw_recs[:4]:
+        if not isinstance(item, dict):
+            continue
+        s_name = str(item.get("skillName", "")).strip()
+        matching_deficit = next((d for d in top_deficits if d.skillName.lower() == s_name.lower()), None)
+        if not matching_deficit and top_deficits:
+            matching_deficit = top_deficits[len(parsed_recommendations) % len(top_deficits)]
+
+        canonical_skill = matching_deficit.skillName if matching_deficit else s_name
+        skill_trilingual = matching_deficit.skillNameLocalized if matching_deficit else get_trilingual_skill(canonical_skill)
+
+        target_members = [
+            c.name
+            for c in candidates
+            if c.skillsStatus.get(canonical_skill)
+            and c.skillsStatus[canonical_skill].status in [SkillMatchStatus.GAP, SkillMatchStatus.CRITICAL_DEFICIT]
+        ]
+
+        c_title_en = str(item.get("courseTitle", f"Professional Masterclass: {canonical_skill}")).strip()
+        c_title_ms = str(item.get("courseTitle_ms") or c_title_en).strip()
+        c_title_zh = str(item.get("courseTitle_zh") or c_title_en).strip()
+        course_title_loc = {"en": c_title_en, "ms": c_title_ms, "zh": c_title_zh}
+
+        plat_en = str(item.get("platform", "HRD Corp Claimable (Malaysia)")).strip()
+        plat_ms = str(item.get("platform_ms") or plat_en).strip()
+        plat_zh = str(item.get("platform_zh") or plat_en).strip()
+        platform_loc = {"en": plat_en, "ms": plat_ms, "zh": plat_zh}
+
+        dur_hours = int(item.get("durationHours", 16) or 16)
+        dur_hours = max(8, min(60, dur_hours))
+        duration_loc = {
+            "en": f"{dur_hours} Hours",
+            "ms": f"{dur_hours} Jam",
+            "zh": f"{dur_hours} 学时",
+        }
+
+        parsed_recommendations.append(
+            CohortTrainingRecommendation(
+                skillName=skill_trilingual.get(loc_code, canonical_skill),
+                skillNameLocalized=skill_trilingual,
+                courseTitle=course_title_loc.get(loc_code, c_title_en),
+                courseTitleLocalized=course_title_loc,
+                platform=platform_loc.get(loc_code, plat_en),
+                platformLocalized=platform_loc,
+                isHrdCorpClaimable=bool(item.get("isHrdCorpClaimable", True)),
+                isFree=bool(item.get("isFree", False)),
+                durationHours=dur_hours,
+                durationHoursLabel=duration_loc.get(loc_code, duration_loc["en"]),
+                durationHoursLabelLocalized=duration_loc,
+                targetTeamMembers=target_members,
+            )
+        )
+
+    if not parsed_recommendations:
+        parsed_recommendations = deterministic_recommendations
+
+    # Executive Insight
+    raw_insight_en = str(raw_response.get("executiveInsight") or default_insight_loc["en"]).strip()
+    raw_insight_ms = str(raw_response.get("executiveInsight_ms") or default_insight_loc["ms"]).strip()
+    raw_insight_zh = str(raw_response.get("executiveInsight_zh") or default_insight_loc["zh"]).strip()
+
+    if loc_code.startswith("en") and re.search(r"[\u4e00-\u9fff]", raw_insight_en):
+        raw_insight_en = default_insight_loc["en"]
+
+    exec_insight_loc = {
+        "en": raw_insight_en,
+        "ms": raw_insight_ms,
+        "zh": raw_insight_zh,
+    }
+    exec_insight = exec_insight_loc.get(loc_code, raw_insight_en)
+
+    return parsed_recommendations, exec_insight, exec_insight_loc
+
+
 async def evaluate_team_skill_matrix(
     request: TeamSkillMatrixRequest,
 ) -> TeamSkillMatrixResponse:
@@ -334,17 +583,22 @@ async def evaluate_team_skill_matrix(
                     user_skill_sample.append(s.name)
 
             try:
+                logger.info(
+                    f"[team-matrix] On-demand synthesizing target benchmark role '{request.targetRoleTitle}' via Tier 1 Qwen / Tier 2 Gemini..."
+                )
                 synth_role = await asyncio.wait_for(
                     synthesize_on_demand_role(
                         title=request.targetRoleTitle,
                         user_skills=user_skill_sample,
                     ),
-                    timeout=4.0,
+                    timeout=25.0,
                 )
                 if synth_role:
                     target_role_dict = synth_role
             except Exception as synth_err:
-                print(f"[team-matrix] On-demand synthesis timed out or failed ({synth_err}), building dynamic benchmark.")
+                logger.warning(
+                    f"[team-matrix] On-demand role synthesis timed out or failed ({synth_err}), building dynamic benchmark."
+                )
 
             # If synthesis timed out or failed, build custom on-demand benchmark preserving requested title
             if not target_role_dict:
@@ -681,48 +935,18 @@ async def evaluate_team_skill_matrix(
             )
         )
 
-        # Generate targeted cohort training recommendation for skills with deficits
-        if (g_cnt + d_cnt) > 0:
-            target_members = [
-                c.name
-                for c in evaluated_candidates
-                if c.skillsStatus[r_skill].status in [SkillMatchStatus.GAP, SkillMatchStatus.CRITICAL_DEFICIT]
-            ]
-            course_title_loc = {
-                "en": f"Professional Masterclass: {skill_trilingual['en']}",
-                "ms": f"Masterclass Profesional: {skill_trilingual['ms']}",
-                "zh": f"专业进阶大师课：{skill_trilingual['zh']}",
-            }
-            platform_loc = {
-                "en": "HRD Corp Claimable (Malaysia)",
-                "ms": "Boleh Dituntut HRD Corp (Malaysia)",
-                "zh": "马来西亚 HRD Corp 培训基金可申报",
-            }
-            duration_loc = {
-                "en": "16 Hours",
-                "ms": "16 Jam",
-                "zh": "16 学时",
-            }
-            cohort_recommendations.append(
-                CohortTrainingRecommendation(
-                    skillName=skill_trilingual.get(locale, r_skill),
-                    skillNameLocalized=skill_trilingual,
-                    courseTitle=course_title_loc.get(locale, course_title_loc["en"]),
-                    courseTitleLocalized=course_title_loc,
-                    platform=platform_loc.get(locale, platform_loc["en"]),
-                    platformLocalized=platform_loc,
-                    isHrdCorpClaimable=True,
-                    isFree=False,
-                    durationHours=16,
-                    durationHoursLabel=duration_loc.get(locale, duration_loc["en"]),
-                    durationHoursLabelLocalized=duration_loc,
-                    targetTeamMembers=target_members,
-                )
-            )
-
     # Sort deficit metrics: highest deficit first
     deficit_metrics.sort(key=lambda d: d.teamDeficitPercentage, reverse=True)
-    cohort_recommendations.sort(key=lambda r: len(r.targetTeamMembers), reverse=True)
+
+    # 5. Cohort Training Recommendations & Executive Management Insights via Tier 1 Qwen -> Tier 2 Gemini -> Tier 3 Fallback
+    cohort_recommendations, exec_insight, exec_insight_loc = await _synthesize_cohort_intelligence(
+        target_role_title=role_title,
+        target_industry=role_industry,
+        top_deficits=deficit_metrics[:4],
+        candidates=evaluated_candidates,
+        avg_readiness=avg_readiness,
+        locale=locale,
+    )
 
     cohort_summary = TeamMatrixCohortSummary(
         totalCandidates=total_candidates,
@@ -731,6 +955,8 @@ async def evaluate_team_skill_matrix(
         topCandidateScore=top_cand.matchPercentage if top_cand else None,
         skillDeficits=deficit_metrics,
         cohortTrainingRecommendations=cohort_recommendations[:4],
+        executiveInsight=exec_insight,
+        executiveInsightLocalized=exec_insight_loc,
     )
 
     return TeamSkillMatrixResponse(
