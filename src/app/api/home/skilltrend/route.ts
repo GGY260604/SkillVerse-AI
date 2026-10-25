@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       headers: {
         Accept: "application/json",
       },
+      next: { revalidate: 30 },
     }, { timeoutMs: 70000 });
 
     // 4. Response Parsing

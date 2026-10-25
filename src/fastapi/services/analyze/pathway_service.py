@@ -48,12 +48,13 @@ MANDATORY REQUIREMENTS:
    - "en": Professional English
    - "ms": Natural Bahasa Melayu
    - "zh": Simplified Chinese (简体中文)
-2. STRUCTURED PHASES:
-   - 3 progressive phases:
-     * Phase 1: Gap Foundations & Core Architecture (theoretical basis of gap skills)
-     * Phase 2: Applied Toolchains & Production Workflows (hands-on stack & automation)
-     * Phase 3: Capstone Integration & Industry Readiness (end-to-end portfolio & certification)
+2. EXACTLY 3 PROGRESSIVE PHASES (CRITICAL REQUIREMENT - MINIMUM 3 PHASES):
+   You MUST generate EXACTLY 3 milestone objects in the "milestones" array (never 1, never 2):
+     * Milestone 1 (phaseIndex: 1): "Phase 1: Gap Foundations & Core Architecture" (theoretical basis of gap skills)
+     * Milestone 2 (phaseIndex: 2): "Phase 2: Applied Toolchains & Production Workflows" (hands-on stack & automation)
+     * Milestone 3 (phaseIndex: 3): "Phase 3: Capstone Integration & Industry Readiness" (end-to-end portfolio & certification)
    - Assign sequential phaseIndex starting from 1 (1, 2, 3).
+   - Under NO circumstances may you return fewer than 3 milestones!
 3. RECOMMENDED COURSES:
    - Recommend 1-2 realistic courses per phase (e.g. Coursera, edX, freeCodeCamp, DeepLearning.AI, HRD Corp Malaysia).
    - Courses MUST teach the candidate's gap skills, NOT their already mastered strengths.
@@ -63,7 +64,7 @@ MANDATORY REQUIREMENTS:
    - Explicitly connect the specific skills acquired in this milestone to that SDG target.
    - Explain how this phase shields the candidate from routine automation risk and elevates them to higher-productivity, sustainable economic work.
    - Include "sdgGoal" (e.g. "SDG 4.4 & 8.2"), "sdgTitle", and "sdgExplanation" (canonical English summary).
-5. Output MUST be ONLY valid JSON matching this schema:
+5. Output MUST be ONLY valid JSON matching this schema with ALL 3 MILESTONES:
 {{
   "totalWeeks": 10,
   "skillsToAcquire": ["Advanced Generative AI Workflows", "Production Scalability Architecture", "Cross-Functional Digital Leadership"],
@@ -130,6 +131,122 @@ MANDATORY REQUIREMENTS:
         "ms": "Menguasai kemahiran jurang bernilai tinggi memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin berisiko kepada penguasaan teknikal berdaya tahan.",
         "zh": "深入掌握高价值技术差距核心底座，直接契合联合国 SDG 4.4 与 SDG 8.2，将常规经验重塑为抗自动化替代的高附加值技术掌控力。"
       }}
+    }},
+    {{
+      "phaseIndex": 2,
+      "phaseTitle": "Phase 2: Applied Toolchains & Production Workflows",
+      "titleLocalized": {{
+        "en": "Phase 2: Applied Toolchains & Production Workflows",
+        "ms": "Fasa 2: Alat Praktikal & Aliran Kerja Pengeluaran",
+        "zh": "第二阶段：应用工具链与生产级自动化工作流"
+      }},
+      "description": "Hands-on execution with production frameworks and automated toolchains.",
+      "descriptionLocalized": {{
+        "en": "Hands-on execution with production frameworks and automated toolchains.",
+        "ms": "Latihan amali menggunakan rangka kerja pengeluaran dan alat automasi.",
+        "zh": "深入实战现代主流工具链与自动化工程生产流水线。"
+      }},
+      "durationWeeks": 4,
+      "estimatedHours": 20,
+      "learningObjectives": [
+        "Deploy production-grade toolchains and modern workflows",
+        "Automate end-to-end integration and optimize operational throughput"
+      ],
+      "objectivesLocalized": {{
+        "en": [
+          "Deploy production-grade toolchains and modern workflows",
+          "Automate end-to-end integration and optimize operational throughput"
+        ],
+        "ms": [
+          "Laksanakan alat gred pengeluaran dan aliran kerja moden",
+          "Automasikan integrasi menyeluruh dan optimumkan hasil operasi"
+        ],
+        "zh": [
+          "部署企业生产级工具链与端到端协同流",
+          "构建高可靠自动化集成链路并提升技术运营效率"
+        ]
+      }},
+      "recommendedCourses": [
+        {{
+          "title": "Applied Production Automation & Toolchains",
+          "titleLocalized": {{
+            "en": "Applied Production Automation & Toolchains",
+            "ms": "Automasi Pengeluaran Gunaan & Rangkaian Alat",
+            "zh": "工程级自动化实战与现代工业工具栈"
+          }},
+          "platform": "edX / DeepLearning.AI",
+          "url": "https://www.edx.org",
+          "isHrdCorpClaimable": true,
+          "isFree": false,
+          "durationHours": 18
+        }}
+      ],
+      "sdgGoal": "SDG 9.4 & 8.2",
+      "sdgTitle": "Modern Infrastructure Upgrade & Sustainable Digital Innovation",
+      "sdgExplanation": "Applying modern toolchains fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows.",
+      "sdgExplanationLocalized": {{
+        "en": "Applying modern toolchains fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows.",
+        "ms": "Mengaplikasikan alatan praktikal memenuhi UN SDG 9.4 dan SDG 8.2 dengan memodenkan aliran kerja manual.",
+        "zh": "实战应用前沿技术栈践行联合国 SDG 9.4 与 SDG 8.2，赋能产业数字化改造与可持续发展。"
+      }}
+    }},
+    {{
+      "phaseIndex": 3,
+      "phaseTitle": "Phase 3: Capstone Integration & Industry Readiness",
+      "titleLocalized": {{
+        "en": "Phase 3: Capstone Integration & Industry Readiness",
+        "ms": "Fasa 3: Projek Capstone & Persijilan Industri",
+        "zh": "第三阶段：综合实战项目与行业级就业认证"
+      }},
+      "description": "Deliver an end-to-end industry portfolio capstone demonstrating career readiness.",
+      "descriptionLocalized": {{
+        "en": "Deliver an end-to-end industry portfolio capstone demonstrating career readiness.",
+        "ms": "Sempurnakan projek capstone portfolio industri membuktikan kesediaan kerjaya.",
+        "zh": "交付高质量行业级实战作品集毕业设计，完成端到端技术成果验证与职场认证。"
+      }},
+      "durationWeeks": 3,
+      "estimatedHours": 15,
+      "learningObjectives": [
+        "Build a comprehensive portfolio capstone targeting the desired role",
+        "Complete enterprise validation, quality auditing, and industry showcase"
+      ],
+      "objectivesLocalized": {{
+        "en": [
+          "Build a comprehensive portfolio capstone targeting the desired role",
+          "Complete enterprise validation, quality auditing, and industry showcase"
+        ],
+        "ms": [
+          "Bina capstone portfolio menyeluruh untuk peranan sasaran",
+          "Lengkapkan pengesahan perusahaan, audit kualiti, dan pameran industri"
+        ],
+        "zh": [
+          "独立完成面向目标技术岗位的全流程综合实战毕业设计",
+          "完成企业级指标交付、系统质量审计与成果展示"
+        ]
+      }},
+      "recommendedCourses": [
+        {{
+          "title": "Industry Capstone & Career Portfolio Showcase",
+          "titleLocalized": {{
+            "en": "Industry Capstone & Career Portfolio Showcase",
+            "ms": "Projek Capstone Industri & Portfolio Kerjaya",
+            "zh": "行业级毕业实战项目与职业作品集实战"
+          }},
+          "platform": "freeCodeCamp / GitHub Open Project",
+          "url": "https://www.freecodecamp.org",
+          "isHrdCorpClaimable": false,
+          "isFree": true,
+          "durationHours": 20
+        }}
+      ],
+      "sdgGoal": "SDG 8.2",
+      "sdgTitle": "High-Value Economic Productivity & Standards Verification",
+      "sdgExplanation": "Delivering the capstone project directly achieves UN SDG 8.2 by certifying capability for high-value economic productivity.",
+      "sdgExplanationLocalized": {{
+        "en": "Delivering the capstone project directly achieves UN SDG 8.2 by certifying capability for high-value economic productivity.",
+        "ms": "Menyempurnakan capstone industri memenuhi UN SDG 8.2 dengan memperakui keupayaan produktiviti bernilai tinggi.",
+        "zh": "高质量交付端到端毕业设计项目直接实现联合国 SDG 8.2，确证个人在现代化高生产率产业中的核心不可替代性。"
+      }}
     }}
   ]
 }}
@@ -138,23 +255,50 @@ MANDATORY REQUIREMENTS:
 
 def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> SelectedRoleRoadmap:
     """Fallback deterministic trilingual roadmap if LLM call is unavailable."""
-    if target_role.skillsGap:
-        first_gap = target_role.skillsGap[0]
-        second_gap = target_role.skillsGap[1] if len(target_role.skillsGap) > 1 else "Workflow Automation"
-        fallback_skills = list(target_role.skillsGap)
-        fallback_skills_loc = dict(target_role.skillsGapLocalized) if target_role.skillsGapLocalized else None
-    else:
-        first_gap = f"Advanced {target_role.title} Architecture"
-        second_gap = f"Automated {target_role.industry} Systems"
-        fallback_skills = [first_gap, second_gap, "Sustainable Digital Leadership"]
-        fallback_skills_loc = {
-            "en": fallback_skills,
-            "ms": [f"Seni Bina {target_role.title} Lanjutan", f"Sistem Automasi {target_role.industry}", "Kepimpinan Digital Mampan"],
-            "zh": [f"高级 {target_role.title} 架构设计", f"{target_role.industry} 自动化流水线系统", "可持续数字技术领导力"],
-        }
+    # Resolve trilingual skill gaps cleanly from localized structures
+    gap_loc = target_role.skillsGapLocalized if isinstance(target_role.skillsGapLocalized, dict) else {}
+    en_gaps = gap_loc.get("en") or target_role.skillsGap or []
+    ms_gaps = gap_loc.get("ms") or target_role.skillsGap or []
+    zh_gaps = gap_loc.get("zh") or target_role.skillsGap or []
 
+    # Cleanly resolve trilingual role titles
     role_name_en = target_role.title
     role_name_localized = target_role.titleLocalized or target_role.title
+    if isinstance(target_role.titleLocalized, dict):
+        role_name_ms = target_role.titleLocalized.get("ms", role_name_en)
+        role_name_zh = target_role.titleLocalized.get("zh", role_name_en)
+    else:
+        role_name_ms = role_name_localized if (locale or "").startswith("ms") else role_name_en
+        role_name_zh = role_name_localized if (locale or "").startswith("zh") else role_name_en
+
+    if en_gaps:
+        first_gap_en = en_gaps[0]
+        second_gap_en = en_gaps[1] if len(en_gaps) > 1 else "Modern Workflow Automation"
+    else:
+        first_gap_en = f"Advanced {target_role.title} Architecture"
+        second_gap_en = f"Automated {target_role.industry} Systems"
+
+    if ms_gaps:
+        first_gap_ms = ms_gaps[0]
+        second_gap_ms = ms_gaps[1] if len(ms_gaps) > 1 else "Automasi Aliran Kerja Moden"
+    else:
+        first_gap_ms = f"Seni Bina {role_name_ms} Lanjutan"
+        second_gap_ms = f"Sistem Automasi {target_role.industry}"
+
+    if zh_gaps:
+        first_gap_zh = zh_gaps[0]
+        second_gap_zh = zh_gaps[1] if len(zh_gaps) > 1 else "现代工程自动化工作流"
+    else:
+        first_gap_zh = f"高级 {role_name_zh} 架构设计"
+        second_gap_zh = f"{target_role.industry} 自动化流水线系统"
+
+    fallback_skills = [first_gap_en, second_gap_en, "Sustainable Digital Leadership"]
+    fallback_skills_loc = {
+        "en": [first_gap_en, second_gap_en, "Sustainable Digital Leadership"],
+        "ms": [first_gap_ms, second_gap_ms, "Kepimpinan Digital Mampan"],
+        "zh": [first_gap_zh, second_gap_zh, "可持续数字技术领导力"],
+    }
+
     primary_role_sdg = (
         target_role.sdgAlignments[0].targetCode
         if target_role.sdgAlignments
@@ -162,76 +306,76 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
     )
 
     m1_title_loc = {
-        "en": f"Phase 1: {first_gap} Foundations",
-        "ms": f"Fasa 1: Asas {first_gap}",
-        "zh": f"第一阶段：{first_gap} 核心理论基础",
+        "en": f"Phase 1: {first_gap_en} Foundations",
+        "ms": f"Fasa 1: Asas {first_gap_ms}",
+        "zh": f"第一阶段：{first_gap_zh} 核心理论基础",
     }
     m1_desc_loc = {
-        "en": f"Master the core theoretical fundamentals of {first_gap} and industry compliance standards.",
-        "ms": f"Kuasai asas teori teras {first_gap} dan piawaian pematuhan industri.",
-        "zh": f"掌握 {first_gap} 的核心理论基础与行业合规标准。",
+        "en": f"Master the core theoretical fundamentals of {first_gap_en} and industry compliance standards.",
+        "ms": f"Kuasai asas teori teras {first_gap_ms} dan piawaian pematuhan industri.",
+        "zh": f"掌握 {first_gap_zh} 的核心理论基础与行业合规标准。",
     }
     m1_obj_loc = {
         "en": [
-            f"Master the core theoretical fundamentals of {first_gap}.",
+            f"Master the core theoretical fundamentals of {first_gap_en}.",
             "Analyze Malaysian and international industry best practices.",
         ],
         "ms": [
-            f"Kuasai asas teori dan rangka kerja teras {first_gap}.",
+            f"Kuasai asas teori dan rangka kerja teras {first_gap_ms}.",
             "Analisis amalan terbaik industri Malaysia dan antarabangsa.",
         ],
         "zh": [
-            f"掌握 {first_gap} 的核心理论基础与知识架构。",
+            f"掌握 {first_gap_zh} 的核心理论基础与知识架构。",
             "分析马来西亚及国际行业最佳实践与规范。",
         ],
     }
 
     m2_title_loc = {
-        "en": "Phase 2: Applied Tools & Workflows",
-        "ms": "Fasa 2: Alat & Aliran Kerja Praktikal",
-        "zh": "第二阶段：应用工具与实操",
+        "en": f"Phase 2: Applied {second_gap_en} & Workflows",
+        "ms": f"Fasa 2: Alat & Aliran Kerja Praktikal {second_gap_ms}",
+        "zh": f"第二阶段：{second_gap_zh} 工具与实操",
     }
     m2_desc_loc = {
-        "en": f"Hands-on execution with {second_gap} and modern production-grade workflows.",
-        "ms": f"Latihan amali menggunakan {second_gap} dan aliran kerja gred pengeluaran moden.",
-        "zh": f"深入实操 {second_gap} 及现代生产级自动化工作流。",
+        "en": f"Hands-on execution with {second_gap_en} and modern production-grade workflows.",
+        "ms": f"Latihan amali menggunakan {second_gap_ms} dan aliran kerja gred pengeluaran moden.",
+        "zh": f"深入实操 {second_gap_zh} 及现代生产级自动化工作流。",
     }
     m2_obj_loc = {
         "en": [
-            f"Hands-on execution with {second_gap} and modern cloud/digital platforms.",
+            f"Hands-on execution with {second_gap_en} and modern cloud/digital platforms.",
             "Build automated data pipelines and reporting dashboards.",
         ],
         "ms": [
-            f"Latihan amali menggunakan {second_gap} dan platform awan/digital moden.",
+            f"Latihan amali menggunakan {second_gap_ms} dan platform awan/digital moden.",
             "Bina saluran data automatik dan papan pemuka pelaporan.",
         ],
         "zh": [
-            f"深入实操 {second_gap} 及现代云端/数字化平台。",
+            f"深入实操 {second_gap_zh} 及现代云端/数字化平台。",
             "构建自动化数据流程与业务分析报告看板。",
         ],
     }
 
     m3_title_loc = {
-        "en": "Phase 3: Capstone & Industry Readiness",
-        "ms": "Fasa 3: Projek Capstone & Persijilan",
-        "zh": "第三阶段：综合实战项目与认证",
+        "en": f"Phase 3: {role_name_en} Capstone & Industry Readiness",
+        "ms": f"Fasa 3: Projek Capstone & Persijilan {role_name_ms}",
+        "zh": f"第三阶段：{role_name_zh} 综合实战项目与认证",
     }
     m3_desc_loc = {
         "en": f"Deliver an end-to-end industry portfolio capstone targeting {role_name_en}.",
-        "ms": f"Sempurnakan projek capstone portfolio industri untuk peranan {role_name_localized}.",
-        "zh": f"完成面向 {role_name_localized} 的端到端行业实战作品集毕业设计。",
+        "ms": f"Sempurnakan projek capstone portfolio industri untuk peranan {role_name_ms}.",
+        "zh": f"完成面向 {role_name_zh} 的端到端行业实战作品集毕业设计。",
     }
     m3_obj_loc = {
         "en": [
-            f"Deliver an end-to-end industry portfolio project demonstrating {first_gap} and {second_gap}.",
+            f"Deliver an end-to-end industry portfolio project demonstrating {first_gap_en} and {second_gap_en}.",
             "Verify alignment with UN SDG impact metrics and workplace standards.",
         ],
         "ms": [
-            f"Sempurnakan projek portfolio industri menyeluruh yang membuktikan kemahiran {first_gap} dan {second_gap}.",
+            f"Sempurnakan projek portfolio industri menyeluruh yang membuktikan kemahiran {first_gap_ms} dan {second_gap_ms}.",
             "Sahkan penjajaran dengan metrik impak UN SDG dan piawaian tempat kerja.",
         ],
         "zh": [
-            f"交付展示 {first_gap} 与 {second_gap} 综合能力的端到端实战项目。",
+            f"交付展示 {first_gap_zh} 与 {second_gap_zh} 综合能力的端到端实战项目。",
             "验证联合国可持续发展目标（SDG）指标与职场技能标准。",
         ],
     }
@@ -249,11 +393,11 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
             objectivesLocalized=m1_obj_loc,
             recommendedCourses=[
                 RecommendedCourse(
-                    title=f"Introduction to {first_gap} & Digital Standards",
+                    title=f"Introduction to {first_gap_en} & Digital Standards",
                     titleLocalized={
-                        "en": f"Introduction to {first_gap} & Digital Standards",
-                        "ms": f"Pengenalan kepada {first_gap} & Standard Digital",
-                        "zh": f"{first_gap} 核心理论与数字化标准",
+                        "en": f"Introduction to {first_gap_en} & Digital Standards",
+                        "ms": f"Pengenalan kepada {first_gap_ms} & Standard Digital",
+                        "zh": f"{first_gap_zh} 核心理论与数字化标准",
                     },
                     platform="Coursera (Free Audit)",
                     url="https://www.coursera.org",
@@ -277,11 +421,11 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
             ],
             sdgGoal="SDG 4.4 & 8.2",
             sdgTitle="Technical & Vocational Skills for Decent Work",
-            sdgExplanation=f"Mastering core fundamentals of {first_gap} advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy.",
+            sdgExplanation=f"Mastering core fundamentals of {first_gap_en} advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy.",
             sdgExplanationLocalized={
-                "en": f"Mastering core fundamentals of {first_gap} directly advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy, shielding you from routine automation.",
-                "ms": f"Menguasai asas teras {first_gap} memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin kepada literasi digital berdaya tahan.",
-                "zh": f"深入掌握 {first_gap} 核心理论基础直接契合联合国 SDG 4.4 与 SDG 8.2，将机械常规流程重塑为具备抗自动化韧性的数字化素养。",
+                "en": f"Mastering core fundamentals of {first_gap_en} directly advances UN SDG 4.4 and SDG 8.2 by transforming routine manual knowledge into resilient digital literacy, shielding you from routine automation.",
+                "ms": f"Menguasai asas teras {first_gap_ms} memacu UN SDG 4.4 dan SDG 8.2 secara langsung dengan menukar tugas rutin kepada literasi digital berdaya tahan.",
+                "zh": f"深入掌握 {first_gap_zh} 核心理论基础直接契合联合国 SDG 4.4 与 SDG 8.2，将机械常规流程重塑为具备抗自动化韧性的数字化素养。",
             },
         ),
         RoadmapMilestone(
@@ -296,11 +440,11 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
             objectivesLocalized=m2_obj_loc,
             recommendedCourses=[
                 RecommendedCourse(
-                    title=f"Hands-on {second_gap} Bootcamp",
+                    title=f"Hands-on {second_gap_en} Bootcamp",
                     titleLocalized={
-                        "en": f"Hands-on {second_gap} Bootcamp",
-                        "ms": f"Kem Latihan Praktikal {second_gap}",
-                        "zh": f"{second_gap} 进阶实操强化营",
+                        "en": f"Hands-on {second_gap_en} Bootcamp",
+                        "ms": f"Kem Latihan Praktikal {second_gap_ms}",
+                        "zh": f"{second_gap_zh} 进阶实操强化营",
                     },
                     platform="edX (Free Audit)",
                     url="https://www.edx.org",
@@ -324,11 +468,11 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
             ],
             sdgGoal="SDG 9.4 & 8.2",
             sdgTitle="Modern Infrastructure Upgrade & Sustainable Digital Innovation",
-            sdgExplanation=f"Applying modern toolchains like {second_gap} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
+            sdgExplanation=f"Applying modern toolchains like {second_gap_en} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
             sdgExplanationLocalized={
-                "en": f"Applying modern toolchains like {second_gap} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
-                "ms": f"Mengaplikasikan alatan praktikal {second_gap} memenuhi UN SDG 9.4 dan SDG 8.2 dengan memodenkan aliran kerja manual dan memacu inovasi industri mampan.",
-                "zh": f"深入实操 {second_gap} 等现代工具链深度推进联合国 SDG 9.4 与 SDG 8.2，淘汰低效手工内耗，加速数字化基础设施改造与可持续技术升级。",
+                "en": f"Applying modern toolchains like {second_gap_en} fulfills UN SDG 9.4 and SDG 8.2 by modernizing legacy workflows and driving sustainable industrial productivity.",
+                "ms": f"Mengaplikasikan alatan praktikal {second_gap_ms} memenuhi UN SDG 9.4 dan SDG 8.2 dengan memodenkan aliran kerja manual dan memacu inovasi industri mampan.",
+                "zh": f"深入实操 {second_gap_zh} 等现代工具链深度推进联合国 SDG 9.4 与 SDG 8.2，淘汰低效手工内耗，加速数字化基础设施改造与可持续技术升级。",
             },
         ),
         RoadmapMilestone(
@@ -346,8 +490,8 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
                     title=f"{role_name_en} Portfolio Project Capstone",
                     titleLocalized={
                         "en": f"{role_name_en} Portfolio Project Capstone",
-                        "ms": f"Projek Portfolio Capstone {role_name_localized}",
-                        "zh": f"{role_name_localized} 综合实战作品集项目",
+                        "ms": f"Projek Portfolio Capstone {role_name_ms}",
+                        "zh": f"{role_name_zh} 综合实战作品集项目",
                     },
                     platform="freeCodeCamp / GitHub Open Project",
                     url="https://www.freecodecamp.org",
@@ -361,8 +505,8 @@ def get_default_roadmap(target_role: MatchedRole, locale: str = "en") -> Selecte
             sdgExplanation=f"Delivering the {role_name_en} portfolio capstone directly achieves UN SDG 8.2 by certifying your capability for high-value economic productivity and sustainable career longevity.",
             sdgExplanationLocalized={
                 "en": f"Delivering the {role_name_en} portfolio capstone directly achieves UN SDG 8.2 by certifying your capability for high-value economic productivity and sustainable career longevity.",
-                "ms": f"Menyempurnakan capstone industri untuk {role_name_localized} memenuhi UN SDG 8.2 secara langsung dengan memperakui keupayaan produktiviti bernilai tinggi anda.",
-                "zh": f"完成面向 {role_name_localized} 的综合实战作品集直接践行联合国 SDG 8.2，认证高附加值工程实战水准，实现高质量体面就业跃升。",
+                "ms": f"Menyempurnakan capstone industri untuk {role_name_ms} memenuhi UN SDG 8.2 secara langsung dengan memperakui keupayaan produktiviti bernilai tinggi anda.",
+                "zh": f"完成面向 {role_name_zh} 的综合实战作品集直接践行联合国 SDG 8.2，认证高附加值工程实战水准，实现高质量体面就业跃升。",
             },
         ),
     ]
@@ -397,7 +541,7 @@ async def synthesize_pathway(
     now = time.time()
     if cache_key in _pathway_cache:
         cached_roadmap, timestamp = _pathway_cache[cache_key]
-        if now - timestamp < PATHWAY_CACHE_TTL:
+        if now - timestamp < PATHWAY_CACHE_TTL and len(cached_roadmap.milestones) >= 3:
             return cached_roadmap
 
     target_sdgs_str = (
@@ -465,7 +609,7 @@ async def synthesize_pathway(
 
                 courses.append(
                     RecommendedCourse(
-                        title=course_title_raw,
+                        title=c_title_loc.get(locale) or c_title_loc.get("en") or course_title_raw,
                         titleLocalized=c_title_loc,
                         platform=c.get("platform", "Coursera"),
                         url=c.get("url", "https://www.coursera.org"),
@@ -480,18 +624,30 @@ async def synthesize_pathway(
             t_loc = m.get("titleLocalized")
             if not isinstance(t_loc, dict):
                 t_loc = {"en": p_title, "ms": p_title, "zh": p_title}
+            else:
+                if not t_loc.get("en"): t_loc["en"] = p_title
+                if not t_loc.get("ms"): t_loc["ms"] = t_loc.get("en", p_title)
+                if not t_loc.get("zh"): t_loc["zh"] = t_loc.get("en", p_title)
 
             # Extract trilingual description
             p_desc = m.get("description", "")
             d_loc = m.get("descriptionLocalized")
             if not isinstance(d_loc, dict):
                 d_loc = {"en": p_desc, "ms": p_desc, "zh": p_desc}
+            else:
+                if not d_loc.get("en"): d_loc["en"] = p_desc
+                if not d_loc.get("ms"): d_loc["ms"] = d_loc.get("en", p_desc)
+                if not d_loc.get("zh"): d_loc["zh"] = d_loc.get("en", p_desc)
 
             # Extract trilingual objectives
             objs = m.get("learningObjectives", [])
             objs_loc = m.get("objectivesLocalized")
             if not isinstance(objs_loc, dict):
                 objs_loc = {"en": objs, "ms": objs, "zh": objs}
+            else:
+                if not objs_loc.get("en"): objs_loc["en"] = objs
+                if not objs_loc.get("ms"): objs_loc["ms"] = objs_loc.get("en", objs)
+                if not objs_loc.get("zh"): objs_loc["zh"] = objs_loc.get("en", objs)
 
             # Extract trilingual SDG relationship explanations
             role_sdg_default = (
@@ -524,21 +680,26 @@ async def synthesize_pathway(
                 }
             sdg_exp = m.get("sdgExplanation") or sdg_exp_loc.get("en", "")
 
+            active_phase_title = t_loc.get(locale) or t_loc.get("en") or p_title
+            active_phase_desc = d_loc.get(locale) or d_loc.get("en") or p_desc
+            active_objs = objs_loc.get(locale) or objs_loc.get("en") or objs
+            active_sdg_exp = sdg_exp_loc.get(locale) or sdg_exp_loc.get("en") or sdg_exp
+
             milestones.append(
                 RoadmapMilestone(
                     phaseIndex=int(m.get("phaseIndex", idx)),
-                    phaseTitle=p_title,
+                    phaseTitle=active_phase_title,
                     titleLocalized=t_loc,
-                    description=p_desc,
+                    description=active_phase_desc,
                     descriptionLocalized=d_loc,
                     durationWeeks=int(m.get("durationWeeks", 3)),
                     estimatedHours=int(m.get("estimatedHours", 15)),
-                    learningObjectives=objs,
+                    learningObjectives=active_objs,
                     objectivesLocalized=objs_loc,
                     recommendedCourses=courses,
                     sdgGoal=sdg_goal,
                     sdgTitle=sdg_title,
-                    sdgExplanation=sdg_exp,
+                    sdgExplanation=active_sdg_exp,
                     sdgExplanationLocalized=sdg_exp_loc,
                 )
             )
@@ -560,6 +721,28 @@ async def synthesize_pathway(
                     "ms": [f"Seni Bina {target_role.title} Lanjutan", f"Sistem Automasi {target_role.industry}", "Kepimpinan Digital Mampan"],
                     "zh": [f"高级 {target_role.title} 架构设计", f"{target_role.industry} 自动化流水线系统", "可持续数字技术领导力"],
                 }
+
+        # If localized skills dictionary is available, align synthesized_skills with active locale
+        if synthesized_skills_loc and isinstance(synthesized_skills_loc, dict):
+            loc_skills = synthesized_skills_loc.get(locale)
+            if loc_skills and isinstance(loc_skills, list) and len(loc_skills) > 0:
+                synthesized_skills = loc_skills
+
+        # Defense-in-depth: Ensure MINIMUM 3 progressive phases are always delivered
+        if len(milestones) < 3:
+            default_roadmap = get_default_roadmap(target_role, locale)
+            existing_indices = {m.phaseIndex for m in milestones}
+            for def_m in default_roadmap.milestones:
+                if def_m.phaseIndex not in existing_indices:
+                    milestones.append(def_m.model_copy(deep=True))
+            while len(milestones) < 3 and default_roadmap.milestones:
+                fallback_m = default_roadmap.milestones[(len(milestones)) % len(default_roadmap.milestones)].model_copy(deep=True)
+                milestones.append(fallback_m)
+            milestones.sort(key=lambda m: m.phaseIndex)
+            for p_idx, m in enumerate(milestones, 1):
+                m.phaseIndex = p_idx
+
+        total_weeks = max(total_weeks, sum(m.durationWeeks for m in milestones))
 
         if milestones:
             roadmap_result = SelectedRoleRoadmap(

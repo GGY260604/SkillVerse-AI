@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           },
           body: forwardFormData,
         },
-        { timeoutMs: 60000 }
+        { timeoutMs: 70000 }
       );
 
       if (response.ok) {

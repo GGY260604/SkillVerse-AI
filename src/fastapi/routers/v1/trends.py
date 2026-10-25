@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from fastapi import APIRouter, Query, HTTPException
 from config import settings
 from services.trends import sync_live_trend_signals_to_supabase, search_and_analyze_skill
@@ -11,14 +11,19 @@ router = APIRouter()
 # In-memory TTL cache for live trends responses (keyed by locale)
 _trends_cache: Dict[str, Dict[str, Any]] = {}
 _trends_cache_time: float = 0.0
-_TRENDS_CACHE_TTL = 60.0  # 60 seconds TTL
+_TRENDS_CACHE_TTL = 600.0  # 10 minutes TTL
+
+# In-memory TTL cache for skill search responses (keyed by f"{clean_query}:{locale}")
+_search_cache: Dict[str, Tuple[SkillSearchResponse, float]] = {}
+_SEARCH_CACHE_TTL = 900.0  # 15 minutes TTL
 
 
 def invalidate_trends_cache():
-    """Invalidates the in-memory trends cache when a fresh sync completes."""
-    global _trends_cache, _trends_cache_time
+    """Invalidates the in-memory trends cache and search cache when a fresh sync completes."""
+    global _trends_cache, _trends_cache_time, _search_cache
     _trends_cache.clear()
     _trends_cache_time = 0.0
+    _search_cache.clear()
 
 
 # Multilingual Category Mappings
@@ -197,13 +202,25 @@ async def search_skill_trend_get(
 ):
     """
     GET variant for skill search and trend analysis.
-    Useful for client URL-driven searches and quick browser lookups.
+    Sub-millisecond in-memory cache lookup for repeat & preset queries.
     """
+    clean_q = query.strip().lower()
+    loc = (locale or "en").lower().strip()
+    cache_key = f"{clean_q}:{loc}"
+    now = time.time()
+
+    if cache_key in _search_cache:
+        cached_resp, ts = _search_cache[cache_key]
+        if now - ts < _SEARCH_CACHE_TTL:
+            return cached_resp
+
     try:
         response = await search_and_analyze_skill(
             query=query,
             locale=locale or "en",
         )
+        if response and response.success:
+            _search_cache[cache_key] = (response, now)
         if response.isNewSkillSynthesized:
             invalidate_trends_cache()
         return response

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import math
 import time
 import httpx
@@ -22,6 +23,8 @@ from services.analyze.skill_translations import (
     warm_skills_cache_batch,
     localize_skill_list_trilingual,
     get_trilingual_skill,
+    bulk_register_role_skills,
+    bulk_register_profile_skills,
 )
 
 
@@ -340,6 +343,8 @@ def calibrate_scenario_multipliers(
 _cached_active_roles: List[Dict[str, Any]] = []
 _last_active_roles_fetch_time: float = 0.0
 _declining_vectors_cache: Dict[str, List[float]] = {}
+_evaluate_roles_cache: Dict[str, Tuple[Any, float]] = {}
+_EVALUATE_ROLES_TTL = 900.0  # 15 minutes TTL
 
 
 async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
@@ -393,7 +398,19 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                             raw_multipliers=r.get("scenario_multipliers"),
                         )
 
-                        formatted.append({
+                        skills_en = r.get("required_skills", [])
+                        loc_skills = r.get("required_skills_localized")
+                        if not loc_skills:
+                            if r.get("required_skills_ms") and r.get("required_skills_zh"):
+                                loc_skills = {
+                                    "en": skills_en,
+                                    "ms": r.get("required_skills_ms"),
+                                    "zh": r.get("required_skills_zh"),
+                                }
+                            else:
+                                loc_skills = localize_skill_list_trilingual(skills_en)
+
+                        role_entry = {
                             "roleId": rid,
                             "title": r["title"],
                             "titleLocalized": {
@@ -402,8 +419,8 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                                 "zh": r.get("title_zh", r["title"]),
                             },
                             "industry": r["industry"],
-                            "requiredSkills": r.get("required_skills", []),
-                            "requiredSkillsLocalized": r.get("required_skills_localized") or localize_skill_list_trilingual(r.get("required_skills", [])),
+                            "requiredSkills": skills_en,
+                            "requiredSkillsLocalized": loc_skills,
                             "sdgAlignments": r.get("sdg_alignments", []),
                             "scenarioMultipliers": calibrated_multipliers,
                             "radarRequirement": r.get("radar_requirements", {
@@ -413,7 +430,9 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
                                 "Human Communication": 75,
                                 "ESG & Sustainability": 70,
                             }),
-                        })
+                        }
+                        bulk_register_role_skills(role_entry)
+                        formatted.append(role_entry)
                     _cached_active_roles = formatted
                     _last_active_roles_fetch_time = time.time()
                     return [dict(r) for r in formatted]
@@ -500,6 +519,10 @@ def _generate_deterministic_fallback_cohort(
     return {"roles": generated}
 
 
+_cohort_synthesis_cache: Dict[str, Tuple[List[Dict[str, Any]], float]] = {}
+_COHORT_SYNTHESIS_CACHE_TTL = 3600.0  # 1 hour TTL
+
+
 async def synthesize_on_demand_cohort(
     primary_title: str,
     industry: Optional[str] = None,
@@ -516,7 +539,16 @@ async def synthesize_on_demand_cohort(
     Tier 1: Local Qwen 2.5 (Ollama) -> Tier 2: Gemini API -> Tier 3: Deterministic Floor.
     Generates trilingual titles and competencies, calibrated macro-scenario multipliers,
     1024-dim ML embeddings via batch vectorization, and registers them into the active catalog.
+    Cached in-memory for 1 hour for sub-millisecond retrieval on repeat domain queries.
     """
+    clean_title = (primary_title or "").strip().lower()
+    cohort_cache_key = f"{clean_title}:{target_count}:{(industry or '').strip().lower()}:{','.join(sorted(existing_titles or []))}"
+    now = time.time()
+    if cohort_cache_key in _cohort_synthesis_cache:
+        cached_cohort, ts = _cohort_synthesis_cache[cohort_cache_key]
+        if now - ts < _COHORT_SYNTHESIS_CACHE_TTL:
+            return [dict(r) for r in cached_cohort]
+
     from services.gemini_service import call_gemini_json
     from services.analyze.skill_translations import register_skill_translation
 
@@ -776,10 +808,11 @@ async def synthesize_on_demand_cohort(
                 sync_resp = await client.post(endpoint, json=db_records_to_sync, headers=headers)
                 if sync_resp.status_code in (200, 201):
                     print(f"[Supabase Sync] Successfully persisted {len(db_records_to_sync)} roles to esco_roles.")
-                else:
-                    print(f"[Supabase Sync] Supabase responded with {sync_resp.status_code}: {sync_resp.text}")
             except Exception as sync_err:
-                print(f"[Supabase Sync] Error persisting roles to Supabase esco_roles: {sync_err}")
+                pass
+
+        if cohort_entries:
+            _cohort_synthesis_cache[cohort_cache_key] = (cohort_entries, now)
 
         return cohort_entries
     except Exception:
@@ -857,7 +890,17 @@ async def evaluate_roles(
     applies scenario multipliers, and computes radar chart dimensions.
     Integrates live ML vector embeddings from RunPod/Gemini and Supabase pgvector.
     Supports zero-shot on-demand role synthesis when users explore novel career goals.
+    Cached in-memory with SHA-256 for sub-millisecond repeat evaluations.
     """
+    cache_key = hashlib.sha256(
+        f"{profile.model_dump_json()}:{scenario}:{locale}".encode()
+    ).hexdigest()
+    now = time.time()
+    if cache_key in _evaluate_roles_cache:
+        cached_result, ts = _evaluate_roles_cache[cache_key]
+        if now - ts < _EVALUATE_ROLES_TTL:
+            return cached_result
+
     user_skills_list = [s.name for s in profile.skills]
     # Add tools/software into user skill set for broader matching
     if profile.toolsAndSoftware:
@@ -950,6 +993,9 @@ async def evaluate_roles(
             if v:
                 _declining_vectors_cache[k] = v
 
+    # Register authentic AI-extracted profile competencies into dynamic cache
+    bulk_register_profile_skills(profile.skills)
+
     # Build multilingual user skill alias map from profile.skills localized_labels
     user_skill_alias_map: Dict[str, List[str]] = {}
     for s_item in profile.skills:
@@ -1024,6 +1070,7 @@ async def evaluate_roles(
 
     # Phase 1: High-Speed In-Memory Coarse Screening (0.002s across all 108 roles)
     raw_evaluations: List[Dict[str, Any]] = []
+    user_skills_set = {s.lower().strip() for s in user_skills_list}
 
     for role_def in active_roles:
         required_skills = role_def["requiredSkills"]
@@ -1034,7 +1081,13 @@ async def evaluate_roles(
             r_norm = req_skill.lower().strip()
             matched = False
 
-            # Fast-path: Exact match, substring containment, or token Jaccard overlap (0.000ms)
+            # O(1) Instant Fast-path: Exact match
+            if r_norm in user_skills_set:
+                matched = True
+                matched_strengths.append(req_skill)
+                continue
+
+            # Substring containment or token Jaccard overlap (0.000ms)
             for user_skill in user_skills_list:
                 u_norm = user_skill.lower().strip()
                 if (
@@ -1238,7 +1291,8 @@ async def evaluate_roles(
                     )
                 )
 
-        matched_loc = localize_skill_list_trilingual(item["matched_strengths"])
+        role_skills_loc = role_def.get("requiredSkillsLocalized") or role_def.get("required_skills_localized")
+        matched_loc = localize_skill_list_trilingual(item["matched_strengths"], role_localized=role_skills_loc)
         if not item["skills_gap"]:
             frontier_gaps = [
                 f"Advanced {role_def['title']} Architecture",
@@ -1260,7 +1314,7 @@ async def evaluate_roles(
             }
             skills_gap_for_candidate = gap_loc.get(locale, frontier_gaps)
         else:
-            gap_loc = localize_skill_list_trilingual(item["skills_gap"])
+            gap_loc = localize_skill_list_trilingual(item["skills_gap"], role_localized=role_skills_loc)
             skills_gap_for_candidate = gap_loc.get(locale, item["skills_gap"])
 
         at_risk_loc = localize_skill_list_trilingual([a.skillName for a in at_risk_items])
@@ -1359,5 +1413,9 @@ async def evaluate_roles(
         persist_embedding_cache()
     except Exception:
         pass
+
+    if len(_evaluate_roles_cache) > 2000:
+        _evaluate_roles_cache.clear()
+    _evaluate_roles_cache[cache_key] = ((matched_roles, radar_data, scenario_roles), now)
 
     return matched_roles, radar_data, scenario_roles

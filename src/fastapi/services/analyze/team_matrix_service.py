@@ -32,6 +32,8 @@ from services.analyze.skill_translations import (
     get_trilingual_skill,
     localize_skill_list_trilingual,
     warm_skills_cache_batch,
+    bulk_register_profile_skills,
+    bulk_register_role_skills,
 )
 
 
@@ -255,6 +257,23 @@ DEFAULT_BENCHMARK_ROLES: List[Dict[str, Any]] = [
             "Power BI & ESG Dashboards",
         ],
     },
+    {
+        "roleId": "role-ai-support-ops-specialist",
+        "title": "AI Support Operations Specialist",
+        "titleLocalized": {
+            "en": "AI Support Operations Specialist",
+            "ms": "Pakar Operasi Sokongan AI",
+            "zh": "AI 智能客服运维专家",
+        },
+        "industry": "Responsible AI & Enterprise Digitalization",
+        "requiredSkills": [
+            "Customer Communication",
+            "Ticket Routing",
+            "Prompt Engineering",
+            "Python",
+            "API Integration",
+        ],
+    },
 ]
 
 
@@ -270,6 +289,11 @@ def _get_proficiency_multiplier(proficiency: Optional[str]) -> float:
     elif p in ["beginner", "novice", "junior"]:
         return 0.50
     return 0.70
+
+
+# In-memory cache for synthesized cohort training intelligence (30 minutes TTL)
+_cohort_intel_cache: Dict[str, Tuple[Tuple[List[CohortTrainingRecommendation], Optional[str], Optional[Dict[str, str]]], float]] = {}
+_COHORT_INTEL_CACHE_TTL = 1800.0
 
 
 async def _synthesize_cohort_intelligence(
@@ -289,6 +313,13 @@ async def _synthesize_cohort_intelligence(
     Returns trilingual recommendations and executive insight summary.
     """
     loc_code = (locale or "en").lower().strip()
+    intel_cache_key = f"{target_role_title.lower().strip()}:{loc_code}:{','.join(d.skillName.lower().strip() for d in top_deficits)}"
+    now = time.time()
+
+    if intel_cache_key in _cohort_intel_cache:
+        cached_result, ts = _cohort_intel_cache[intel_cache_key]
+        if now - ts < _COHORT_INTEL_CACHE_TTL:
+            return cached_result
 
     # Pre-build deterministic fallback
     deterministic_recommendations: List[CohortTrainingRecommendation] = []
@@ -513,8 +544,9 @@ TASK & CONSTRAINTS:
         "zh": raw_insight_zh,
     }
     exec_insight = exec_insight_loc.get(loc_code, raw_insight_en)
-
-    return parsed_recommendations, exec_insight, exec_insight_loc
+    res_tuple = (parsed_recommendations, exec_insight, exec_insight_loc)
+    _cohort_intel_cache[intel_cache_key] = (res_tuple, now)
+    return res_tuple
 
 
 # In-memory TTL cache for team matrix evaluation (15 min TTL)
@@ -544,6 +576,7 @@ def _compute_team_matrix_cache_key(request: TeamSkillMatrixRequest) -> str:
 def clear_team_matrix_cache() -> None:
     """Clears the in-memory team matrix evaluation cache (useful for testing or manual eviction)."""
     _team_matrix_cache.clear()
+    _cohort_intel_cache.clear()
 
 
 async def evaluate_team_skill_matrix(
@@ -742,6 +775,12 @@ async def evaluate_team_skill_matrix(
     # Required competencies trilingual localization:
     # 1. First check if role already has pre-cached trilingual skills
     existing_skills_loc = target_role_dict.get("requiredSkillsLocalized") or target_role_dict.get("required_skills_localized")
+    if not existing_skills_loc and target_role_dict.get("required_skills_ms") and target_role_dict.get("required_skills_zh"):
+        existing_skills_loc = {
+            "en": req_skills,
+            "ms": target_role_dict.get("required_skills_ms"),
+            "zh": target_role_dict.get("required_skills_zh"),
+        }
     if (
         isinstance(existing_skills_loc, dict)
         and existing_skills_loc.get("zh")
@@ -751,7 +790,7 @@ async def evaluate_team_skill_matrix(
     ):
         req_skills_trilingual = existing_skills_loc
     else:
-        req_skills_trilingual = localize_skill_list_trilingual(req_skills)
+        req_skills_trilingual = localize_skill_list_trilingual(req_skills, role_localized=existing_skills_loc)
 
     req_skills_display = req_skills_trilingual.get(locale, req_skills)
 
@@ -759,6 +798,7 @@ async def evaluate_team_skill_matrix(
     evaluated_candidates: List[TeamMemberAnalysis] = []
 
     for member in request.teamMembers:
+        bulk_register_profile_skills(member.skills)
         user_skills_dict: Dict[str, Optional[str]] = {}
         for s in member.skills:
             clean_name = s.name.strip()
