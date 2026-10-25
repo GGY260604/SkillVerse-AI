@@ -61,3 +61,102 @@ def test_quiz_generate_service_failure(mock_quiz_service, client: TestClient, sa
     response = client.post("/api/v1/quiz/generate", json=sample_quiz_request)
     assert response.status_code == 500
     assert "failed to generate phase verification quiz" in response.json()["detail"].lower()
+
+
+async def test_generate_phase_quiz_tier1_qwen():
+    """Verify that generate_phase_quiz prioritizes Tier 1 Local Qwen 2.5."""
+    from services.quiz.quiz_service import generate_phase_quiz
+    from schemas.quiz import PhaseQuizRequest
+
+    qwen_mock_data = {
+        "expReward": 45,
+        "expDifficultyTier": "Intermediate Architecture (45 EXP)",
+        "evaluationReason": "Scenario evaluation requiring architectural comprehension.",
+        "questions": [
+            {
+                "id": i,
+                "question": f"Qwen Scenario Question {i}?",
+                "options": ["Opt A", "Opt B", "Opt C", "Opt D"],
+                "correctIndex": 0,
+                "explanation": "Opt A is verified standard.",
+            }
+            for i in range(1, 11)
+        ],
+    }
+
+    req = PhaseQuizRequest(
+        phaseIndex=1,
+        phaseTitle="Cloud Fundamentals",
+        skills=["Kubernetes", "Docker"],
+        locale="en",
+        forceRefresh=True,
+    )
+
+    with patch("services.local_llm_service.call_local_llm_json", return_value=qwen_mock_data) as mock_qwen, \
+         patch("services.quiz.quiz_service.call_gemini_with_fallback") as mock_gemini:
+        res = await generate_phase_quiz(req)
+        mock_qwen.assert_called_once()
+        mock_gemini.assert_not_called()
+        assert res.expReward == 45
+        assert len(res.questions) == 10
+        assert res.questions[0].question == "Qwen Scenario Question 1?"
+
+
+async def test_generate_phase_quiz_tier2_gemini_fallback():
+    """Verify fallback to Tier 2 Gemini when Tier 1 Qwen fails."""
+    from services.quiz.quiz_service import generate_phase_quiz
+    from schemas.quiz import PhaseQuizRequest
+
+    gemini_mock_data = {
+        "expReward": 70,
+        "expDifficultyTier": "Advanced Systems (70 EXP)",
+        "evaluationReason": "Evaluated by Gemini fallback.",
+        "questions": [
+            {
+                "id": i,
+                "question": f"Gemini Scenario Question {i}?",
+                "options": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"],
+                "correctIndex": 2,
+                "explanation": "Opt 3 is the correct path.",
+            }
+            for i in range(1, 11)
+        ],
+    }
+
+    req = PhaseQuizRequest(
+        phaseIndex=2,
+        phaseTitle="Production Workflows",
+        skills=["Terraform", "CI/CD"],
+        locale="en",
+        forceRefresh=True,
+    )
+
+    with patch("services.local_llm_service.call_local_llm_json", side_effect=Exception("Ollama offline")), \
+         patch("services.quiz.quiz_service.call_gemini_with_fallback", return_value=gemini_mock_data) as mock_gemini:
+        res = await generate_phase_quiz(req)
+        mock_gemini.assert_called_once()
+        assert res.expReward == 70
+        assert len(res.questions) == 10
+        assert res.questions[0].question == "Gemini Scenario Question 1?"
+
+
+async def test_generate_phase_quiz_tier3_deterministic_fallback():
+    """Verify fallback to Tier 3 deterministic rule-based quiz when both Qwen and Gemini fail."""
+    from services.quiz.quiz_service import generate_phase_quiz
+    from schemas.quiz import PhaseQuizRequest
+
+    req = PhaseQuizRequest(
+        phaseIndex=3,
+        phaseTitle="Capstone Certification",
+        skills=["Full Stack Architecture"],
+        locale="en",
+        forceRefresh=True,
+    )
+
+    with patch("services.local_llm_service.call_local_llm_json", side_effect=Exception("Ollama offline")), \
+         patch("services.quiz.quiz_service.call_gemini_with_fallback", side_effect=Exception("Gemini disabled")):
+        res = await generate_phase_quiz(req)
+        assert res.expReward == 85
+        assert len(res.questions) == 10
+        assert "Full Stack Architecture" in res.questions[0].question
+
