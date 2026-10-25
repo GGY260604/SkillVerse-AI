@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ]
     
     # Gemini API Key Pool (Loads GEMINI_API_KEY_1 through GEMINI_API_KEY_50)
+    ENABLE_GEMINI_API: bool = os.getenv("ENABLE_GEMINI_API", "true").lower() in ["1", "true", "yes"]
     GEMINI_API_KEYS: List[str] = []
     
     # Supabase Configuration (supports both standard backend and NEXT_PUBLIC_ prefixes)
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
 
     # Local LLM Inference Engine (Ollama / vLLM / OpenAI-compatible endpoint)
     ENABLE_LOCAL_LLM: bool = os.getenv("ENABLE_LOCAL_LLM", "true").lower() in ["1", "true", "yes"]
-    LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1")
+    LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
     LOCAL_LLM_MODEL: str = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b")
     LOCAL_LLM_API_KEY: str = os.getenv("LOCAL_LLM_API_KEY", "ollama")
 
@@ -51,18 +52,19 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Collect all populated GEMINI_API_KEY_* keys from environment
         keys = []
-        for i in range(1, 51):
-            key = os.getenv(f"GEMINI_API_KEY_{i}")
-            if key and key.strip():
-                keys.append(key.strip())
-        
-        # Fallback to generic GEMINI_API_KEY if present
-        single_key = os.getenv("GEMINI_API_KEY")
-        if single_key and single_key.strip() and single_key not in keys:
-            keys.append(single_key.strip())
+        if self.ENABLE_GEMINI_API:
+            # Collect all populated GEMINI_API_KEY_* keys from environment
+            for i in range(1, 51):
+                key = os.getenv(f"GEMINI_API_KEY_{i}")
+                if key and key.strip():
+                    keys.append(key.strip())
             
+            # Fallback to generic GEMINI_API_KEY if present
+            single_key = os.getenv("GEMINI_API_KEY")
+            if single_key and single_key.strip() and single_key not in keys:
+                keys.append(single_key.strip())
+                
         self.GEMINI_API_KEYS = keys
 
     class Config:

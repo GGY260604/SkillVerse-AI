@@ -114,10 +114,10 @@ async def call_gemini_with_fallback(
     5. Strict JSON parsing with flexible max output tokens.
     """
     global _active_key_index, _last_used_key_identifier
-    if not settings.GEMINI_API_KEYS:
+    if not getattr(settings, "ENABLE_GEMINI_API", True) or not settings.GEMINI_API_KEYS:
         raise HTTPException(
-            status_code=500,
-            detail="No Gemini API keys configured. Please add GEMINI_API_KEY_1 in your .env file.",
+            status_code=503,
+            detail="Gemini API is disabled via ENABLE_GEMINI_API=false (or no keys are configured).",
         )
 
     last_error = None

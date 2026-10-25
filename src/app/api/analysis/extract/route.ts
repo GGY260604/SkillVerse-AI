@@ -84,13 +84,17 @@ export async function POST(request: NextRequest) {
     let lastError: any = null;
 
     try {
-      const response = await fetchWithFastApiFallback("/api/v1/extract", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
+      const response = await fetchWithFastApiFallback(
+        "/api/v1/extract",
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+          },
+          body: forwardFormData,
         },
-        body: forwardFormData,
-      });
+        { timeoutMs: 60000 }
+      );
 
       if (response.ok) {
         extractData = await response.json();

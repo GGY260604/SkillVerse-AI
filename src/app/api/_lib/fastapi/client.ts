@@ -153,11 +153,10 @@ export async function fetchWithFastApiFallback(
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     const targetUrl = `${target.baseUrl}${cleanSubPath}`;
-
     try {
       const controller = new AbortController();
-      // Fail fast on local tier (3s) if local server isn't running, but allow full duration for cloud tiers
-      const effectiveTimeout = target.tier === "local" ? Math.min(timeoutMs, 3000) : timeoutMs;
+      // Allow full timeout duration (default 60s) so local LLM / OCR inference can complete
+      const effectiveTimeout = timeoutMs;
       const timer = setTimeout(() => controller.abort(), effectiveTimeout);
 
       const mergedHeaders = {
@@ -169,13 +168,16 @@ export async function fetchWithFastApiFallback(
         delete mergedHeaders["content-type"];
       }
 
-      const response = await fetch(targetUrl, {
-        ...init,
-        headers: mergedHeaders,
-        signal: init?.signal || controller.signal,
-      });
-
-      clearTimeout(timer);
+      let response: Response;
+      try {
+        response = await fetch(targetUrl, {
+          ...init,
+          headers: mergedHeaders,
+          signal: init?.signal || controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
 
       if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 404)) {
         return response;
