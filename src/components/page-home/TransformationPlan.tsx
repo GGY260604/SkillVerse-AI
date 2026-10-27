@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
 import { useAuth } from "@/context/auth/AuthContext";
 
 /**
@@ -59,7 +59,7 @@ export default function TransformationPlan() {
   return (
     <section
       id="transformation-plan"
-      className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24"
+      className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24 overflow-x-clip"
     >
       {/* ========================================== */}
       {/* Step 2: Render Section Header and Subtitles */}

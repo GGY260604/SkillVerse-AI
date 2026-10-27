@@ -852,5 +852,30 @@
         }
       }
     }
+  },
+  "chatbot": {
+    "header": {
+      "title": "SkillVerse AI Agent",
+      "subtitle": "职业与技能智能领航",
+      "reset_title": "重置对话",
+      "close_title": "关闭对话"
+    },
+    "ball": {
+      "tooltip": "SkillVerse AI Agent",
+      "thinking_tooltip": "AI 正在思考中...（点击查看）"
+    },
+    "messages": {
+      "welcome": "您好！我是您的 SkillVerse AI Agent。今天有什么可以协助您的职业路线规划、技能对齐或市场趋势分析？",
+      "offline": "现在 AI 不在线，请稍后再试。",
+      "require_login": "请先登录您的账号以使用 SkillVerse AI 智能服务。正在为您打开登录窗口...",
+      "thinking": "Thinking"
+    },
+    "input": {
+      "placeholder": "向 SkillVerse AI Agent 提问...",
+      "send_aria": "发送消息"
+    },
+    "footer": {
+      "note": "由 SkillVerse AI 提供支持"
+    }
   }
 }

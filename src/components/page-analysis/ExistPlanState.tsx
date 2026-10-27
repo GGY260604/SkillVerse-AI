@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import PlanCard from "./planCard/PlanCard";
 import PlanDetailView from "./planCard/PlanDetailView";
 import { type PlanData, type PlanPhase } from "./planCard/planData";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
-import { useSharedModal } from "@/context/analysis/SharedModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
+import { useSharedModal } from "@/context/page-analysis/SharedModalContext";
 
 // User metadata structure for collaborative peer roadmap exploration.
 export interface SharedUserInfo {

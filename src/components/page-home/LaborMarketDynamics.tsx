@@ -272,7 +272,7 @@ export default function LaborMarketDynamics() {
 
   // --- UI ---
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full overflow-x-clip">
       {/* ========================================== */}
       {/* Step 4: Render Telemetry Section Header and Global Filter Switcher */}
       {/* ========================================== */}

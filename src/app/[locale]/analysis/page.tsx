@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/auth/AuthContext";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
 import { type PlanData } from "@/components/page-analysis/planCard/planData";
 import EmptyPlanState from "@/components/page-analysis/EmptyPlanState";
 import ExistPlanState from "@/components/page-analysis/ExistPlanState";

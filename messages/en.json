@@ -852,5 +852,30 @@
         }
       }
     }
+  },
+  "chatbot": {
+    "header": {
+      "title": "SkillVerse AI Agent",
+      "subtitle": "Career & Skills Intelligence",
+      "reset_title": "Reset conversation",
+      "close_title": "Close chat"
+    },
+    "ball": {
+      "tooltip": "SkillVerse AI Agent",
+      "thinking_tooltip": "AI is thinking... (Click to view)"
+    },
+    "messages": {
+      "welcome": "Hello! I am your SkillVerse AI Agent. How can I assist you with your career roadmap, skill analysis, or labor market trends today?",
+      "offline": "The AI agent is currently offline. Please try again later.",
+      "require_login": "Please log in to your account first to access SkillVerse AI services. Opening the login window for you now...",
+      "thinking": "Thinking"
+    },
+    "input": {
+      "placeholder": "Ask SkillVerse AI Agent...",
+      "send_aria": "Send message"
+    },
+    "footer": {
+      "note": "Powered by SkillVerse AI"
+    }
   }
 }

@@ -229,6 +229,8 @@ html[data-theme="light"] {
 /* ========================================== */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 body {
@@ -239,6 +241,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
+  max-width: 100vw;
 }
 
 ::-webkit-scrollbar {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
 import type { ProfileIntakePayload } from "@/lib/analysis/types";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";

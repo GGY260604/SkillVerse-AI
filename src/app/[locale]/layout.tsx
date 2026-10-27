@@ -11,11 +11,13 @@ import ProfileModal from "@/components/auth/ProfileModal";
 import PlanModals from "@/components/page-analysis/options/PlanModals";
 import SharedPlansModal from "@/components/page-analysis/SharedPlansModal";
 import ExpGainModal from "@/components/auth/ExpGainModal";
+import Chatbot from "@/components/chatbot/Chatbot";
 import { AuthProvider } from "@/context/auth/AuthContext";
 import { ProfileModalProvider } from "@/context/auth/ProfileModalContext";
 import { ExpGainProvider } from "@/context/auth/ExpGainContext";
-import { PlanModalProvider } from "@/context/analysis/PlanModalContext";
-import { SharedModalProvider } from "@/context/analysis/SharedModalContext";
+import { PlanModalProvider } from "@/context/page-analysis/PlanModalContext";
+import { SharedModalProvider } from "@/context/page-analysis/SharedModalContext";
+import { ChatbotProvider } from "@/context/chatbot/ChatbotContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { routing } from "@/lib/i18n/routing";
 import "../globals.css";
@@ -110,6 +112,7 @@ export default async function LocaleLayout({
                   <ExpGainProvider>
                     <PlanModalProvider>
                       <SharedModalProvider>
+                        <ChatbotProvider>
                         {/* ========================================== */}
                         {/* Header Navigation */}
                         {/* ========================================== */}
@@ -120,7 +123,7 @@ export default async function LocaleLayout({
                         {/* Main Page Content */}
                         {/* ========================================== */}
                         {/* Render active route page child content. */}
-                        <main className="flex-1 flex flex-col">{children}</main>
+                        <main className="flex-1 flex flex-col w-full overflow-x-clip">{children}</main>
 
                         {/* ========================================== */}
                         {/* Footer */}
@@ -145,8 +148,12 @@ export default async function LocaleLayout({
 
                         {/* Mount experience point gain celebration overlay. */}
                         <ExpGainModal />
-                      </SharedModalProvider>
-                    </PlanModalProvider>
+
+                        {/* Mount AI Copilot floating chatbot assistant. */}
+                        <Chatbot />
+                      </ChatbotProvider>
+                    </SharedModalProvider>
+                  </PlanModalProvider>
                   </ExpGainProvider>
                 </ProfileModalProvider>
               </AuthProvider>

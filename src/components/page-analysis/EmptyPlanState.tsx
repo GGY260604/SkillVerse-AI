@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
 
 /**
  * Empty Career Plan State Component

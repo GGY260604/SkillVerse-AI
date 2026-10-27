@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { usePlanModal } from "@/context/analysis/PlanModalContext";
+import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
 import Logo from "@/components/Logo";
 
 /**

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useSharedModal } from "@/context/analysis/SharedModalContext";
+import { useSharedModal } from "@/context/page-analysis/SharedModalContext";
 import Logo from "@/components/Logo";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { getAvatarInitials } from "@/lib/avatar";

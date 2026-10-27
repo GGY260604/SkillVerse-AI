@@ -173,7 +173,7 @@ cd src/fastapi
 **Windows (PowerShell):**
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\activate.bat
+.\.venv\Scripts\Activate.bat
 ```
 
 **macOS / Linux (Bash / Zsh):**

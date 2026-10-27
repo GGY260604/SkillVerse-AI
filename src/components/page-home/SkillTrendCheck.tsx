@@ -335,18 +335,11 @@ export default function SkillTrendCheck() {
       className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24 relative"
     >
       {/* Outer Ambient Glow Mesh for Light and Dark Modes */}
-      <div
-        aria-hidden="true"
-        className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-accent/25 dark:bg-accent/10 blur-3xl pointer-events-none"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-10 -right-10 w-96 h-96 rounded-full bg-indigo-500/25 dark:bg-indigo-500/10 blur-3xl pointer-events-none"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-80 rounded-full bg-linear-to-r from-accent/20 via-teal-400/10 to-indigo-500/20 dark:from-accent/5 dark:to-indigo-500/5 blur-3xl pointer-events-none"
-      />
+      <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-accent/25 dark:bg-accent/10 blur-3xl" />
+        <div className="absolute -bottom-10 -right-10 w-96 h-96 rounded-full bg-indigo-500/25 dark:bg-indigo-500/10 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-80 rounded-full bg-linear-to-r from-accent/20 via-teal-400/10 to-indigo-500/20 dark:from-accent/5 dark:to-indigo-500/5 blur-3xl" />
+      </div>
 
       {/* Gradient Border Frame */}
       <div className="relative rounded-2xl sm:rounded-3xl p-px bg-linear-to-b from-accent/40 via-border-subtle to-indigo-500/40 shadow-xl dark:shadow-2xl">
@@ -432,7 +425,7 @@ export default function SkillTrendCheck() {
               >
                 {loading ? (
                   <svg
-                    className="animate-spin h-5 w-5 text-black"
+                    className="animate-spin h-5 w-5 text-bg-primary"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -452,7 +445,7 @@ export default function SkillTrendCheck() {
                   </svg>
                 ) : (
                   <svg
-                    className="w-5 h-5 text-black"
+                    className="w-5 h-5 text-bg-primary"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -618,7 +611,7 @@ export default function SkillTrendCheck() {
                     setTooltipState((prev) => (prev && !prev.isPinned ? null : prev));
                   }}
                 >
-                  <div className="min-w-[720px] w-full relative">
+                  <div className="min-w-180 w-full relative">
                     <svg
                       viewBox={`0 0 ${chartGeometry.svgWidth} ${chartGeometry.svgHeight}`}
                       className="w-full h-auto overflow-visible select-none"
