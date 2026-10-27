@@ -531,9 +531,13 @@ export async function POST(request: NextRequest) {
             .eq("user_id", effectiveUserId)
             .eq("status", "current");
 
+          const nowIso = new Date().toISOString();
+          const newRoadmapId = crypto.randomUUID();
+
           const { data: createdRoadmap, error: roadmapInsertErr } = await admin
             .from("roadmaps")
             .insert({
+              id: newRoadmapId,
               user_id: effectiveUserId,
               session_id: data.sessionId || `sess-${Date.now()}`,
               status: "current",
@@ -578,6 +582,8 @@ export async function POST(request: NextRequest) {
               total_hours: totalHours,
               radar_data: data.radarData || [],
               top_roles: enrichedTopRoles,
+              created_at: nowIso,
+              updated_at: nowIso,
             })
             .select()
             .single();
@@ -587,6 +593,7 @@ export async function POST(request: NextRequest) {
           }
 
           const phasesToInsert = phasesData.map((p: any) => ({
+            id: crypto.randomUUID(),
             roadmap_id: createdRoadmap.id,
             phase_index: p.phaseIndex,
             phase_title: p.phaseTitle,
@@ -602,6 +609,8 @@ export async function POST(request: NextRequest) {
             objectives_localized: p.objectivesLocalized,
             recommended_courses: p.recommendedCourses,
             is_completed: false,
+            created_at: nowIso,
+            updated_at: nowIso,
           }));
 
           const { data: insertedPhases, error: phasesInsertErr } = await admin
@@ -611,6 +620,7 @@ export async function POST(request: NextRequest) {
 
           if (phasesInsertErr) {
             console.error("[/api/page-analysis/analyze] Error inserting roadmap phases:", phasesInsertErr);
+            throw new Error(phasesInsertErr?.message || "Failed to insert roadmap phases into database.");
           }
 
           const completeRoadmap = {
@@ -626,11 +636,13 @@ export async function POST(request: NextRequest) {
           return applyAuthCookies(response, newTokens);
         } catch (dbErr: any) {
           console.error("[/api/page-analysis/analyze] Error persisting roadmap to DB:", dbErr);
-          const response = NextResponse.json({
-            ...data,
-            dbPersistError: dbErr?.message || "DB transaction failed",
-          });
-          return applyAuthCookies(response, newTokens);
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Database persistence failed: ${dbErr?.message || "DB transaction failed"}`,
+            },
+            { status: 500 }
+          );
         }
       }
 

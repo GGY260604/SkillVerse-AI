@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     LOCAL_LLM_BASE_URL: str = os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
     LOCAL_LLM_MODEL: str = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b")
     LOCAL_LLM_API_KEY: str = os.getenv("LOCAL_LLM_API_KEY", "ollama")
+    LOCAL_LLM_KEEP_ALIVE: str = os.getenv("LOCAL_LLM_KEEP_ALIVE", "-1")
 
     # Local PII Sanitization via GLiNER (Zero-shot Named Entity Recognition)
     ENABLE_LOCAL_GLINER: bool = os.getenv("ENABLE_LOCAL_GLINER", "true").lower() in ["1", "true", "yes"]

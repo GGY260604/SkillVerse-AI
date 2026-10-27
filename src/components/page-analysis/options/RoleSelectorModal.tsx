@@ -336,6 +336,10 @@ export default function RoleSelectorModal() {
 
       const resp = await synthesizeSelectedRoadmap(synthesizeReq);
 
+      if ((resp as any).dbPersistError) {
+        throw new Error(`Database save failed: ${(resp as any).dbPersistError}`);
+      }
+
       // Mark synthesis as complete before saving the roadmap.
       setProgressPercent(90);
       setLoadingTitle(t("saving_title"));

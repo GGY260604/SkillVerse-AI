@@ -103,7 +103,11 @@ async def call_local_llm_json(
     try:
         import time
         t0 = time.time()
-        logger.info(f"[local_llm] Calling Ollama model '{model_name}' (timeout: {timeout}s)...")
+        keep_alive_val = getattr(settings, "LOCAL_LLM_KEEP_ALIVE", "-1")
+        extra_body = {}
+        if keep_alive_val:
+            extra_body["keep_alive"] = -1 if keep_alive_val == "-1" else keep_alive_val
+
         response = await client.chat.completions.create(
             model=model_name,
             messages=[
@@ -113,6 +117,7 @@ async def call_local_llm_json(
             response_format={"type": "json_object"},
             temperature=0.2,
             timeout=timeout,
+            extra_body=extra_body if extra_body else None,
         )
 
         content = response.choices[0].message.content
