@@ -23,6 +23,17 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[startup] Warning: Failed to pre-warm local embedding model: {e}")
 
+    # Pre-warm local GLiNER PII masking model into RAM during startup if enabled
+    if settings.ENABLE_LOCAL_GLINER:
+        import asyncio
+        from services.extract.pii_sanitizer import get_gliner_model
+        try:
+            print("[startup] Pre-warming GLiNER local PII masking model into RAM...")
+            await asyncio.to_thread(get_gliner_model)
+            print("[startup] GLiNER PII masking model warmed up and ready for zero-latency extraction.")
+        except Exception as e:
+            print(f"[startup] Warning: Failed to pre-warm GLiNER model: {e}")
+
     yield
     # Gracefully close connections on shutdown
     await close_shared_client()

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     # Local PII Sanitization via GLiNER (Zero-shot Named Entity Recognition)
     ENABLE_LOCAL_GLINER: bool = os.getenv("ENABLE_LOCAL_GLINER", "true").lower() in ["1", "true", "yes"]
-    GLINER_MODEL_NAME: str = os.getenv("GLINER_MODEL_NAME", "urchade/gliner_multi-v2.1")
+    GLINER_MODEL_NAME: str = os.getenv("GLINER_MODEL_NAME", "urchade/gliner_small-v2.1")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

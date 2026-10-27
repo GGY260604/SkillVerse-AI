@@ -63,17 +63,25 @@ def get_gliner_model():
         return None
 
     try:
-        from gliner import GLiNER
-        model_name = getattr(settings, "GLINER_MODEL_NAME", "urchade/gliner_multi-v2.1")
-        # Try local cache first to avoid hanging during web requests
-        try:
-            _gliner_instance = GLiNER.from_pretrained(model_name, local_files_only=True)
-            logger.info(f"GLiNER model '{model_name}' loaded from local disk cache.")
-            return _gliner_instance
-        except Exception:
-            # If not locally cached on this dev machine, fallback to regex without hanging
-            logger.info(f"GLiNER model '{model_name}' not cached locally. Using high-speed regex PII sanitizer.")
-            return None
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            warnings.filterwarnings("ignore", category=UserWarning)
+            from gliner import GLiNER
+            model_name = getattr(settings, "GLINER_MODEL_NAME", "urchade/gliner_small-v2.1")
+            # Try local cache first to avoid hanging during web requests
+            try:
+                _gliner_instance = GLiNER.from_pretrained(model_name, local_files_only=True)
+                logger.info(f"GLiNER model '{model_name}' loaded from local disk cache.")
+                return _gliner_instance
+            except Exception:
+                try:
+                    _gliner_instance = GLiNER.from_pretrained(model_name)
+                    logger.info(f"GLiNER model '{model_name}' downloaded and loaded.")
+                    return _gliner_instance
+                except Exception:
+                    logger.info(f"GLiNER model '{model_name}' not cached locally. Using high-speed regex PII sanitizer.")
+                    return None
     except Exception as e:
         logger.warning(f"Could not load GLiNER model ({e}). Using regex PII sanitizer fallback.")
         return None
