@@ -9,6 +9,12 @@ from config import settings
 from services.gemini_service import call_gemini_with_fallback
 from services.embedding_service import generate_embedding, generate_embeddings_batch
 from services.http_client import get_shared_client
+from services.analyze.skill_translations import (
+    localize_skill_name,
+    sanitize_title_ms,
+    sanitize_skills_ms,
+    register_skill_translation,
+)
 
 # This API is used to get the latest AI research papers from ArXiv, which is a research papers website
 ARXIV_API_URL = (
@@ -122,12 +128,12 @@ Return ONLY valid JSON with this exact structure:
     {{
       "roleId": "canonical-slug-role-id",
       "title": "Professional Role Title in English",
-      "title_ms": "Tajuk Peranan dalam Bahasa Melayu",
+      "title_ms": "Tajuk Peranan dalam Bahasa Melayu (Latin alphabet only, NO Chinese)",
       "title_zh": "中文职位名称 (Simplified Chinese)",
       "industry": "Responsible AI & Digital Transformation",
       "description": "Clear 1-2 sentence description of what this professional does.",
       "essentialSkills": ["skill 1 in English", "skill 2 in English", "skill 3 in English", "skill 4 in English", "skill 5 in English"],
-      "essentialSkills_ms": ["kemahiran 1 dalam Bahasa Melayu", "kemahiran 2 dalam Bahasa Melayu", "kemahiran 3 dalam Bahasa Melayu", "kemahiran 4 dalam Bahasa Melayu", "kemahiran 5 dalam Bahasa Melayu"],
+      "essentialSkills_ms": ["kemahiran 1 dalam Bahasa Melayu (Latin only)", "kemahiran 2 dalam Bahasa Melayu", "kemahiran 3 dalam Bahasa Melayu", "kemahiran 4 dalam Bahasa Melayu", "kemahiran 5 dalam Bahasa Melayu"],
       "essentialSkills_zh": ["技能 1 中文名称", "技能 2 中文名称", "技能 3 中文名称", "技能 4 中文名称", "技能 5 中文名称"],
       "sdgAlignment": "SDG 8.2",
       "sdgTitle": "Technological upgrading & productivity"
@@ -500,17 +506,19 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
         for role in emerging_roles:
             r_id = role.get("roleId") or f"emerging-{uuid.uuid4().hex[:8]}"
             title = role.get("title", "Emerging Professional Role")
-            title_ms = role.get("title_ms") or title
+            title_ms = sanitize_title_ms(role.get("title_ms"), title)
             title_zh = role.get("title_zh") or title
             skills_en = role.get("essentialSkills", [])
-            skills_ms = role.get("essentialSkills_ms") or []
+            skills_ms = sanitize_skills_ms(role.get("essentialSkills_ms"), skills_en)
             skills_zh = role.get("essentialSkills_zh") or []
-            if not skills_ms or len(skills_ms) < len(skills_en):
-                from services.analyze.skill_translations import localize_skill_name
-                skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
             if not skills_zh or len(skills_zh) < len(skills_en):
-                from services.analyze.skill_translations import localize_skill_name
                 skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
+
+            register_skill_translation(f"role:{title.lower()}", title_zh, title_ms, title)
+            for s_idx, s_name in enumerate(skills_en):
+                zh_s = skills_zh[s_idx] if s_idx < len(skills_zh) else s_name
+                ms_s = skills_ms[s_idx] if s_idx < len(skills_ms) else s_name
+                register_skill_translation(s_name, zh_s, ms_s)
 
             localized_skills = {
                 "en": skills_en,

@@ -18,6 +18,9 @@ from services.analyze.skill_translations import (
     localize_skill_list_trilingual,
     register_skill_translation,
     get_trilingual_skill,
+    sanitize_title_ms,
+    sanitize_skills_ms,
+    is_chinese_text,
 )
 from services.analyze.matching_service import (
     fetch_active_roles_from_supabase,
@@ -406,14 +409,14 @@ TASK:
    - citation: Trend driver explanation
 3. Synthesize 5 Suggested Occupational Roles directly related to this skill conforming to ESCO taxonomy:
    - roleId: Clean canonical slug (e.g. "ai-workflow-automation-engineer")
-   - title: Professional English Title
-   - title_ms: Bahasa Melayu Title
-   - title_zh: Simplified Chinese Title (简体中文)
+   - title: Professional English Title (Latin alphabet only)
+   - title_ms: Authentic Bahasa Melayu Title (Latin alphabet only, e.g. "Jurutera Automasi AI"). NEVER use Chinese or non-Latin characters.
+   - title_zh: Authentic Simplified Chinese Title (简体中文, e.g. "AI工作流自动化工程师")
    - industry: Sector name (e.g. "Responsible AI & Digital Transformation", "Clean Energy & ESG")
    - description: 1 concise sentence describing the role
    - requiredSkills: 5 essential skills in English (MUST include the searched skill or direct variant)
-   - requiredSkills_ms: Matching authentic Bahasa Melayu translations for each of the 5 skills
-   - requiredSkills_zh: Matching authentic Simplified Chinese translations for each of the 5 skills
+   - requiredSkills_ms: Matching authentic Bahasa Melayu translations for each of the 5 skills (Latin alphabet only, NO Chinese)
+   - requiredSkills_zh: Matching authentic Simplified Chinese translations for each of the 5 skills (简体中文)
    - sdgAlignment: Target code, e.g. "SDG 8.2"
 
 OUTPUT FORMAT:
@@ -860,14 +863,15 @@ async def persist_new_roles_to_supabase(
             r = item["raw_dict"]
             rid = item["canonical_rid"]
             title_en = item["title_en"]
-            title_ms = r.get("title_ms") or title_en
+            title_ms = sanitize_title_ms(r.get("title_ms"), title_en)
             title_zh = r.get("title_zh") or title_en
             industry = r.get("industry", "Responsible AI & Digital Transformation")
             skills_en = r.get("requiredSkills", [])
-            skills_ms = r.get("requiredSkills_ms") or [localize_skill_name(s, "ms") for s in skills_en]
+            skills_ms = sanitize_skills_ms(r.get("requiredSkills_ms"), skills_en)
             skills_zh = r.get("requiredSkills_zh") or [localize_skill_name(s, "zh") for s in skills_en]
 
-            # Register skill translations into dynamic dictionary
+            # Register role and skill translations into dynamic dictionary
+            register_skill_translation(f"role:{title_en.lower()}", title_zh, title_ms, title_en)
             for s_idx, s_name in enumerate(skills_en):
                 zh_trans = skills_zh[s_idx] if s_idx < len(skills_zh) else s_name
                 ms_trans = skills_ms[s_idx] if s_idx < len(skills_ms) else s_name

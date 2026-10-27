@@ -6,9 +6,12 @@ extracted from profile normalization and role synthesis pipelines.
 
 import json
 import logging
+import re
 from typing import Optional, Dict, List, Any
 
 logger = logging.getLogger("skill_translations")
+
+CHINESE_CHAR_REGEX = re.compile(r"[\u4e00-\u9fff]")
 
 # Dynamic in-memory cache for on-demand translations learned from AI pipelines and role catalogs.
 # Maps lower-cased skill names (EN, ZH, MS) to {"en": "...", "ms": "...", "zh": "..."}
@@ -38,6 +41,8 @@ def register_skill_translation(skill_name: str, zh: str, ms: str, en: Optional[s
     clean_en = (en or skill_name).strip()
     clean_zh = (zh or clean_en).strip()
     clean_ms = (ms or clean_en).strip()
+    if CHINESE_CHAR_REGEX.search(clean_ms):
+        clean_ms = clean_en
     entry = {
         "en": clean_en,
         "zh": clean_zh,
@@ -253,3 +258,93 @@ async def warm_skills_cache_batch(skills: List[str], locale: Optional[str] = Non
                     register_skill_translation(skill_name, zh_trans, ms_trans)
     except Exception as e:
         logger.warning(f"[skill_translations] Dynamic AI translation warm failed: {e}")
+
+
+def is_chinese_text(text: Optional[str]) -> bool:
+    """Returns True if the text contains any Chinese / Hanzi characters."""
+    if not text:
+        return False
+    return bool(CHINESE_CHAR_REGEX.search(str(text)))
+
+
+async def translate_role_title_ai(title_en: str, target_lang: str = "ms") -> str:
+    """
+    Dynamically translates an occupational role title using local LLM (Qwen) / Gemini.
+    Zero hardcoding: pure dynamic AI translation with in-memory caching.
+    """
+    clean_en = (title_en or "").strip()
+    if not clean_en:
+        return ""
+
+    # Check dynamic cache
+    cache_key = f"role:{clean_en.lower()}"
+    if cache_key in _DYNAMIC_CACHE:
+        cached = _DYNAMIC_CACHE[cache_key].get(target_lang)
+        if cached and not is_chinese_text(cached):
+            return cached
+
+    # Query Local LLM dynamically
+    try:
+        from services.local_llm_service import call_local_llm_json
+        prompt = (
+            f"You are a professional HR occupational taxonomy translator.\n"
+            f"Translate this occupational job title into authentic Bahasa Melayu (Latin alphabet only, NO Chinese characters):\n"
+            f"Title: \"{clean_en}\"\n\n"
+            f"Return JSON strictly:\n"
+            f'{{"title_ms": "Bahasa Melayu title"}}\n'
+            f"Return ONLY valid JSON."
+        )
+        res = await call_local_llm_json(
+            prompt=prompt,
+            system_instruction="You are a professional HR multilingual translator. Output strictly valid JSON. title_ms MUST use Latin characters in Bahasa Melayu only.",
+            timeout=5.0,
+        )
+        if isinstance(res, dict) and res.get("title_ms"):
+            cand = str(res["title_ms"]).strip()
+            if cand and not is_chinese_text(cand):
+                register_skill_translation(cache_key, zh=clean_en, ms=cand, en=clean_en)
+                return cand
+    except Exception as e:
+        logger.warning(f"[skill_translations] Dynamic AI title translation failed: {e}")
+
+    return clean_en
+
+
+def sanitize_title_ms(title_ms: Optional[str], title_en: str) -> str:
+    """
+    Synchronous guardrail: If title_ms is non-empty and contains NO Chinese characters,
+    returns it. If it contains Chinese or is missing, checks dynamic AI cache or falls back
+    to title_en to guarantee title_ms NEVER contains Chinese.
+    """
+    if title_ms and isinstance(title_ms, str) and not is_chinese_text(title_ms):
+        clean_ms = title_ms.strip()
+        if clean_ms and clean_ms.lower() != title_en.strip().lower():
+            return clean_ms
+
+    # Check if previously cached dynamically
+    cache_key = f"role:{title_en.strip().lower()}"
+    if cache_key in _DYNAMIC_CACHE:
+        cached = _DYNAMIC_CACHE[cache_key].get("ms")
+        if cached and not is_chinese_text(cached):
+            return cached
+
+    # Fallback to English canonical title (guaranteed Latin characters)
+    return title_en.strip()
+
+
+def sanitize_skills_ms(skills_ms: Optional[List[str]], skills_en: List[str]) -> List[str]:
+    """
+    Guarantees required_skills_ms contains authentic Bahasa Melayu text with ZERO Chinese characters.
+    """
+    if not skills_en:
+        return []
+    result: List[str] = []
+    for i, s_en in enumerate(skills_en):
+        val = skills_ms[i] if (skills_ms and i < len(skills_ms) and isinstance(skills_ms[i], str)) else ""
+        if not val or is_chinese_text(val):
+            val = localize_skill_name(s_en, "ms")
+            if not val or is_chinese_text(val):
+                val = s_en
+        result.append(val.strip())
+    return result
+

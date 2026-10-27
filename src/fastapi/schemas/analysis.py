@@ -104,6 +104,7 @@ class MatchedRole(BaseModel):
     roleId: str = Field(description="Unique identifier for the prospective role")
     title: str = Field(description="Canonical English role title")
     titleLocalized: str = Field(description="Role title translated to user locale")
+    titleLocalizedDict: Optional[Dict[str, str]] = Field(default=None, description="Trilingual role titles: en, ms, zh")
     industry: str = Field(description="Industry sector, e.g. Clean Energy, Responsible AI")
     matchScore: float = Field(description="Calculated deterministic match score (0.0 - 1.0)")
     scenarioMultiplierApplied: float = Field(default=1.0, description="Multiplier from the active macro scenario")

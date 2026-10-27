@@ -469,15 +469,28 @@ export async function POST(request: NextRequest) {
           const rawRoleTitleLoc =
             selectedRole.titleLocalized || selectedRole.title || data.targetRoleTitle || roleTitle;
 
-          // Compute complete trilingual representations for terms
-          const targetTitleLocalized =
-            typeof rawRoleTitleLoc === "object" && rawRoleTitleLoc?.zh
-              ? rawRoleTitleLoc
-              : {
-                  en: roleTitle,
-                  ms: typeof rawRoleTitleLoc === "string" ? rawRoleTitleLoc : roleTitle,
-                  zh: typeof rawRoleTitleLoc === "string" ? rawRoleTitleLoc : roleTitle,
-                };
+          // Check if FastAPI returned full trilingual dictionary
+          const titleLocDict =
+            selectedRole.titleLocalizedDict ||
+            (typeof rawRoleTitleLoc === "object" ? rawRoleTitleLoc : null);
+
+          const containsChinese = (s?: string) => Boolean(s && /[\u4e00-\u9fff]/.test(s));
+
+          // Compute complete trilingual representations for terms without cross-language contamination
+          const targetTitleLocalized = {
+            en: titleLocDict?.en || roleTitle,
+            ms:
+              titleLocDict?.ms && !containsChinese(titleLocDict.ms)
+                ? titleLocDict.ms
+                : typeof rawRoleTitleLoc === "string" && !containsChinese(rawRoleTitleLoc)
+                ? rawRoleTitleLoc
+                : roleTitle,
+            zh:
+              titleLocDict?.zh ||
+              (typeof rawRoleTitleLoc === "string" && containsChinese(rawRoleTitleLoc)
+                ? rawRoleTitleLoc
+                : roleTitle),
+          };
 
           const matchedStrengthsLocalized =
             selectedRole.matchedStrengthsLocalized || {

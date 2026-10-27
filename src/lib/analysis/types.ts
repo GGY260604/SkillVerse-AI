@@ -56,6 +56,7 @@ export interface MatchedRole {
   roleId: string;
   title: string;
   titleLocalized: string;
+  titleLocalizedDict?: { en?: string; ms?: string; zh?: string };
   targetTitleLocalized?: { en?: string; ms?: string; zh?: string };
   descriptionLocalized?: { en?: string; ms?: string; zh?: string };
   industry: string;

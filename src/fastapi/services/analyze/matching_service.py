@@ -25,6 +25,9 @@ from services.analyze.skill_translations import (
     get_trilingual_skill,
     bulk_register_role_skills,
     bulk_register_profile_skills,
+    sanitize_title_ms,
+    sanitize_skills_ms,
+    is_chinese_text,
 )
 
 
@@ -579,16 +582,24 @@ async def synthesize_on_demand_cohort(
         f"Industry Sector: \"{industry or 'Cross-Industry'}\"\n"
         f"Candidate Background: {', '.join(user_skills[:6]) if user_skills else 'General Professional'}\n\n"
         f"{role_instructions}\n\n"
-        f"Provide the output strictly as a JSON object with a \"roles\" array containing {target_count} role objects with all titles and skills in English, Bahasa Melayu, and Simplified Chinese:\n"
+        f"Provide the output strictly as a JSON object with a \"roles\" array containing {target_count} role objects with all titles and skills in English, Bahasa Melayu, and Simplified Chinese.\n"
+        f"CRITICAL LOCALIZATION RULES:\n"
+        f"- \"title\": Canonical professional role title in English (Latin characters only).\n"
+        f"- \"title_ms\": Authentic Bahasa Melayu title in standard Latin characters (e.g. \"Pegawai Inovasi Tukang Kunci\"). NEVER output Chinese or non-Latin characters in title_ms.\n"
+        f"- \"title_zh\": Authentic Simplified Chinese title (简体中文, e.g. \"锁匠创新专员\").\n"
+        f"- \"required_skills\": 6-8 core professional skills in English.\n"
+        f"- \"required_skills_ms\": Authentic Bahasa Melayu translations for each skill (Latin characters only, NO Chinese characters).\n"
+        f"- \"required_skills_zh\": Authentic Simplified Chinese translations for each skill (简体中文).\n\n"
+        f"Output JSON Schema:\n"
         f"{{\n"
         f'  "roles": [\n'
         f"    {{\n"
         f'      "title": "{sample_title}",\n'
-        f'      "title_ms": "Bahasa Melayu translation of title",\n'
-        f'      "title_zh": "Simplified Chinese translation of title",\n'
+        f'      "title_ms": "Bahasa Melayu title in Latin alphabet only",\n'
+        f'      "title_zh": "Simplified Chinese title (简体中文)",\n'
         f'      "industry": "{target_industry}",\n'
         f'      "required_skills": ["top 6-8 essential professional skills in English"],\n'
-        f'      "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order"],\n'
+        f'      "required_skills_ms": ["Bahasa Melayu translations of the 6-8 skills in matching order (Latin alphabet only)"],\n'
         f'      "required_skills_zh": ["Simplified Chinese translations of the 6-8 skills in matching order"],\n'
         f'      "sdg_alignments": [\n'
         f'        {{"targetCode": "SDG 8.2", "targetTitle": "Technological upgrading & productivity", "affinityScore": 0.90}}\n'
@@ -614,7 +625,11 @@ async def synthesize_on_demand_cohort(
         logger.info(f"[role_synthesis] Tier 1: Querying Local Qwen 2.5 for '{primary_title}' ({target_count} roles)...")
         data = await call_local_llm_json(
             prompt=prompt,
-            system_instruction="You are an expert occupational taxonomist and future-workforce strategist for the UN Sustainable Development Goals. Output valid JSON only.",
+            system_instruction=(
+                "You are an expert occupational taxonomist and future-workforce strategist for the UN Sustainable Development Goals. "
+                "Output valid JSON only. STRICT REQUIREMENT: title_ms and required_skills_ms MUST be in authentic Bahasa Melayu using Latin characters only. "
+                "NEVER use Chinese characters in title_ms or required_skills_ms."
+            ),
             timeout=45.0,
         )
         if data and isinstance(data, (dict, list)):
@@ -671,20 +686,29 @@ async def synthesize_on_demand_cohort(
             if has_existing and existing_titles and any(r_title.lower().strip() == ex.lower().strip() for ex in existing_titles):
                 r_title = f"{r_title} Specialist"
 
-            skills_en = item.get("required_skills", [f"{r_title} Operations", "Problem Solving", "Digital Collaboration"])
-            skills_ms = item.get("required_skills_ms") or []
-            skills_zh = item.get("required_skills_zh") or []
+            # Sanitize titles and competencies dynamically (zero hardcoding)
+            raw_title_ms = item.get("title_ms")
+            clean_title_ms = sanitize_title_ms(raw_title_ms, r_title)
+            if is_chinese_text(clean_title_ms):
+                from services.analyze.skill_translations import translate_role_title_ai
+                clean_title_ms = await translate_role_title_ai(r_title, "ms")
+                if is_chinese_text(clean_title_ms):
+                    clean_title_ms = r_title
 
-            if not skills_ms or len(skills_ms) < len(skills_en):
-                skills_ms = [localize_skill_name(s, "ms") for s in skills_en]
+            clean_title_zh = item.get("title_zh") or r_title
+
+            skills_en = item.get("required_skills", [f"{r_title} Operations", "Problem Solving", "Digital Collaboration"])
+            skills_ms = sanitize_skills_ms(item.get("required_skills_ms"), skills_en)
+            skills_zh = item.get("required_skills_zh") or []
             if not skills_zh or len(skills_zh) < len(skills_en):
                 skills_zh = [localize_skill_name(s, "zh") for s in skills_en]
 
-            # Register newly synthesized competencies into dynamic translation cache
+            # Register newly synthesized competencies and role title into dynamic translation cache
             for i, s_en in enumerate(skills_en):
                 s_zh = skills_zh[i] if i < len(skills_zh) else s_en
                 s_ms = skills_ms[i] if i < len(skills_ms) else s_en
                 register_skill_translation(s_en, s_zh, s_ms)
+            register_skill_translation(f"role:{r_title.lower()}", zh=clean_title_zh, ms=clean_title_ms, en=r_title)
 
             r_ind = item.get("industry", industry or "Cross-Industry")
             sdg_al = item.get("sdg_alignments", [
@@ -725,8 +749,8 @@ async def synthesize_on_demand_cohort(
             prepared_roles.append({
                 "role_id": role_id,
                 "title": r_title,
-                "title_ms": item.get("title_ms", r_title),
-                "title_zh": item.get("title_zh", r_title),
+                "title_ms": clean_title_ms,
+                "title_zh": clean_title_zh,
                 "industry": r_ind,
                 "required_skills": skills_en,
                 "required_skills_ms": skills_ms,
@@ -1331,6 +1355,11 @@ async def evaluate_roles(
             "roleId": role_def["roleId"],
             "title": role_def["title"],
             "titleLocalized": loc_title,
+            "titleLocalizedDict": role_def.get("titleLocalized") or {
+                "en": role_def["title"],
+                "ms": role_def.get("title_ms", role_def["title"]),
+                "zh": role_def.get("title_zh", role_def["title"]),
+            },
             "industry": role_def["industry"],
             "base_match": item["base_match"],
             "scenarioMultipliers": calibrated_multipliers,
