@@ -14,6 +14,7 @@ export interface SharedCollaborator {
   email: string;
   level: number;
   accessLevel: "no_access" | "viewable" | "editable";
+  isSelf?: boolean;
 }
 
 /**
@@ -87,7 +88,24 @@ export default function SharedPlansModal() {
           return;
         }
 
-        setCollaborators(data.users || []);
+        const rawList = Array.isArray(data.users)
+          ? data.users
+          : Array.isArray(data.sharedUsers)
+          ? data.sharedUsers
+          : data.user
+          ? [data.user]
+          : [];
+
+        const normalized: SharedCollaborator[] = rawList.map((u: any) => ({
+          id: u.id || u.userId || "",
+          name: u.name || null,
+          email: u.email || "",
+          level: typeof u.level === "number" ? u.level : 1,
+          accessLevel: u.accessLevel || "no_access",
+          isSelf: Boolean(u.isSelf),
+        }));
+
+        setCollaborators(normalized);
       } catch {
         setErrorMsg(t("network_error_load"));
         setCollaborators([]);
@@ -412,40 +430,46 @@ export default function SharedPlansModal() {
 
                   {/* Access Level Toggle Action Button */}
                   <div className="flex shrink-0 items-center gap-2.5">
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() =>
-                        handleAccessChange(user.id, isShared ? "no_access" : "viewable")
-                      }
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer border ${
-                        isShared
-                          ? "bg-accent text-bg-primary border-accent hover:opacity-90 shadow-sm shadow-accent/20"
-                          : "bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-accent border-border-subtle hover:border-accent"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={isShared ? t("shared_revoke") : t("share_roadmap")}
-                      aria-label={isShared ? t("shared") : t("share_roadmap")}
-                    >
-                      {isUpdating ? (
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                          />
-                        </svg>
-                      )}
-                    </button>
+                    {user.isSelf ? (
+                      <span className="text-[11px] font-mono font-semibold px-2.5 py-1.5 rounded-lg border border-border-subtle bg-bg-card text-text-muted">
+                        You
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() =>
+                          handleAccessChange(user.id, isShared ? "no_access" : "viewable")
+                        }
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer border ${
+                          isShared
+                            ? "bg-accent text-bg-primary border-accent hover:opacity-90 shadow-sm shadow-accent/20"
+                            : "bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-accent border-border-subtle hover:border-accent"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={isShared ? t("shared_revoke") : t("share_roadmap")}
+                        aria-label={isShared ? t("shared") : t("share_roadmap")}
+                      >
+                        {isUpdating ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               );

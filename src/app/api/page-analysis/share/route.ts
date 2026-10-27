@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
 
     // ==========================================
+    // ==========================================
     // Branch A: Retrieve Currently Shared Users
     // ==========================================
     if (filter === "all" || filter === "viewable") {
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
       if (!shares || shares.length === 0) {
         return NextResponse.json({
           success: true,
+          users: [],
           sharedUsers: [],
           total: 0,
         });
@@ -87,9 +89,11 @@ export async function GET(request: NextRequest) {
       const sharedUsers = shares.map((s) => {
         const profile = userMap.get(s.target_user_id) || {};
         return {
+          id: s.target_user_id,
           userId: s.target_user_id,
           email: profile.email || "Unknown email",
           name: profile.name || null,
+          level: profile.level ?? 1,
           role: profile.currentJobTitle || profile.targetJobTitle || "Professional",
           department: profile.industry || "General",
           accessLevel: s.access_level || "viewable",
@@ -101,6 +105,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        users: sharedUsers,
         sharedUsers,
         total: sharedUsers.length,
       });
@@ -115,88 +120,76 @@ export async function GET(request: NextRequest) {
           searchQuery
         );
 
-      let targetUser = null;
+      let foundUsers: any[] = [];
 
       if (isUUID) {
         const { data: userById } = await admin
           .from("users")
-          .select("id, email, name, currentJobTitle, targetJobTitle, industry")
+          .select("id, email, name, level, currentJobTitle, targetJobTitle, industry")
           .eq("id", searchQuery)
-          .maybeSingle();
+          .limit(1);
 
-        if (userById) {
-          targetUser = userById;
+        if (userById && userById.length > 0) {
+          foundUsers = userById;
         }
-      }
-
-      if (!targetUser) {
-        const { data: userByEmail } = await admin
+      } else {
+        const cleanQuery = searchQuery.replace(/[%_,]/g, "\\$&");
+        const { data: matchedUsers } = await admin
           .from("users")
-          .select("id, email, name, currentJobTitle, targetJobTitle, industry")
-          .ilike("email", searchQuery)
-          .maybeSingle();
+          .select("id, email, name, level, currentJobTitle, targetJobTitle, industry")
+          .or(`email.ilike.%${cleanQuery}%,name.ilike.%${cleanQuery}%`)
+          .limit(10);
 
-        if (userByEmail) {
-          targetUser = userByEmail;
+        if (matchedUsers && matchedUsers.length > 0) {
+          foundUsers = matchedUsers;
         }
       }
 
-      if (!targetUser) {
-        const { data: userByName } = await admin
-          .from("users")
-          .select("id, email, name, currentJobTitle, targetJobTitle, industry")
-          .ilike("name", searchQuery)
-          .maybeSingle();
-
-        if (userByName) {
-          targetUser = userByName;
-        }
-      }
-
-      if (!targetUser) {
+      if (foundUsers.length === 0) {
         return NextResponse.json({
           success: true,
           found: false,
+          users: [],
           user: null,
           message: "No user found matching the provided search query.",
         });
       }
 
-      if (targetUser.id === currentUserId) {
-        return NextResponse.json({
-          success: true,
-          found: true,
-          isSelf: true,
-          user: {
-            id: targetUser.id,
-            email: targetUser.email,
-            name: targetUser.name,
-          },
-          message: "This is your own account.",
-        });
-      }
+      const targetIds = foundUsers.map((u) => u.id);
+      const sharesMap = new Map<string, any>();
 
-      const { data: existingShare } = await admin
+      const { data: existingShares } = await admin
         .from("shared_roadmaps")
-        .select("id, access_level, created_at, updated_at")
+        .select("id, target_user_id, access_level, created_at, updated_at")
         .eq("owner_id", currentUserId)
-        .eq("target_user_id", targetUser.id)
-        .maybeSingle();
+        .in("target_user_id", targetIds);
+
+      (existingShares || []).forEach((s) => sharesMap.set(s.target_user_id, s));
+
+      const users = foundUsers.map((u) => {
+        const isSelf = u.id === currentUserId;
+        const existingShare = sharesMap.get(u.id);
+        return {
+          id: u.id,
+          userId: u.id,
+          email: u.email,
+          name: u.name,
+          level: u.level ?? 1,
+          role: u.currentJobTitle || u.targetJobTitle || "Professional",
+          department: u.industry || "General",
+          accessLevel: existingShare ? existingShare.access_level : "no_access",
+          isSelf,
+          sharedRecordId: existingShare ? existingShare.id : null,
+          sharedAt: existingShare ? existingShare.created_at : null,
+        };
+      });
 
       return NextResponse.json({
         success: true,
         found: true,
-        isSelf: false,
-        user: {
-          userId: targetUser.id,
-          email: targetUser.email,
-          name: targetUser.name,
-          role: targetUser.currentJobTitle || targetUser.targetJobTitle || "Professional",
-          department: targetUser.industry || "General",
-          accessLevel: existingShare ? existingShare.access_level : "no_access",
-          sharedRecordId: existingShare ? existingShare.id : null,
-          sharedAt: existingShare ? existingShare.created_at : null,
-        },
+        users,
+        user: users[0] || null,
+        total: users.length,
       });
     }
 
@@ -205,6 +198,8 @@ export async function GET(request: NextRequest) {
     // ==========================================
     return NextResponse.json({
       success: true,
+      users: [],
+      sharedUsers: [],
       message: "Please specify either ?filter=all/viewable or ?search=uid/email/name.",
     });
   } catch (err: unknown) {
@@ -225,6 +220,7 @@ export async function GET(request: NextRequest) {
  * - Request Body (JSON):
  *   - targetUserId (required): String (UUID). Target collaborator ID to share with or revoke.
  *   - accessLevel (optional): String ('viewable' | 'no_access'). Defaults to 'viewable'.
+ *   - roadmapId (optional): String (UUID). Associated roadmap ID.
  *
  * Workflow:
  * 1. Authenticate user from session cookies.
@@ -247,7 +243,7 @@ export async function POST(request: NextRequest) {
     // Step 2: Payload Validation
     // ==========================================
     const body = await request.json().catch(() => ({}));
-    const { targetUserId, accessLevel: rawAccessLevel } = body;
+    const { targetUserId, accessLevel: rawAccessLevel, roadmapId } = body;
 
     if (!targetUserId) {
       return NextResponse.json(
@@ -296,6 +292,18 @@ export async function POST(request: NextRequest) {
     // ==========================================
     // Step 4: Grant or Update Access Permission
     // ==========================================
+    let roadmapTitle: string | null = null;
+    if (roadmapId) {
+      const { data: rm } = await admin
+        .from("roadmaps")
+        .select("target_role")
+        .eq("id", roadmapId)
+        .maybeSingle();
+      if (rm?.target_role) {
+        roadmapTitle = rm.target_role;
+      }
+    }
+
     const { data: existing, error: findErr } = await admin
       .from("shared_roadmaps")
       .select("id")
@@ -312,12 +320,16 @@ export async function POST(request: NextRequest) {
 
     let shareRecord;
     if (existing) {
+      const updatePayload: Record<string, any> = {
+        access_level: "viewable",
+        updated_at: new Date().toISOString(),
+      };
+      if (roadmapId) updatePayload.roadmap_id = roadmapId;
+      if (roadmapTitle) updatePayload.title = roadmapTitle;
+
       const { data: updated, error: updateErr } = await admin
         .from("shared_roadmaps")
-        .update({
-          access_level: "viewable",
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", existing.id)
         .select()
         .single();
@@ -330,13 +342,17 @@ export async function POST(request: NextRequest) {
       }
       shareRecord = updated;
     } else {
+      const insertPayload: Record<string, any> = {
+        owner_id: currentUserId,
+        target_user_id: targetUserId,
+        access_level: "viewable",
+      };
+      if (roadmapId) insertPayload.roadmap_id = roadmapId;
+      if (roadmapTitle) insertPayload.title = roadmapTitle;
+
       const { data: created, error: createErr } = await admin
         .from("shared_roadmaps")
-        .insert({
-          owner_id: currentUserId,
-          target_user_id: targetUserId,
-          access_level: "viewable",
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
