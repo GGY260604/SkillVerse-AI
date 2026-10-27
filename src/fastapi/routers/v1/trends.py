@@ -3,6 +3,12 @@ from typing import Dict, Any, Tuple
 from fastapi import APIRouter, Query, HTTPException
 from config import settings
 from services.trends import sync_live_trend_signals_to_supabase, search_and_analyze_skill
+from services.trends.skill_search_service import (
+    CATEGORY_TRANSLATIONS,
+    register_category_translation,
+    localize_category,
+    normalize_canonical_category,
+)
 from services.http_client import get_shared_client
 from schemas.trends import SkillSearchResponse
 
@@ -24,23 +30,6 @@ def invalidate_trends_cache():
     _trends_cache.clear()
     _trends_cache_time = 0.0
     _search_cache.clear()
-
-
-# Multilingual Category Mappings
-CATEGORY_TRANSLATIONS = {
-    "Artificial Intelligence": {"ms": "Kecerdasan Buatan (AI)", "zh": "人工智能 (AI)"},
-    "Cloud & DevOps": {"ms": "Awan & DevOps", "zh": "云原生与运维架构"},
-    "Data Engineering": {"ms": "Kejuruteraan Data", "zh": "数据工程与流处理"},
-    "Cybersecurity": {"ms": "Keselamatan Siber", "zh": "网络与信息安全"},
-    "Clean Tech & ESG": {"ms": "Teknologi Bersih & ESG", "zh": "绿色科技与 ESG"},
-    "Digital Marketing": {"ms": "Pemasaran Digital", "zh": "数字化营销与增长"},
-    "Operations": {"ms": "Operasi & Rantaian Bekalan", "zh": "智能运营与供应链"},
-    "Clerical & Administrative": {"ms": "Perkeranian & Pentadbiran", "zh": "文职与日常行政"},
-    "Customer Support": {"ms": "Sokongan Pelanggan", "zh": "客户联络与支持"},
-    "Marketing & Content": {"ms": "Pemasaran & Kandungan", "zh": "营销与内容策划"},
-    "Finance & Accounting": {"ms": "Kewangan & Perakaunan", "zh": "财务与智能核算"},
-    "Software Development": {"ms": "Pembangunan Perisian", "zh": "软件工程与开发"},
-}
 
 # Multilingual Status Mappings
 STATUS_TRANSLATIONS = {
@@ -134,19 +123,26 @@ async def get_live_trends(locale: str = "en"):
                 sources = r.get("sources", [])
                 first_source = sources[0] if (isinstance(sources, list) and len(sources) > 0 and isinstance(sources[0], dict)) else {}
 
+                # Register dynamic category translations if present in sources
+                register_category_translation(
+                    raw_cat,
+                    first_source.get("category_zh"),
+                    first_source.get("category_ms"),
+                )
+
                 # Localize skill name
                 norm_skill = raw_skill.lower().strip()
                 if loc == "zh":
                     loc_skill = first_source.get("skillName_zh") or raw_skill
-                    loc_cat = first_source.get("category_zh") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("zh") or raw_cat
+                    loc_cat = localize_category(raw_cat, "zh", first_source)
                     loc_citation = first_source.get("citation_zh") or first_source.get("citation", "")
                 elif loc == "ms":
                     loc_skill = first_source.get("skillName_ms") or raw_skill
-                    loc_cat = first_source.get("category_ms") or CATEGORY_TRANSLATIONS.get(raw_cat, {}).get("ms") or raw_cat
+                    loc_cat = localize_category(raw_cat, "ms", first_source)
                     loc_citation = first_source.get("citation_ms") or first_source.get("citation", "")
                 else:
                     loc_skill = raw_skill
-                    loc_cat = raw_cat
+                    loc_cat = normalize_canonical_category(raw_cat)
                     loc_citation = first_source.get("citation", "")
 
                 loc_status = STATUS_TRANSLATIONS.get(raw_status, {}).get(loc) or raw_status

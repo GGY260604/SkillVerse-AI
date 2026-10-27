@@ -15,6 +15,11 @@ from services.analyze.skill_translations import (
     sanitize_skills_ms,
     register_skill_translation,
 )
+from services.trends.skill_search_service import (
+    register_category_translation,
+    normalize_canonical_category,
+    CATEGORY_TRANSLATIONS,
+)
 
 # This API is used to get the latest AI research papers from ArXiv, which is a research papers website
 ARXIV_API_URL = (
@@ -100,7 +105,7 @@ TASK:
    - "emerging": High growth, cutting-edge, rising adoption (velocityVs between +0.30 and +0.85)
    - "declining": Routine clerical/manual tasks being automated or superseded (velocityVs between -0.20 and -0.50)
    - "stable": Baseline established competency (velocityVs between -0.10 and +0.20)
-3. Assign each skill to a valid category: "Artificial Intelligence", "Cloud & DevOps", "Data Engineering", "Cybersecurity", "Clean Tech & ESG", "Digital Marketing", or "Operations".
+3. Assign each skill to a valid domain category (e.g., "Artificial Intelligence", "Cloud & DevOps", "Data Engineering", "Cybersecurity", "Clean Tech & ESG", "Digital Marketing", "Operations & Logistics", "Engineering & Manufacturing", or other accurate occupational category).
 4. Cite the exact source title and URL from the input stream.
 5. Identify 1 to 2 Emerging Occupational Roles or New Job Titles appearing in these live listings/research (e.g., 'AI Agent Systems Architect', 'MLOps Infrastructure Specialist', 'Autonomous Workflow Engineer', 'Carbon Accounting Analyst').
 
@@ -458,10 +463,14 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
         else:
             calc_status = "stable"
 
+        cat_val = normalize_canonical_category(s.get("category"), skill_name=skill_name)
+        cat_ms_val = CATEGORY_TRANSLATIONS[cat_val]["ms"]
+        cat_zh_val = CATEGORY_TRANSLATIONS[cat_val]["zh"]
+
         signal_payloads.append({
             "id": str(uuid.uuid4()),
             "skillName": skill_name,
-            "category": s.get("category", "Technology"),
+            "category": cat_val,
             "status": calc_status,
             "velocityVs": real_velocity,
             "currentWindowC": current_c,
@@ -475,8 +484,8 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                     "citation_zh": s.get("citation_zh", ""),
                     "skillName_ms": s.get("skillName_ms", skill_name),
                     "skillName_zh": s.get("skillName_zh", skill_name),
-                    "category_ms": s.get("category_ms", s.get("category", "Technology")),
-                    "category_zh": s.get("category_zh", s.get("category", "Technology")),
+                    "category_ms": cat_ms_val,
+                    "category_zh": cat_zh_val,
                     "capturedAt": capture_time,
                 }
             ],
