@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (including libgomp1, libgl1, libglib2.0-0 for OpenCV / PaddleOCR / PyTorch)
+# Install system dependencies (including libgomp1, libgl1, libglib2.0-0 for OpenCV / RapidOCR / PyTorch)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \

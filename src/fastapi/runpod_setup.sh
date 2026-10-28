@@ -8,7 +8,7 @@ set -e
 echo "=== [1/4] Checking and installing dependencies ==="
 cd "$(dirname "$0")"
 
-# Install system libraries for OpenCV & PaddleOCR if apt-get is available
+# Install system libraries for OpenCV & RapidOCR if apt-get is available
 if command -v apt-get &> /dev/null; then
     apt-get update -qq && apt-get install -y -qq libgl1 libglib2.0-0 > /dev/null 2>&1 || true
 fi
