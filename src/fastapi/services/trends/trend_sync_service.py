@@ -20,6 +20,12 @@ from services.trends.skill_search_service import (
     normalize_canonical_category,
     CATEGORY_TRANSLATIONS,
 )
+from services.trends.role_velocity_service import (
+    pop_unindexed_skills_backlog,
+    compute_role_velocity_metrics,
+    build_trend_signals_velocity_map,
+    recalibrate_all_esco_roles_velocity,
+)
 
 # This API is used to get the latest AI research papers from ArXiv, which is a research papers website
 ARXIV_API_URL = (
@@ -301,6 +307,7 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
        - Tier 2: Gemini 1.5 Flash API Fallback
        - Tier 3: Zero-Failure Deterministic Fallback Floor
     3. Persists updated signals and timestamps into Supabase `trend_signals`.
+    4. Recalibrates composite role velocity (V_role) across `esco_roles`.
     """
     capture_time = datetime.now(timezone.utc).isoformat()
 
@@ -311,6 +318,18 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
     )
 
     all_items = arxiv_items + remoteok_items
+
+    # Tier 4 Self-Expanding Ingestion Backlog: Include any unindexed ESCO skills queued at runtime
+    backlog_skills = pop_unindexed_skills_backlog(limit=10)
+    if backlog_skills:
+        all_items.append({
+            "source": "ESCO Unindexed Skill Backlog",
+            "title": "Occupational Skills Queued for Velocity Evaluation",
+            "snippet": f"Evaluate current market demand and velocity for: {', '.join(backlog_skills)}",
+            "url": "https://esco.ec.europa.eu",
+            "publishedAt": capture_time,
+        })
+
     if not all_items:
         return {
             "success": False,
@@ -509,6 +528,7 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
     if emerging_roles:
         roles_endpoint = f"{base_url}/rest/v1/esco_roles?on_conflict=role_id"
         role_payloads: List[Dict[str, Any]] = []
+        vel_map = build_trend_signals_velocity_map(signal_payloads)
 
         # Prepare role metadata and batch embeddings concurrently
         role_items_to_embed = []
@@ -557,6 +577,14 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
         role_vectors = await generate_embeddings_batch(role_texts)
 
         for item, vector in zip(role_items_to_embed, role_vectors):
+            vel_metrics = compute_role_velocity_metrics(
+                required_skills=item["skills_en"],
+                industry=item["industry"],
+                title=item["title"],
+                trend_signals_map=vel_map,
+                stored_base_velocity=0.45,
+                scenario_multiplier=1.0,
+            )
             role_payloads.append({
                 "id": str(uuid.uuid4()),
                 "role_id": item["role_id"],
@@ -569,7 +597,13 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 "required_skills_zh": item["skills_zh"],
                 "required_skills_localized": item["localized_skills"],
                 "embedding": vector,
-                "scenario_multipliers": {"conservative": 1.0, "moderate": 1.15, "disruptive": 1.30},
+                "scenario_multipliers": {
+                    "moderate": 1.0,
+                    "accelerated_ai": 1.25,
+                    "green_economy": 1.10,
+                    "velocityVs": vel_metrics["roleVelocity"],
+                    "trendStatus": vel_metrics["roleTrendStatus"],
+                },
                 "sdg_alignments": item["sdg_alignments"],
                 "radar_requirements": {
                     "Technical Aptitude": 85,
@@ -592,11 +626,15 @@ async def sync_live_trend_signals_to_supabase() -> Dict[str, Any]:
                 if ind_r_resp.status_code in [200, 201, 204]:
                     roles_synced_count += 1
 
+    # Recalibrate composite role velocity (V_role) across all ESCO roles in Supabase
+    recalibration_summary = await recalibrate_all_esco_roles_velocity()
+
     return {
         "success": True,
         "message": f"Successfully synced {synced_count} live trend signals and {roles_synced_count} emerging occupational roles from ArXiv & RemoteOK feeds (Tier: {extraction_tier}).",
         "syncedCount": synced_count,
         "syncedRolesCount": roles_synced_count,
+        "rolesVelocityRecalibration": recalibration_summary,
         "tierUsed": extraction_tier,
         "sourcesProcessed": ["ArXiv cs.AI (Latest Research)", "RemoteOK (Live Global Remote Jobs)"],
         "capturedAt": capture_time,

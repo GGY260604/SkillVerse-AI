@@ -384,5 +384,10 @@ export function convertAssessmentToPlanData(
     roadmapWeeks: `${totalWeeks} Weeks`,
     roadmapHours: `${totalHours} Total Hours`,
     phases: phases.length > 0 ? phases : [],
+    roleVelocity: selectedRole.roleVelocity ?? (createdRoadmap as any)?.roleVelocity ?? (createdRoadmap as any)?.role_velocity,
+    roleGrowthRatePercent: selectedRole.roleGrowthRatePercent ?? (createdRoadmap as any)?.roleGrowthRatePercent ?? (createdRoadmap as any)?.role_growth_rate_percent,
+    roleTrendStatus: selectedRole.roleTrendStatus ?? (createdRoadmap as any)?.roleTrendStatus ?? (createdRoadmap as any)?.role_trend_status,
+    roleTrendStatusLocalized: selectedRole.roleTrendStatusLocalized ?? (createdRoadmap as any)?.roleTrendStatusLocalized ?? (createdRoadmap as any)?.role_trend_status_localized,
+    pursueRecommendation: selectedRole.pursueRecommendation ?? (createdRoadmap as any)?.pursueRecommendation ?? (createdRoadmap as any)?.pursue_recommendation,
   };
 }

@@ -41,8 +41,13 @@ class EscoRoleSuggested(BaseModel):
     requiredSkillsLocalized: Dict[str, List[str]] = Field(description="Trilingual essential skills: en, ms, zh")
     sdgAlignments: List[Dict[str, Any]] = Field(default_factory=list, description="UN Sustainable Development Goal alignments")
     radarRequirements: Dict[str, int] = Field(default_factory=dict, description="Five-axis radar chart proficiency requirements (0-100)")
-    scenarioMultipliers: Optional[Dict[str, float]] = Field(default=None, description="Demand multipliers across macroeconomic scenarios")
+    scenarioMultipliers: Optional[Dict[str, Any]] = Field(default=None, description="Demand multipliers and velocity metadata across macroeconomic scenarios")
     isNewlyCreated: bool = Field(default=False, description="True if dynamically synthesized and added to the ESCO database")
+    roleVelocity: float = Field(default=0.0, description="Composite occupational growth velocity V_role (-1.0 to +1.0)")
+    roleGrowthRatePercent: str = Field(default="+0.0%", description="Formatted percentage growth string, e.g. '+48.0%' or '-32.0%'")
+    roleTrendStatus: str = Field(default="stable", description="Market viability tier: on_trend, stable, or falling_behind")
+    roleTrendStatusLocalized: Dict[str, str] = Field(default_factory=dict, description="Trilingual role status badge labels: en, ms, zh")
+    pursueRecommendation: Dict[str, str] = Field(default_factory=dict, description="Trilingual 1-line guidance on whether to pursue or upskill")
 
 
 class SkillSearchResponse(BaseModel):

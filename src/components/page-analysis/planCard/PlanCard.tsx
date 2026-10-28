@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { PlanData } from "./planData";
+import { PlanData, getRoleViabilityInfo } from "./planData";
 
 // Component properties specification for roadmap plan cards.
 interface PlanCardProps {
@@ -44,6 +44,7 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
   const completedCount = plan.phases?.filter((p) => p.isCompleted).length || 0;
   const totalPhases = plan.phases?.length || 0;
   const progressPercent = totalPhases > 0 ? Math.round((completedCount / totalPhases) * 100) : 0;
+  const viability = getRoleViabilityInfo(plan, locale);
 
   // ==========================================
   // Step 2: Format Creation Timestamp for Display
@@ -69,6 +70,14 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-bg-secondary text-text-muted border border-border-subtle">
               <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
               {tHistory("badge")}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${viability.badgeClass}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${viability.dotClass}`} />
+              <span>{viability.growthPct}</span>
+              <span className="opacity-60">•</span>
+              <span className="font-sans">{viability.localizedStatus}</span>
             </span>
             <span className="text-[11px] font-mono text-text-muted">
               ID: <span className="text-text-secondary">{plan.id}</span>
@@ -124,6 +133,10 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
               <span className="text-[10px] font-mono uppercase text-text-muted">{tCurrent("match_score")}:</span>
               <span className="text-sm font-bold font-mono text-text-secondary">{plan.matchScore.toFixed(1)}%</span>
             </div>
+            <div className="text-[10px] font-mono text-text-muted flex items-center gap-1 mt-0.5">
+              <span>{locale === "zh" ? "趋势" : locale === "ms" ? "Trend" : "Trend"}:</span>
+              <span className={`font-semibold ${viability.textClass}`}>{viability.growthPct}</span>
+            </div>
             <div className="w-24 bg-bg-secondary rounded-full h-1 overflow-hidden mt-1 hidden sm:block">
               <div
                 className="h-full bg-text-muted"
@@ -178,15 +191,31 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
       {/* Role Summary Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
         <div className="lg:col-span-2">
-          <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
-            {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
-              ? tCurrent("role_category_default")
-              : plan.roleCategory}
-          </span>
+          <div className="flex items-center flex-wrap gap-2 mb-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted">
+              {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
+                ? tCurrent("role_category_default")
+                : plan.roleCategory}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${viability.badgeClass}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${viability.dotClass}`} />
+              <span>{viability.growthPct}</span>
+              <span className="opacity-60">•</span>
+              <span className="font-sans">{viability.localizedStatus}</span>
+            </span>
+          </div>
 
           <h3 className="wrap-break-word text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2 group-hover:text-accent transition-colors">
             {displayRoleTitle}
           </h3>
+
+          {viability.localizedRecommendation && (
+            <p className="text-xs text-text-secondary leading-relaxed mb-3.5 bg-bg-secondary/70 border border-border-subtle/70 rounded-xl px-3 py-2 font-mono">
+              {viability.localizedRecommendation}
+            </p>
+          )}
 
           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-4 line-clamp-2">
             {displayDescription}
@@ -229,6 +258,17 @@ export default function PlanCard({ plan, variant, onSelect }: PlanCardProps) {
               className="h-full bg-accent transition-all duration-500"
               style={{ width: `${plan.matchScore}%` }}
             />
+          </div>
+
+          {/* Role Current Trend & Score Breakdown */}
+          <div className="w-full pt-2.5 mt-0.5 border-t border-border-subtle/60 flex items-center justify-between text-[11px] font-mono mb-2 px-0.5">
+            <span className="text-text-muted text-[10px] uppercase tracking-wider">
+              {locale === "zh" ? "市场趋势" : locale === "ms" ? "Trend Pasaran" : "Market Trend"}
+            </span>
+            <span className={`font-bold flex items-center gap-1 ${viability.textClass}`}>
+              <span>{viability.growthPct}</span>
+              <span className="text-[10px] opacity-80">({viability.status === "on_trend" ? (locale === "zh" ? "强劲" : locale === "ms" ? "Tinggi" : "Growth") : viability.status === "falling_behind" ? (locale === "zh" ? "预警" : locale === "ms" ? "Risiko" : "Risk") : (locale === "zh" ? "稳健" : locale === "ms" ? "Stabil" : "Core")})</span>
+            </span>
           </div>
 
           <span className="text-[11px] font-mono text-text-secondary font-medium">

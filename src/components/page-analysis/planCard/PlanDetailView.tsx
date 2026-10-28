@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { PlanData, PlanPhase, CourseItem, LocalizedStringMap, LocalizedListMap } from "./planData";
+import { PlanData, PlanPhase, CourseItem, LocalizedStringMap, LocalizedListMap, getRoleViabilityInfo } from "./planData";
 import { useExpGain } from "@/context/auth/ExpGainContext";
 import PhaseQuizModal from "@/components/page-analysis/quiz/PhaseQuizModal";
 import { USE_PHASE_QUIZ_MODAL_TESTING } from "@/constants/testing/quiz";
@@ -210,6 +210,7 @@ export default function PlanDetailView({
   const localizedPlanDesc = getLocalized(plan.descriptionLocalized, locale, plan.description);
   const rawDate = plan.createdAt || plan.date || "";
   const displayDate = rawDate.split("T")[0].split(" ")[0];
+  const viability = getRoleViabilityInfo(plan, locale);
 
   // Helper to resolve localized skill lists for active locale
   const getSkillsForLocale = (
@@ -298,15 +299,31 @@ export default function PlanDetailView({
         {/* Role Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-5">
           <div className="lg:col-span-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted block mb-1">
-              {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
-                ? tCurrent("role_category_default")
-                : plan.roleCategory}
-            </span>
+            <div className="flex items-center flex-wrap gap-2 mb-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-text-muted">
+                {!plan.roleCategory || plan.roleCategory === "Target Horizon Role"
+                  ? tCurrent("role_category_default")
+                  : plan.roleCategory}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${viability.badgeClass}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${viability.dotClass}`} />
+                <span>{viability.growthPct}</span>
+                <span className="opacity-60">•</span>
+                <span className="font-sans">{viability.localizedStatus}</span>
+              </span>
+            </div>
 
             <h2 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
               {localizedRoleTitle}
             </h2>
+
+            {viability.localizedRecommendation && (
+              <p className="text-xs text-text-secondary leading-relaxed mb-3.5 bg-bg-secondary/70 border border-border-subtle/70 rounded-xl px-3 py-2 font-mono">
+                {viability.localizedRecommendation}
+              </p>
+            )}
 
             <p className="text-xs sm:text-sm text-text-secondary leading-relaxed mb-4">
               {localizedPlanDesc}
@@ -349,6 +366,17 @@ export default function PlanDetailView({
                 className="h-full bg-accent transition-all duration-500"
                 style={{ width: `${plan.matchScore}%` }}
               />
+            </div>
+
+            {/* Role Current Trend & Score Breakdown */}
+            <div className="w-full pt-2.5 mt-0.5 border-t border-border-subtle/60 flex items-center justify-between text-[11px] font-mono mb-2 px-0.5">
+              <span className="text-text-muted text-[10px] uppercase tracking-wider">
+                {locale === "zh" ? "市场趋势" : locale === "ms" ? "Trend Pasaran" : "Market Trend"}
+              </span>
+              <span className={`font-bold flex items-center gap-1 ${viability.textClass}`}>
+                <span>{viability.growthPct}</span>
+                <span className="text-[10px] opacity-80">({viability.status === "on_trend" ? (locale === "zh" ? "强劲" : locale === "ms" ? "Tinggi" : "Growth") : viability.status === "falling_behind" ? (locale === "zh" ? "预警" : locale === "ms" ? "Risiko" : "Risk") : (locale === "zh" ? "稳健" : locale === "ms" ? "Stabil" : "Core")})</span>
+              </span>
             </div>
 
             <span className="text-[11px] font-mono text-text-secondary font-medium">

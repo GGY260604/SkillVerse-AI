@@ -521,6 +521,32 @@ export default function RoleSelectorModal() {
                       skills: strengths.join(t("strength_separator")),
                     })
                   : t("reason_general");
+                const trendStatus = role.roleTrendStatus || "stable";
+                const growthPct = role.roleGrowthRatePercent || "+0.0%";
+                const localizedTrendStatus =
+                  (role.roleTrendStatusLocalized as Record<string, string> | undefined)?.[locale] ||
+                  role.roleTrendStatusLocalized?.en ||
+                  (trendStatus === "on_trend"
+                    ? "On-Trend (High Growth)"
+                    : trendStatus === "falling_behind"
+                    ? "Falling Behind (Automation Risk)"
+                    : "Stable Core Competency");
+                const localizedRecommendation =
+                  (role.pursueRecommendation as Record<string, string> | undefined)?.[locale] ||
+                  role.pursueRecommendation?.en ||
+                  "";
+                const trendBadgeClasses =
+                  trendStatus === "on_trend"
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                    : trendStatus === "falling_behind"
+                    ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                    : "bg-sky-500/15 text-sky-300 border-sky-500/30";
+                const trendDotClasses =
+                  trendStatus === "on_trend"
+                    ? "bg-emerald-400"
+                    : trendStatus === "falling_behind"
+                    ? "bg-rose-400"
+                    : "bg-sky-400";
 
                 return (
                   <div
@@ -556,6 +582,14 @@ export default function RoleSelectorModal() {
                             {Math.round((role.scenarioMultiplierApplied - 1) * 100)}%
                           </span>
                         )}
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold shrink-0 inline-flex items-center gap-1.5 border ${trendBadgeClasses}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${trendDotClasses}`} />
+                          <span>{growthPct}</span>
+                          <span className="opacity-60">•</span>
+                          <span className="font-sans">{localizedTrendStatus}</span>
+                        </span>
                       </div>
                       <span className="text-xs font-mono font-bold text-accent shrink-0">
                         {t("match_score", { percent: matchPct })}
@@ -582,6 +616,13 @@ export default function RoleSelectorModal() {
                     <p className="text-[11px] sm:text-xs text-text-secondary mt-1.5 leading-snug">
                       {reason}
                     </p>
+
+                    {/* Market Viability Pursue / Upskill Recommendation */}
+                    {localizedRecommendation && (
+                      <p className="text-[11px] text-text-muted mt-1.5 leading-snug border-t border-border-subtle/40 pt-1.5">
+                        {localizedRecommendation}
+                      </p>
+                    )}
                   </div>
                 );
               })}

@@ -115,6 +115,11 @@ class MatchedRole(BaseModel):
     skillsGapLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual gaps: en, ms, zh")
     atRiskCompetencies: List[AtRiskSkillItem] = Field(default_factory=list)
     atRiskSkillsLocalized: Optional[Dict[str, List[str]]] = Field(default=None, description="Trilingual at-risk competencies: en, ms, zh")
+    roleVelocity: float = Field(default=0.0, description="Composite occupational growth velocity V_role (-1.0 to +1.0)")
+    roleGrowthRatePercent: str = Field(default="+0.0%", description="Formatted percentage growth string, e.g. '+48.0%' or '-32.0%'")
+    roleTrendStatus: str = Field(default="stable", description="Market viability tier: on_trend, stable, or falling_behind")
+    roleTrendStatusLocalized: Optional[Dict[str, str]] = Field(default=None, description="Trilingual role status badge labels: en, ms, zh")
+    pursueRecommendation: Optional[Dict[str, str]] = Field(default=None, description="Trilingual 1-line guidance on whether to pursue or upskill")
 
 
 class RecommendedCourse(BaseModel):
@@ -197,4 +202,3 @@ class SynthesizeRoadmapResponse(BaseModel):
     radarData: List[RadarAxisItem] = Field(default_factory=list)
     topRoles: List[MatchedRole] = Field(default_factory=list)
     selectedRoleRoadmap: SelectedRoleRoadmap = Field(description="Synthesized 3-phase reskilling roadmap")
-

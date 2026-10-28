@@ -32,6 +32,10 @@ from schemas.trends import (
     EscoRoleSuggested,
     SkillSearchResponse,
 )
+from services.trends.role_velocity_service import (
+    compute_role_velocity_metrics,
+    build_trend_signals_velocity_map,
+)
 
 # In-memory caches for trend signals and skill vectors
 _cached_trend_signals: List[Dict[str, Any]] = []
@@ -1190,6 +1194,8 @@ async def persist_new_roles_to_supabase(
 
     roles_to_insert: List[Dict[str, Any]] = []
     result_roles: List[EscoRoleSuggested] = []
+    signals_for_vel = await fetch_trend_signals_from_supabase()
+    vel_map = build_trend_signals_velocity_map(signals_for_vel)
 
     for r in roles:
         title_en = (r.get("title") or "").strip()
@@ -1240,13 +1246,24 @@ async def persist_new_roles_to_supabase(
             ex_radar = existing_match.get("radarRequirement") or existing_match.get("radar_requirements") or r.get("radarRequirements", {})
             ex_sdg = existing_match.get("sdgAlignments") or existing_match.get("sdg_alignments") or []
             ex_mult = existing_match.get("scenarioMultipliers") or existing_match.get("scenario_multipliers") or {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10}
+            ex_industry = existing_match.get("industry", r.get("industry", "Responsible AI & Digital Transformation"))
+            stored_v = ex_mult.get("velocityVs") if isinstance(ex_mult, dict) else None
+            vel_metrics = compute_role_velocity_metrics(
+                required_skills=ex_skills,
+                industry=ex_industry,
+                title=ex_title,
+                trend_signals_map=vel_map,
+                trend_embeddings_map=_trend_skills_embeddings,
+                stored_base_velocity=float(stored_v) if stored_v is not None else None,
+                scenario_multiplier=1.0,
+            )
 
             result_roles.append(
                 EscoRoleSuggested(
                     roleId=ex_id,
                     title=ex_title,
                     titleLocalized=ex_loc_title,
-                    industry=existing_match.get("industry", r.get("industry", "Responsible AI & Digital Transformation")),
+                    industry=ex_industry,
                     similarityScore=0.88,
                     requiredSkills=ex_skills,
                     requiredSkillsLocalized=ex_loc_skills,
@@ -1254,6 +1271,7 @@ async def persist_new_roles_to_supabase(
                     radarRequirements=ex_radar,
                     scenarioMultipliers=ex_mult,
                     isNewlyCreated=False,
+                    **vel_metrics,
                 )
             )
         else:
@@ -1303,6 +1321,22 @@ async def persist_new_roles_to_supabase(
             if vec and skill_embedding:
                 sim = round(max(0.1, min(0.99, cosine_similarity(skill_embedding, vec))), 4)
 
+            vel_metrics = compute_role_velocity_metrics(
+                required_skills=skills_en,
+                industry=industry,
+                title=title_en,
+                trend_signals_map=vel_map,
+                trend_embeddings_map=_trend_skills_embeddings,
+                scenario_multiplier=1.0,
+            )
+            new_mult = {
+                "moderate": 1.0,
+                "accelerated_ai": 1.15,
+                "green_economy": 1.10,
+                "velocityVs": vel_metrics["roleVelocity"],
+                "trendStatus": vel_metrics["roleTrendStatus"],
+            }
+
             new_db_payloads.append({
                 "id": str(uuid.uuid4()),
                 "role_id": rid,
@@ -1319,7 +1353,7 @@ async def persist_new_roles_to_supabase(
                     "zh": skills_zh,
                 },
                 "embedding": vec,
-                "scenario_multipliers": {"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10},
+                "scenario_multipliers": new_mult,
                 "sdg_alignments": [
                     {
                         "targetCode": r.get("sdgAlignment", "SDG 8.2"),
@@ -1365,8 +1399,9 @@ async def persist_new_roles_to_supabase(
                         "Learning Agility": 85,
                         "Strategic Leadership": 70,
                     }),
-                    scenarioMultipliers={"moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10},
+                    scenarioMultipliers=new_mult,
                     isNewlyCreated=True,
+                    **vel_metrics,
                 )
             )
 
@@ -1419,6 +1454,9 @@ async def match_closest_esco_roles_via_bge(
     }
 
     # Step A: Attempt Supabase pgvector stored procedure
+    signals_for_vel = await fetch_trend_signals_from_supabase()
+    vel_map = build_trend_signals_velocity_map(signals_for_vel)
+
     if base_url and settings.SUPABASE_SERVICE_ROLE_KEY:
         try:
             endpoint = f"{base_url}/rest/v1/rpc/match_roles"
@@ -1445,6 +1483,19 @@ async def match_closest_esco_roles_via_bge(
                                 }
                             else:
                                 loc_skills = localize_skill_list_trilingual(skills_en)
+                        r_mult = r.get("scenario_multipliers") or {
+                            "moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10
+                        }
+                        stored_v = r_mult.get("velocityVs") if isinstance(r_mult, dict) else None
+                        vel_metrics = compute_role_velocity_metrics(
+                            required_skills=skills_en,
+                            industry=r.get("industry", "Responsible AI & Digital Transformation"),
+                            title=r.get("title", ""),
+                            trend_signals_map=vel_map,
+                            trend_embeddings_map=_trend_skills_embeddings,
+                            stored_base_velocity=float(stored_v) if stored_v is not None else None,
+                            scenario_multiplier=1.0,
+                        )
                         results.append(
                             EscoRoleSuggested(
                                 roleId=r["role_id"],
@@ -1466,10 +1517,9 @@ async def match_closest_esco_roles_via_bge(
                                     "Learning Agility": 80,
                                     "Strategic Leadership": 70,
                                 }),
-                                scenarioMultipliers=r.get("scenario_multipliers", {
-                                    "moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10
-                                }),
+                                scenarioMultipliers=r_mult,
                                 isNewlyCreated=False,
+                                **vel_metrics,
                             )
                         )
                     _skill_roles_cache[clean_k] = results
@@ -1522,6 +1572,19 @@ async def match_closest_esco_roles_via_bge(
             "ms": r["title"],
             "zh": r["title"],
         })
+        r_mult = r.get("scenarioMultipliers") or {
+            "moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10
+        }
+        stored_v = r_mult.get("velocityVs") if isinstance(r_mult, dict) else None
+        vel_metrics = compute_role_velocity_metrics(
+            required_skills=skills_en,
+            industry=r.get("industry", "Technology"),
+            title=r.get("title", ""),
+            trend_signals_map=vel_map,
+            trend_embeddings_map=_trend_skills_embeddings,
+            stored_base_velocity=float(stored_v) if stored_v is not None else None,
+            scenario_multiplier=1.0,
+        )
 
         results.append(
             EscoRoleSuggested(
@@ -1540,10 +1603,9 @@ async def match_closest_esco_roles_via_bge(
                     "Learning Agility": 80,
                     "Strategic Leadership": 70,
                 }),
-                scenarioMultipliers=r.get("scenarioMultipliers", {
-                    "moderate": 1.0, "accelerated_ai": 1.15, "green_economy": 1.10
-                }),
+                scenarioMultipliers=r_mult,
                 isNewlyCreated=False,
+                **vel_metrics,
             )
         )
 

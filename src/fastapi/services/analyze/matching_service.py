@@ -336,11 +336,20 @@ def calibrate_scenario_multipliers(
             green = max(green, 1.24)
             acc_ai = min(acc_ai, 1.08)
 
-    return {
+    result: Dict[str, Any] = {
         "moderate": moderate,
         "accelerated_ai": acc_ai,
         "green_economy": green,
     }
+    if isinstance(raw_multipliers, dict):
+        if "velocityVs" in raw_multipliers and raw_multipliers["velocityVs"] is not None:
+            try:
+                result["velocityVs"] = float(raw_multipliers["velocityVs"])
+            except (TypeError, ValueError):
+                pass
+        if "trendStatus" in raw_multipliers and raw_multipliers["trendStatus"]:
+            result["trendStatus"] = str(raw_multipliers["trendStatus"])
+    return result
 
 
 _cached_active_roles: List[Dict[str, Any]] = []
@@ -443,6 +452,12 @@ async def fetch_active_roles_from_supabase() -> List[Dict[str, Any]]:
         pass
 
     return FALLBACK_ROLES_CATALOG
+
+
+from services.trends.role_velocity_service import (
+    compute_role_velocity_metrics,
+    build_trend_signals_velocity_map,
+)
 
 
 def _generate_deterministic_fallback_cohort(
@@ -733,6 +748,16 @@ async def synthesize_on_demand_cohort(
                 sdg_alignments=sdg_al,
                 required_skills=skills_en,
             )
+            est_vel = item.get("estimated_velocity")
+            vel_metrics = compute_role_velocity_metrics(
+                required_skills=skills_en,
+                industry=r_ind,
+                title=r_title,
+                stored_base_velocity=float(est_vel) if est_vel is not None else None,
+                scenario_multiplier=1.0,
+            )
+            calibrated_mults["velocityVs"] = vel_metrics["roleVelocity"]
+            calibrated_mults["trendStatus"] = vel_metrics["roleTrendStatus"]
 
             localized_skills = {
                 "en": skills_en,
@@ -1361,6 +1386,7 @@ async def evaluate_roles(
                 "zh": role_def.get("title_zh", role_def["title"]),
             },
             "industry": role_def["industry"],
+            "requiredSkills": role_def.get("requiredSkills", []),
             "base_match": item["base_match"],
             "scenarioMultipliers": calibrated_multipliers,
             "sdgAlignments": sdg_items,
@@ -1372,6 +1398,20 @@ async def evaluate_roles(
             "atRiskSkillsLocalized": at_risk_loc,
         })
 
+
+    # Fetch active trend signals once for composite role velocity calculation
+    vel_map: Dict[str, float] = {}
+    trend_emb_map: Dict[str, List[float]] = {}
+    try:
+        from services.trends.skill_search_service import (
+            fetch_trend_signals_from_supabase,
+            _trend_skills_embeddings,
+        )
+        active_signals = await fetch_trend_signals_from_supabase()
+        vel_map = build_trend_signals_velocity_map(active_signals)
+        trend_emb_map = _trend_skills_embeddings
+    except Exception:
+        pass
 
     # Build Top 5 rankings for each macro scenario (moderate, accelerated_ai, green_economy)
     scenario_roles: Dict[str, List[MatchedRole]] = {}
@@ -1385,13 +1425,24 @@ async def evaluate_roles(
             if cand["roleId"] in seen_cand_ids:
                 continue
             seen_cand_ids.add(cand["roleId"])
-            multiplier = cand["scenarioMultipliers"].get(scen_key, 1.0)
+            multiplier = float(cand["scenarioMultipliers"].get(scen_key, 1.0) or 1.0)
             final_score = round(min(1.0, max(0.15, cand["base_match"] * multiplier)), 3)
+            stored_v = cand["scenarioMultipliers"].get("velocityVs")
+            vel_metrics = compute_role_velocity_metrics(
+                required_skills=cand.get("requiredSkills", []),
+                industry=cand["industry"],
+                title=cand["title"],
+                trend_signals_map=vel_map,
+                trend_embeddings_map=trend_emb_map,
+                stored_base_velocity=float(stored_v) if stored_v is not None else None,
+                scenario_multiplier=multiplier,
+            )
             scen_list.append(
                 MatchedRole(
                     roleId=cand["roleId"],
                     title=cand["title"],
                     titleLocalized=cand["titleLocalized"],
+                    titleLocalizedDict=cand.get("titleLocalizedDict"),
                     industry=cand["industry"],
                     matchScore=final_score,
                     scenarioMultiplierApplied=multiplier,
@@ -1402,6 +1453,7 @@ async def evaluate_roles(
                     skillsGapLocalized=cand.get("skillsGapLocalized"),
                     atRiskCompetencies=cand["atRiskCompetencies"],
                     atRiskSkillsLocalized=cand.get("atRiskSkillsLocalized"),
+                    **vel_metrics,
                 )
             )
         scen_list.sort(key=lambda x: x.matchScore, reverse=True)

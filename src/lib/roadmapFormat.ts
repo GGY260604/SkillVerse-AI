@@ -43,6 +43,12 @@ export interface DatabaseRoadmap {
   totalWeeks?: number | null;
   totalHours?: number | null;
   certificatesEarned?: string | null;
+  topRoles?: any[];
+  roleVelocity?: number;
+  roleGrowthRatePercent?: string;
+  roleTrendStatus?: string;
+  roleTrendStatusLocalized?: any;
+  pursueRecommendation?: any;
   createdAt: string | Date;
   updatedAt: string | Date;
   phases: Array<{
@@ -82,6 +88,12 @@ export function formatRoadmapToPlanData(roadmap: DatabaseRoadmap): PlanData {
     .replace(/^role-|^custom-/, "")
     .slice(0, 6)
     .toUpperCase();
+
+  const topRoles = roadmap.topRoles || (roadmap as any).top_roles || [];
+  const targetRoleId = roadmap.targetRoleId || (roadmap as any).target_role_id;
+  const matchedTargetRole = Array.isArray(topRoles)
+    ? topRoles.find((r: any) => r.roleId === targetRoleId || r.targetRoleId === targetRoleId) || topRoles[0]
+    : null;
 
   // Sort learning phases sequentially by designated phase index.
   const rawPhases = (roadmap.phases || (roadmap as any).roadmap_phases || []) as any[];
@@ -220,5 +232,27 @@ function pickArray(...candidates: any[]): string[] {
     roadmapHours: `${roadmap.totalHours || (roadmap as any).total_hours || 45} Total Hours`,
     phases,
     historyNote: !isCurrent ? "Archived previous milestone iteration." : undefined,
+    roleVelocity:
+      roadmap.roleVelocity ??
+      (roadmap as any).role_velocity ??
+      matchedTargetRole?.roleVelocity ??
+      0,
+    roleGrowthRatePercent:
+      roadmap.roleGrowthRatePercent ??
+      (roadmap as any).role_growth_rate_percent ??
+      matchedTargetRole?.roleGrowthRatePercent,
+    roleTrendStatus:
+      roadmap.roleTrendStatus ??
+      (roadmap as any).role_trend_status ??
+      matchedTargetRole?.roleTrendStatus ??
+      "stable",
+    roleTrendStatusLocalized:
+      roadmap.roleTrendStatusLocalized ??
+      (roadmap as any).role_trend_status_localized ??
+      matchedTargetRole?.roleTrendStatusLocalized,
+    pursueRecommendation:
+      roadmap.pursueRecommendation ??
+      (roadmap as any).pursue_recommendation ??
+      matchedTargetRole?.pursueRecommendation,
   };
 }

@@ -75,6 +75,11 @@ export interface MatchedRole {
   atRiskSkillsMs?: string[];
   atRiskSkillsZh?: string[];
   atRiskSkillsLocalized?: { en?: string[]; ms?: string[]; zh?: string[] };
+  roleVelocity?: number;
+  roleGrowthRatePercent?: string;
+  roleTrendStatus?: "on_trend" | "stable" | "falling_behind" | string;
+  roleTrendStatusLocalized?: { en?: string; ms?: string; zh?: string };
+  pursueRecommendation?: { en?: string; ms?: string; zh?: string };
 }
 
 export interface RecommendedCourse {

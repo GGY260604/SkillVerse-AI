@@ -42,6 +42,11 @@ interface EscoRole {
   requiredSkillsLocalized?: Record<string, string[]>;
   sdgAlignments?: Array<{ targetCode?: string; targetTitle?: string; affinityScore?: number }>;
   isNewlyCreated?: boolean;
+  roleVelocity?: number;
+  roleGrowthRatePercent?: string;
+  roleTrendStatus?: "on_trend" | "stable" | "falling_behind" | string;
+  roleTrendStatusLocalized?: Record<string, string>;
+  pursueRecommendation?: Record<string, string>;
 }
 
 // Used by SkillSearchResponse schema below.
@@ -956,6 +961,32 @@ export default function SkillTrendCheck() {
                     const localizedTitle = role.titleLocalized?.[locale] || role.title;
                     const localizedSkills =
                       role.requiredSkillsLocalized?.[locale] || role.requiredSkills || [];
+                    const trendStatus = role.roleTrendStatus || "stable";
+                    const growthPct = role.roleGrowthRatePercent || "+0.0%";
+                    const localizedTrendStatus =
+                      role.roleTrendStatusLocalized?.[locale] ||
+                      role.roleTrendStatusLocalized?.["en"] ||
+                      (trendStatus === "on_trend"
+                        ? "On-Trend (High Growth)"
+                        : trendStatus === "falling_behind"
+                        ? "Falling Behind (Automation Risk)"
+                        : "Stable Core Competency");
+                    const localizedRecommendation =
+                      role.pursueRecommendation?.[locale] ||
+                      role.pursueRecommendation?.["en"] ||
+                      "";
+                    const trendBadgeClasses =
+                      trendStatus === "on_trend"
+                        ? "bg-emerald-500/12 text-emerald-400 border-emerald-500/25"
+                        : trendStatus === "falling_behind"
+                        ? "bg-rose-500/12 text-rose-400 border-rose-500/25"
+                        : "bg-sky-500/12 text-sky-300 border-sky-500/25";
+                    const trendDotClasses =
+                      trendStatus === "on_trend"
+                        ? "bg-emerald-400"
+                        : trendStatus === "falling_behind"
+                        ? "bg-rose-400"
+                        : "bg-sky-400";
 
                     return (
                       <div
@@ -977,6 +1008,25 @@ export default function SkillTrendCheck() {
                           <h5 className="text-sm sm:text-base font-bold text-text-primary group-hover:text-accent transition-colors mb-2">
                             {localizedTitle}
                           </h5>
+
+                          {/* Role Market Viability Badge & Pursue Recommendation */}
+                          <div className="mb-3 space-y-1.5">
+                            <div className="flex items-center flex-wrap gap-1.5">
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border ${trendBadgeClasses}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${trendDotClasses}`} />
+                                <span>{growthPct}</span>
+                                <span className="opacity-60">•</span>
+                                <span className="font-sans">{localizedTrendStatus}</span>
+                              </span>
+                            </div>
+                            {localizedRecommendation && (
+                              <p className="text-[11px] text-text-secondary leading-snug bg-bg-card/60 border border-border-subtle/50 rounded-lg px-2.5 py-1.5">
+                                {localizedRecommendation}
+                              </p>
+                            )}
+                          </div>
 
                           {/* Required Competencies */}
                           <div className="mt-3">
