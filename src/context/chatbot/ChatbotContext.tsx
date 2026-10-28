@@ -6,6 +6,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { useAuth } from "@/context/auth/AuthContext";
 import { useProfileModal } from "@/context/auth/ProfileModalContext";
 import { usePlanModal } from "@/context/page-analysis/PlanModalContext";
+import { useTheme } from "@/context/ThemeContext";
 import type { ChatMessage } from "@/components/chatbot/ChatbotModal";
 import {
   type AgentActionType,
@@ -16,6 +17,13 @@ import {
   dispatchAgentBranch,
   matchPresetTrigger,
 } from "./router/engine";
+import { compileAgentSystemInstruction } from "./router/config/setup";
+
+// ==========================================
+// Global Feature Toggles
+// ==========================================
+// Toggle switch to enable or disable deterministic preset keyword matching.
+const ENABLE_PRESETS = false;
 
 // Re-export directive types for consumer convenience.
 export type { AgentActionType, AgentDirective, AgentExecutionResult, AgentActionContext };
@@ -86,6 +94,15 @@ export function ChatbotProvider({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, openAuthModal } = useAuth();
   const { openProfileModal } = useProfileModal();
   const { openUploadOption, openWizardOption, openPathwaySelect } = usePlanModal();
+  const { toggleTheme: toggleAppTheme, setTheme: setAppTheme } = useTheme();
+
+  const handleToggleTheme = useCallback((targetTheme?: string) => {
+    if (targetTheme === "dark" || targetTheme === "light") {
+      setAppTheme(targetTheme);
+    } else {
+      toggleAppTheme();
+    }
+  }, [setAppTheme, toggleAppTheme]);
 
   // Dialog visibility state.
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -128,18 +145,55 @@ export function ChatbotProvider({ children }: { children: React.ReactNode }) {
   // ==========================================
   const navigateTo = useCallback(
     (path: string) => {
-      router.push(path);
+      const parts = path.split("#");
+      const pagePath = parts[0];
+      const hash = parts[1];
+
+      if (pagePath) {
+        router.push(path);
+      }
+
+      if (hash) {
+        const cleanHash = hash.split("?")[0];
+        const scrollToElement = () => {
+          const el = document.getElementById(cleanHash);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            return true;
+          }
+          return false;
+        };
+
+        if (cleanHash === "skill-trend-check") {
+          const queryPart = hash.split("?")[1] || "";
+          const params = new URLSearchParams(queryPart);
+          const skill = params.get("skill") || "Autonomous Agents";
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("trigger-skill-trend", { detail: { skill } }));
+          }, 100);
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("trigger-skill-trend", { detail: { skill } }));
+          }, 400);
+        }
+
+        if (!scrollToElement()) {
+          setTimeout(scrollToElement, 150);
+          setTimeout(scrollToElement, 400);
+          setTimeout(scrollToElement, 800);
+        }
+      }
     },
     [router]
   );
 
   // Append assistant message directly to the conversational history.
-  const addAssistantMessage = useCallback((text: string) => {
+  const addAssistantMessage = useCallback((text: string, modelUsed?: string) => {
     const assistantMsg: ChatMessage = {
       id: `bot-${Date.now()}`,
       sender: "bot",
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      model: modelUsed,
     };
     setMessages((prev) => [...prev, assistantMsg]);
   }, []);
@@ -192,9 +246,10 @@ export function ChatbotProvider({ children }: { children: React.ReactNode }) {
         openModal,
         addAssistantMessage,
         locale,
+        toggleTheme: handleToggleTheme,
       });
     },
-    [navigateTo, openModal, addAssistantMessage, locale]
+    [navigateTo, openModal, addAssistantMessage, locale, handleToggleTheme]
   );
 
   // ==========================================
@@ -234,8 +289,8 @@ export function ChatbotProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Evaluate deterministic preset keyword rules from presets.ts.
-      const presetDirective = matchPresetTrigger(text, locale);
+      // Evaluate deterministic preset keyword rules from presets.ts if enabled.
+      const presetDirective = ENABLE_PRESETS ? matchPresetTrigger(text, locale) : null;
       if (presetDirective) {
         setTimeout(async () => {
           await dispatchAgentBranch(presetDirective, {
@@ -249,33 +304,70 @@ export function ChatbotProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Simulate network response latency before processing AI output and action directives.
-      setTimeout(async () => {
+      // Dispatch inquiry to Next.js /api/chatbot proxy route (calling FastAPI Qwen 2.5 with Gemini fallback).
+      try {
+        const historyPayload = messages.slice(-8).map((m) => ({
+          role: m.sender === "user" ? "user" : "assistant",
+          content: m.text,
+        }));
+
+        const systemPrompt = compileAgentSystemInstruction(locale);
+
+        const response = await fetch("/api/chatbot", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: text,
+            history: historyPayload,
+            locale,
+            system_instruction: systemPrompt,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Agent endpoint responded with status ${response.status}`);
+        }
+
+        const data = await response.json();
         // Resolve agent directive directly from AI returned output.
-        const directive = resolveAgentDirective(offlineText);
+        const directive = resolveAgentDirective(data);
+        const modelUsed = data.model_used || data.model || undefined;
 
         if (!directive.isMessageOnly && directive.target) {
           await dispatchAgentBranch(directive, {
             navigateTo,
             openModal,
-            addAssistantMessage,
+            addAssistantMessage: (text: string) => addAssistantMessage(text, modelUsed),
             locale,
+            toggleTheme: handleToggleTheme,
           });
         } else {
           const botResponse: ChatMessage = {
             id: `bot-${Date.now()}`,
             sender: "bot",
-            text: directive.message || offlineText,
+            text: directive.message || data.message || offlineText,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            model: modelUsed,
           };
-
           setMessages((prev) => [...prev, botResponse]);
         }
-
+      } catch (err) {
+        console.warn("[Chatbot] Backend /agent request failed, falling back to offline notice:", err);
+        const botResponse: ChatMessage = {
+          id: `bot-${Date.now()}`,
+          sender: "bot",
+          text: offlineText,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          model: "offline",
+        };
+        setMessages((prev) => [...prev, botResponse]);
+      } finally {
         setIsTyping(false);
-      }, 1200);
+      }
     },
-    [inputValue, isLoggedIn, requireLoginText, offlineText, locale, navigateTo, openModal, openAuthModal, addAssistantMessage]
+    [inputValue, isLoggedIn, requireLoginText, offlineText, locale, messages, navigateTo, openModal, openAuthModal, addAssistantMessage]
   );
 
   // Dispatch programmatic inquiries with optional automatic dialog opening.

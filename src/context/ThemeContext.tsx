@@ -95,6 +95,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Listen to window custom event broadcast for theme toggling.
+  useEffect(() => {
+    const handleToggleEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ theme?: Theme }>;
+      const targetTheme = customEvent.detail?.theme;
+      if (targetTheme === "dark" || targetTheme === "light") {
+        setTheme(targetTheme);
+      } else {
+        toggleTheme();
+      }
+    };
+
+    window.addEventListener("toggle-theme", handleToggleEvent);
+    return () => {
+      window.removeEventListener("toggle-theme", handleToggleEvent);
+    };
+  }, []);
+
   // ==========================================
   // Step 3: Provide Theme Context to Children Components
   // ==========================================

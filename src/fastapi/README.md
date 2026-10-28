@@ -84,6 +84,16 @@ flowchart TD
    - Generates 10-question technical competency scenario quizzes for each roadmap phase.
    - Evaluates and assigns Experience Points (EXP) to drive user progression and continuous learning momentum.
 
+8. **Autonomous Conversational Workforce Agent & Dynamic Knowledge Base (`/agent`)**
+   - Implements a 3-tier intelligence stack: Local Qwen 2.5 (via Ollama/vLLM) $\rightarrow$ Google Gemini Flash (50-key failover pool) $\rightarrow$ Deterministic offline fallback.
+   - **Dynamic Architecture Knowledge Ingestion**: Automatically detects inquiries regarding system architecture, formulas, and UN SDGs, dynamically querying and injecting sections from `services/agent/Summary.md`.
+   - **User Database Context**: Fetches authenticated user roadmap history, quiz metrics, and competency records under zero-PII user isolation.
+
+9. **Empirical Role Velocity ($V_{\text{role}}$) & Market Viability Engine (`role_velocity_service.py`)**
+   - Calculates empirical role velocity by aggregating constituent skill trend velocities: $V_{\text{skills}}(R) = \frac{1}{|S|}\sum w_s V_s(s)$.
+   - Calibrates macroeconomic scenario multipliers ($V_{\text{role}} = \text{round}(V_{\text{skills}} \times M_{\text{scenario}}, 3)$).
+   - Classifies occupations into 3 viability tiers: 🟢 `on_trend` ($\ge +0.25$), 🔵 `stable` ($-0.10 \sim +0.25$), and 🔴 `falling_behind` ($< -0.10$).
+
 ---
 
 ## 📂 Directory Layout
@@ -103,9 +113,11 @@ src/fastapi/
 │       ├── extract.py          # Multimodal CV document parser & PII scrubber
 │       ├── analyze.py          # Role matching, SSE streaming, roadmap synthesis & team matrix
 │       ├── trends.py           # Market signal sync, TTL cache & dynamic skill search
-│       └── quiz.py             # Milestone verification quiz & EXP reward engine
+│       ├── quiz.py             # Milestone verification quiz & EXP reward engine
+│       └── agent.py            # Conversational workforce agent & user database inspection
 ├── schemas/
 │   ├── __init__.py             # Pydantic schema exports
+│   ├── agent.py                # Agent chat requests, history models & tool response schemas
 │   ├── analysis.py             # Match role payloads, roadmaps & SSE event models
 │   ├── profile.py              # Profile intake, extraction responses & normalization schemas
 │   ├── quiz.py                 # Quiz questions, answer keys & scoring models
@@ -115,11 +127,18 @@ src/fastapi/
     ├── __init__.py             # Service exports
     ├── embedding_service.py    # BAAI/bge-m3 dense vector inference (Local / GPU / Remote)
     ├── gemini_service.py       # Google Gemini 1.5 Flash client with 50-key failover pool
+    ├── local_llm_service.py    # Ollama / vLLM OpenAI-compatible client for Qwen 2.5
     ├── http_client.py          # Persistent asynchronous HTTP client connection pool
+    ├── agent/                  # Conversational intelligence & project knowledge engine
+    │   ├── __init__.py         # Module exports
+    │   ├── agent_service.py    # 3-tier model router (Qwen 2.5 -> Gemini -> Offline)
+    │   ├── database_reader_service.py # User-isolated database reader (0-PII)
+    │   ├── project_knowledge_service.py # Dynamic knowledge extractor & relevance scorer
+    │   └── Summary.md          # Canonical platform architecture & mathematical reference
     ├── analyze/                # Role evaluation, scenario multipliers & roadmap synthesis
     ├── extract/                # PDF text parser & image vision pre-processor
     ├── quiz/                   # Prompt synthesis & quiz validation logic
-    └── trends/                 # ArXiv / RemoteOK ingestion, velocity calculations & skill search
+    └── trends/                 # ArXiv / RemoteOK ingestion, velocity calculations, role velocity & skill search
 ```
 
 ---
@@ -137,6 +156,9 @@ cp src/fastapi/.env.example src/fastapi/.env
 | `PORT` | `int` | `8000` | Port on which Uvicorn will listen. |
 | `DEBUG` | `bool` | `true` | Enables FastAPI auto-reload and verbose logging. |
 | `ENABLE_LOCAL_BGE_M3` | `bool` | `true` | Loads `BAAI/bge-m3` locally on GPU/CPU for zero-latency embeddings without Gemini token consumption. |
+| `ENABLE_LOCAL_LLM` | `bool` | `true` | Enables Tier 1 local Qwen 2.5 inference via Ollama / vLLM for zero cloud costs and private processing. |
+| `LOCAL_LLM_BASE_URL` | `string` | `http://127.0.0.1:11434/v1` | OpenAI-compatible endpoint URL for Ollama / vLLM. |
+| `LOCAL_LLM_MODEL` | `string` | `qwen2.5:7b` | Model identifier for local LLM inference. |
 | `RUNPOD_API_ENDPOINT` | `string` | `""` | Optional remote RunPod GPU endpoint (if offloading inference to a dedicated GPU worker). |
 | `RUNPOD_API_KEY` | `string` | `""` | API key for authenticated RunPod GPU endpoints. |
 | `SUPABASE_URL` | `string` | Required | Supabase project URL (`https://<project-ref>.supabase.co`). |
@@ -153,6 +175,7 @@ cp src/fastapi/.env.example src/fastapi/.env
 
 ### Prerequisites
 - **Python**: Version `3.10` or higher (Python `3.11`, `3.12`, or `3.14` supported).
+- **Ollama & Qwen 2.5 7B** *(Recommended)*: Local model engine for zero-cost private LLM processing.
 - Verify your Python installation:
   ```bash
   python --version
@@ -173,7 +196,7 @@ cd src/fastapi
 **Windows (PowerShell):**
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.bat
+.\.venv\Scripts\Activate.ps1
 ```
 
 **macOS / Linux (Bash / Zsh):**
@@ -190,9 +213,25 @@ pip install -r requirements.txt
 > [!TIP]
 > On the initial installation, PyTorch and Hugging Face dependencies (`transformers`, `sentence-transformers`, `fastembed`) will be installed.
 
-#### 4. Run the Development Server
+#### 4. Setup Local LLM Engine: Ollama & Qwen 2.5 (Recommended)
+
+FastAPI connects to an OpenAI-compatible endpoint (Ollama / vLLM) to perform local inference for the Autonomous Agent (`/agent`), profile intake normalization, and novel frontier skill synthesis:
+
+1. Download and install [Ollama](https://ollama.com/) on your host system.
+2. Pull the official **Qwen 2.5 7B** model weights:
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Start the Ollama local inference server (listens on `http://127.0.0.1:11434` by default):
+   ```bash
+   ollama serve
+   ```
+> [!NOTE]
+> If Ollama is offline or unavailable, FastAPI's multi-tier resilience layer automatically and instantly routes inference to the Google Gemini 1.5 Flash API pool (`GEMINI_API_KEY_1...50`) without breaking active requests.
+
+#### 5. Run the Development Server
 ```bash
-.\.venv\Scripts\python -m uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 
 The service will start at:
@@ -223,7 +262,52 @@ The service will start at:
 
 ---
 
-### 2. Intake & Document Extraction
+### 2. Autonomous Chatbot Agent
+
+#### `POST /agent` (or `POST /api/v1/agent`)
+Processes conversational inquiries from the frontend chatbot assistant with dual-tier LLM intelligence:
+1. **Tier 1 (Primary)**: Local **Qwen 2.5** via Ollama / vLLM (`settings.LOCAL_LLM_MODEL`).
+2. **Tier 2 (Failover)**: Instant automatic fallback to Google **Gemini API** key pool if Qwen times out, errors, or is offline.
+
+- **Content-Type**: `application/json`
+- **Body**:
+  ```json
+  {
+    "message": "Can you analyze my skills and show my roadmap?",
+    "history": [
+      { "role": "user", "content": "Hi!" },
+      { "role": "assistant", "content": "Hello! How can I assist you today?" }
+    ],
+    "locale": "en",
+    "system_instruction": "Optional custom system instruction string"
+  }
+  ```
+
+**Sample Response (Action Triggered):**
+```json
+{
+  "success": true,
+  "target": "/analysis",
+  "message": "I will take you to the Skill Gap Analysis dashboard to review your customized career roadmap.",
+  "args": {},
+  "model_used": "qwen (qwen2.5:7b)"
+}
+```
+
+**Sample Response (Conversational / General Query):**
+```json
+{
+  "success": true,
+  "target": null,
+  "message": "SkillVerse AI uses ESCO and O*NET taxonomies to analyze your career gaps and design tailored reskilling pathways.",
+  "args": {},
+  "model_used": "gemini (GEMINI_API_KEY_5)"
+}
+```
+
+---
+
+### 3. Intake & Document Extraction
 
 #### `POST /api/v1/extract`
 Uploads a resume file (PDF) or CV image (PNG, JPG, WEBP). Executes OCR, scrubs PII, and normalizes skills into standard ESCO competencies.

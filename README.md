@@ -24,6 +24,7 @@
 | RunPod Endpoint   | https://g83nqi9mdolu2h-8000.proxy.runpod.net/                     |
 | Slide Deck        | https://github.com/njwongzhe/SkillVerse-AI/blob/main/docs/Slide%20Deck/ |
 | Demo Video        | • **Youtube Link:** https://youtu.be/s7jrfcFnFH4<br>• **Backup Drive Link:** https://tinyurl.com/42by65y2 |
+| Full Architecture & Math Specification | [Summary.md](src/fastapi/services/agent/Summary.md) |
 
 ---
 
@@ -43,6 +44,7 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 
 ### Key Features
 
+- **Autonomous Conversational Workforce Agent (`/agent`)** — Draggable, freely resizable floating AI assistant powered by a 3-tier intelligence stack (Local Qwen 2.5 via Ollama/vLLM $\rightarrow$ Google Gemini Flash 50-key failover pool $\rightarrow$ Offline deterministic fallback).
 - **AI-Trend Signal Layer (Live Market & Academic Telemetry)** — Aggregates real-time signals from ArXiv cs.AI abstracts and RemoteOK job feeds to track emerging skill velocity ($V_s$).
 - **Skill Trend & Trajectory Diagnostics (Trend Velocity Vectoring)** — Computes Skill Trend Velocity ($V_s = \Delta\text{Market Demand} / \Delta t$) to uncover emerging niches, project 12-month trajectories, and evaluate commoditization risks.
 - **Skills Profile Intake (Multi-Modal & Zero-Retention)** — Ingests resumes (PDF, images) or text questionnaires with automatic in-memory PII scrubbing and zero permanent data retention.
@@ -52,7 +54,7 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 - **Dynamic Replanning (Real-Time Trend Integration)** — Enables on-demand pathway recalculation driven by latest live market velocities ($V_s$) and telemetry feeds rather than static snapshots.
 - **Interactive Milestone Quizzes & Gamified XP Leveling** — Validates phase competency with AI-generated quizzes, awarding Experience Points (XP) and level-ups to drive sustained learning momentum.
 - **Plan Sharing & Collaborative Upskilling** — Allows secure sharing of personalized roadmaps with registered peers and mentors for collaborative benchmarking and feedback.
-- **Deficit Heatmap (Canvas-Rendered Visual Analytics)** — Visualizes individual and team competency gaps using high-density Canvas heatmaps, complete with publication-ready PDF report export.
+- **Deficit Heatmap (Canvas-Rendered Visual Analytics)** — Visualizes individual and team competency gaps using high-density Canvas heatmaps, complete with team selection mode and publication-ready PDF export.
 - **Multi-Language Accessibility (Trilingual Architecture)** — Full-platform native localization across English, Bahasa Melayu, and Simplified Chinese (中文) powered by next-intl.
 - **Mobile-Friendly & Theme Customization (Dark / Light Mode)** — Responsive mobile-first interface with persistent Dark/Light mode toggling optimized for low-latency smartphones and tablets.
 - **Fairness Checks (Demographic Neutrality & Bias Mitigation)** — Eliminates demographic markers (name, gender, age, location) prior to evaluation, ensuring strictly merit-based algorithmic neutrality (SDGs 5 & 10).
@@ -62,10 +64,10 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 
 | Layer            | Technology                                                                                                                       |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Frontend         | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4                                                                    |
+| Frontend         | Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, remark-gfm                                                        |
 | Backend & ML     | Next.js Route Handlers, Python (FastAPI microservice in `src/fastapi`), PyTorch (`torch`), Hugging Face Transformers (`transformers`, `sentence-transformers`) |
 | Database         | Supabase (PostgreSQL 15 + `pgvector`), Prisma ORM                                                                                |
-| AI & ML Compute  | Google Gemini APIs (OCR & Multimodal Synthesis), PyTorch & Transformers on RunPod / Render GPU (`bge-m3` 1024-dim Embeddings)      |
+| AI & ML Compute  | Local Qwen 2.5 (Ollama/vLLM), Google Gemini APIs (OCR & Multimodal Synthesis), PyTorch & Transformers on RunPod / Render GPU (`bge-m3` 1024-dim Embeddings) |
 | Hosting / Dev    | Vercel, Replit, VSCode, Antigravity                                                                                              |
 
 ---
@@ -74,12 +76,12 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 
 ```
 .
-├── docs/                                # All documents related to the project.
-│   ├── Simple Project Box Diagram.png   # System architecture diagram.
-│   └── Slide Deck/                      # Slide deck of the project.
-│       ├── Slide Deck.html              # HTML version of slide deck.
-│       ├── Slide Deck.pdf               # PDF version of slide deck.
-│       └── Slide Deck.pptx              # PowerPoint version of slide deck.
+├── docs/                                  # Competition documentation & presentation materials.
+│   ├── V1 (Preliminary)/                  # Preliminary submission documents.
+│   │   ├── Simple Project Box Diagram.png # High-level architecture diagram.
+│   │   └── Slide Deck/                    # Project pitch deck (HTML, PDF, PPTX).
+│   └── V2 (Self Improving)/               # Stage 2 iterative diagrams and design specs.
+│       └── Simple Project Box Diagram.png
 ├── messages/                            # Internationalization dictionaries (next-intl).
 │   ├── en.json                          # English translations.
 │   ├── ms.json                          # Bahasa Melayu translations.
@@ -89,67 +91,105 @@ Anchored against European ESCO standards, the platform evaluates macro scenario 
 │   ├── migrations/                      # SQL migration history.
 │   └── seed.sql                         # ESCO skills & taxonomy seed records.
 ├── public/                              # Static public assets, branding & icons.
-├── src/                                 # All source code.
+├── src/                                 # All application source code.
 │   ├── app/                             # Next.js 16 App Router.
-│   │   ├── [locale]/                    # Localized page routes (home, analysis, shared).
-│   │   │   ├── error.tsx                # Error boundary.
-│   │   │   ├── layout.tsx               # Layout.
-│   │   │   ├── loading.tsx              # Loading state.
-│   │   │   ├── not-found.tsx            # 404 Not Found page.
-│   │   │   ├── page.tsx                 # Landing page & labor market telemetry.
-│   │   │   ├── analysis/page.tsx        # Career analysis & reskilling dashboard.
-│   │   │   └── shared/page.tsx          # Team competency heatmap & shared plans.
+│   │   ├── [locale]/                    # Localized page routes.
+│   │   │   ├── analysis/page.tsx        # Career gap analysis & reskilling dashboard.
+│   │   │   ├── shared/page.tsx          # Team competency matrix, heatmap & PDF exporter.
+│   │   │   ├── error.tsx                # Error boundary view.
+│   │   │   ├── layout.tsx               # Root localized layout with Theme & Chatbot providers.
+│   │   │   ├── loading.tsx              # Fallback loading skeleton.
+│   │   │   ├── not-found.tsx            # Localized 404 handler.
+│   │   │   └── page.tsx                 # Landing page & labor market telemetry overview.
 │   │   ├── api/                         # Next.js server route handlers.
-│   │   ├   │── _lib/                    # Library functions for route handlers.
-│   │   │   ├── analysis/                # Roadmap creation, update & verification APIs.
-│   │   │   ├── auth/                    # User authentication & session endpoints.
-│   │   │   ├── home/                    # Live labor market telemetry proxy.
-│   │   │   ├── profile/                 # User profile management APIs.
-│   │   │   └── shared/                  # Roadmap sharing & team matrix benchmarking.
-│   │   ├── globals.css                  # Tailwind CSS v4 design tokens & theme layers.
-│   │   ├── layout.tsx                   # Layout.
-│   │   └── not-found.tsx                # 404 Not Found page.
-│   ├── components/                      # Modular UI component tree.
-│   │   ├── DarkLightSwitche.tsx         # Dark/Light mode switcher.
-│   │   ├── Footer.tsx                   # Footer component.
-│   │   ├── Header.tsx                   # Header component.
-│   │   ├── LoadingSpinner.tsx           # Loading spinner component.
-│   │   ├── Logo.tsx                     # Logo component.
-│   │   ├── analysis/                    # Career roadmap cards, quizzes & flow details.
-│   │   ├── auth/                        # Login, registration & user profile modals.
-│   │   ├── home/                        # Labor market trends & trajectory charts.
-│   │   └── shared/                      # Heatmap matrix visualization & PDF exporter.
-│   ├── constants/                       # System configuration & platform constants.
-│   ├── context/                         # Client-side React context providers (Auth, EXP, Theme).
-│   ├── lib/                             # Core utilities (i18n, Supabase, PDF generation).
-│   ├── middleware.ts                    # Routing middleware for next-intl & auth protection.
-│   └── fastapi/                         # Python AI & GPU Microservice.
-│       ├── .dockerignore                # Dockerignore file for .env protection.
-│       ├── .env.example                 # Example environment variables template.
-│       ├── config.py                    # 26-key circular Gemini rotation & env config.
-│       ├── Dockerfile                   # Container build for GPU cloud deployment.
-│       ├── main.py                      # FastAPI application entry point.
-│       ├── README.md                    # FastAPI application documentation.
-│       ├── requirements.txt             # Python dependencies (PyTorch, FastAPI, etc.).
-│       ├── runpod_setup.sh              # RunPod serverless GPU environment initialization.
-│       ├── routers/                     # API endpoints (analyze, extract, trends, quiz).
-│       ├── schemas/                     # Pydantic validation schemas.
-│       └── services/                    # Core AI & inference services.
-├── submission/                          # Competition deliverables.
-│   ├── SDC2026_TeamName_Preliminary.pdf      # Preliminary submission.
-│   ├── SDC2026_TeamName_TechDeclaration.pdf  # Technology declaration.
-│   ├── SDC2026_TeamName_Replit_POU.pdf       # Replit proof of use.
-│   └── SDC2026_TeamName_Runpod_POU.pdf       # RunPod proof of use.
-├── .dockerignore                        # Dockerignore file for .env protection.
-├── .env.example                         # Example environment variables template.
-├── .gitignore                           # Git ignore file.
-├── eslint.config.mjs                    # ESLint configuration.
+│   │   │   ├── auth/                    # Session management & user authentication.
+│   │   │   ├── chatbot/                 # Unified agent proxy routing to FastAPI /agent.
+│   │   │   ├── page-analysis/           # Pathway generation, verification & roadmap CRUD.
+│   │   │   ├── page-home/               # Real-time labor market telemetry & skill search.
+│   │   │   ├── page-shared/             # Shared roadmap access & cohort matrix evaluation.
+│   │   │   ├── profile/                 # Resume document parsing & profile normalization.
+│   │   │   └── supabase/                # Direct database access & row-level CRUD utilities.
+│   │   ├── globals.css                  # Tailwind CSS v4 design tokens & theme variable layers.
+│   │   ├── layout.tsx                   # Top-level viewport & font layout wrapper.
+│   │   └── not-found.tsx                # Root 404 page.
+│   ├── components/                      # Modular React 19 UI component tree.
+│   │   ├── auth/                        # User authentication, EXP leveling & profile modals.
+│   │   │   ├── AuthModal.tsx            # Login & registration modal dialog.
+│   │   │   ├── ExpGainModal.tsx         # Gamified EXP reward milestone popup.
+│   │   │   └── ProfileModal.tsx         # User skill inventory & competency editor.
+│   │   ├── chatbot/                     # Autonomous Conversational Agent interface.
+│   │   │   ├── Chatbot.tsx              # Floating trigger & modal state orchestrator.
+│   │   │   ├── ChatbotModal.tsx         # Resizable conversational window with drag handles.
+│   │   │   ├── ChatMessageMarkdown.tsx  # Rich Markdown message bubble renderer (GFM).
+│   │   │   ├── FloatingBall.tsx         # Draggable circular floating action button.
+│   │   │   └── SuggestedQuestion.ts     # Trilingual prompt chips catalog.
+│   │   ├── page-analysis/               # Career roadmap & skill gap analysis components.
+│   │   │   ├── options/                 # Target career selector & scenario multipliers.
+│   │   │   ├── planCard/                # 3-phase reskilling roadmap milestone cards.
+│   │   │   ├── quiz/                    # Gamified competency scenario quiz runner.
+│   │   │   ├── Disclaimer.tsx           # AI transparency & user autonomy disclosure.
+│   │   │   ├── EmptyPlanState.tsx       # Intake CTA & initial assessment prompt.
+│   │   │   ├── ExistPlanState.tsx       # Active roadmap progress & radar visualization.
+│   │   │   └── SharedPlansModal.tsx     # Peer roadmap selection & benchmark comparison.
+│   │   ├── page-home/                   # Landing page telemetry & interactive charts.
+│   │   │   ├── helper/                  # Telemetry card formatters & chart helpers.
+│   │   │   ├── Hero.tsx                 # Hero section & multi-modal intake CTA.
+│   │   │   ├── LaborMarketDynamics.tsx  # Emerging vs declining skill velocity scatterplot.
+│   │   │   ├── SkillTrendCheck.tsx      # Real-time frontier skill search & trajectory radar.
+│   │   │   └── TransformationPlan.tsx   # 3-step platform journey visualizer.
+│   │   ├── page-shared/                 # Team analytics & deficit visualization.
+│   │   │   ├── HeatMapPrintReport.tsx   # Print-optimized publication PDF template.
+│   │   │   ├── HeatMapView.tsx          # High-density Canvas deficit heatmap engine.
+│   │   │   └── SharedPlansView.tsx      # Multi-candidate cohort card list & plan explorer.
+│   │   ├── DarkLightSwicher.tsx         # Persistent Dark/Light mode theme switcher.
+│   │   ├── Footer.tsx                   # Footer component with attribution & SDG badges.
+│   │   ├── Header.tsx                   # Responsive navigation bar with locale switcher.
+│   │   ├── LoadingSpinner.tsx           # Centralized loading indicator.
+│   │   └── Logo.tsx                     # Adaptive SVG brand logo.
+│   ├── constants/                       # Static platform metadata & test fixtures.
+│   │   ├── footer.ts                    # Footer link schemas & external resources.
+│   │   └── testing/                     # Offline fixtures for EXP, quizzes & role profiles.
+│   ├── context/                         # Client-side React context providers.
+│   │   ├── auth/                        # User authentication, EXP leveling & profile contexts.
+│   │   ├── chatbot/                     # Autonomous Agent context & client tool router.
+│   │   │   ├── ChatbotContext.tsx       # Global chat state, message history & model tracking.
+│   │   │   └── router/                  # Client-side autonomous tool execution engine.
+│   │   │       ├── engine.ts            # Tool routing dispatcher & execution pipeline.
+│   │   │       ├── README.md            # Agent tool registry & routing documentation.
+│   │   │       └── config/              # Tool schemas, handlers, presets & prompt setup.
+│   │   ├── page-analysis/               # Active roadmap, verification & sharing modal contexts.
+│   │   └── ThemeContext.tsx             # System-aware reactive theme provider.
+│   ├── lib/                             # Core shared utilities & SDK clients.
+│   │   ├── analysis/                    # Roadmap formatting & competency radar calculation.
+│   │   ├── email/                       # Resend email notification templates & dispatchers.
+│   │   ├── fastapi/                     # Type-safe client communicating with Python backend.
+│   │   ├── i18n/                        # Routing, request configuration & localized navigation.
+│   │   ├── pdf/                         # HTML2Canvas & jsPDF automated report generator.
+│   │   ├── supabase/                    # Supabase browser, server & Prisma client instances.
+│   │   ├── avatar.ts                    # Dynamic user avatar generators.
+│   │   ├── fileIcons.tsx                # MIME-type document icons.
+│   │   ├── profileNormalization.ts      # Profile schema sanitization & taxonomy mapping.
+│   │   └── roadmapFormat.ts             # Phase timeline & milestone progress formatters.
+│   ├── middleware.ts                    # Routing middleware for next-intl & session gating.
+│   └── fastapi/                         # Python AI & GPU Computational Microservice.
+├── submission/                          # Official competition deliverables.
+│   ├── V1 (Preliminary)/                # Preliminary submission deliverable package.
+│   │   ├── README.md                    # Preliminary architecture & execution overview.
+│   │   ├── SDC2026_ILoveYou3000_Preliminary.pdf     # Executive preliminary report.
+│   │   ├── SDC2026_ILoveYou3000_Replit_POU.pdf      # Replit deployment proof of use.
+│   │   ├── SDC2026_ILoveYou3000_Runpod_POU.pdf      # RunPod GPU worker proof of use.
+│   │   └── SDC2026_ILoveYou3000_TechDeclaration.pdf # Technology declaration certificate.
+│   └── V2 (Self Improving)/             # Stage 2 workspace.
+├── .dockerignore                        # Docker build exclusion rules.
+├── .env.example                         # Root application environment variable template.
+├── .gitignore                           # Git ignore specification.
+├── eslint.config.mjs                    # ESLint rule configuration.
 ├── LICENSE                              # Project license.
-├── next.config.ts                       # Next.js configuration.
-├── package-lock.json                    # Node.js dependencies and run scripts.
-├── package.json                         # Node.js dependencies and run scripts.
+├── next.config.ts                       # Next.js 16 compiler & bundler configuration.
+├── package-lock.json                    # Deterministic dependency lockfile.
+├── package.json                         # Node.js project manifest & script declarations.
 ├── README.md                            # Comprehensive project documentation.
-└── tsconfig.json                        # TypeScript compiler configuration.
+└── tsconfig.json                        # TypeScript compiler options.
 ```
 
 ### Architecture
@@ -179,7 +219,7 @@ User
              └── RemoteOK API (Live Job Market Demand Signals)
 ```
 
-![SkillVerse AI System Architecture & Pipeline](docs/Simple%20Project%20Box%20Diagram.png)
+![SkillVerse AI System Architecture & Pipeline](docs/V2%20(Self%20Improving)/Simple%20Project%20Box%20Diagram.png)
 
 ---
 
@@ -189,8 +229,9 @@ User
 
 - **Node.js**: v20.x or higher (with `npm`)
 - **Python**: 3.10 or higher (for local FastAPI inference engine)
+- **Ollama & Qwen 2.5 7B** *(Recommended)*: Local LLM runtime for zero-cost private inference without cloud API consumption.
 - **Supabase**: Active PostgreSQL 15 instance with `pgvector` enabled
-- **Google Gemini API Key**: At least one key for multimodal OCR & roadmap synthesis
+- **Google Gemini API Key**: At least one key for multimodal OCR & roadmap synthesis failover
 - *(Optional)* **RunPod Endpoint**: Serverless GPU endpoint for offloaded `bge-m3` tensor acceleration
 
 ---
@@ -227,7 +268,22 @@ cp src/fastapi/.env.example src/fastapi/.env
 ```
 > Fill in your Supabase credentials, database URLs, and Gemini API key(s) in both `.env` files.
 
-#### 3. Start Next.js Frontend (Terminal 1)
+#### 3. Setup Local LLM Engine: Ollama & Qwen 2.5 (Terminal 1 — Recommended)
+
+SkillVerse AI utilizes a 3-tier intelligence stack with local **Qwen 2.5** as the primary inference engine to guarantee zero cloud API costs and data privacy:
+
+1. Download and install [Ollama](https://ollama.com/) (supports Windows, macOS, and Linux).
+2. Pull the official **Qwen 2.5 7B** model:
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+3. Start the Ollama background service (runs on `http://127.0.0.1:11434` by default):
+   ```bash
+   ollama serve
+   ```
+> **Note:** If Ollama is offline or unavailable, SkillVerse AI's multi-tier failover system automatically and seamlessly shifts inference to the Google Gemini 1.5 Flash API pool without disruption.
+
+#### 4. Start Next.js Frontend (Terminal 2)
 
 ```bash
 # Install Node.js dependencies
@@ -245,7 +301,7 @@ npm run dev
 ```
 > The web interface will be available at [http://localhost:3000](http://localhost:3000).
 
-#### 4. Start FastAPI AI Engine (Terminal 2)
+#### 5. Start FastAPI AI Engine (Terminal 3)
 
 *Note: If you configured `RUNPOD_API_ENDPOINT` or `RENDER_API_ENDPOINT` in root `.env`, Next.js will automatically route vector embedding and synthesis workloads to the cloud GPU endpoint. To run inference locally:*
 
@@ -263,7 +319,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Start FastAPI server on port 8000
-.\.venv\Scripts\python -m uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 > The FastAPI service and interactive Swagger documentation will be accessible at [http://localhost:8000/docs](http://localhost:8000/docs).
 
@@ -271,8 +327,15 @@ pip install -r requirements.txt
 
 ### Run Tests
 
+Execute the comprehensive test suite covering mathematical vector computations, role velocity calibration, user data isolation, and API routers:
+
 ```bash
-# There is no test in this project.
+# Run backend pytest suite
+cd src/fastapi
+pytest tests/
+
+# Run frontend TypeScript type-checking
+npx tsc --noEmit
 ```
 
 ---

@@ -13,7 +13,8 @@ src/context/chatbot/router/
 ├── 📂 config/
 │   ├── ⚙️ registry.ts       # Module 1: Route and action manifests
 │   ├── ⚙️ handlers.ts       # Module 2: Action execution logic
-│   └── ⚙️ presets.ts        # Module 3: Preset keyword trigger rules
+│   ├── ⚙️ presets.ts        # Module 3: Preset keyword trigger rules
+│   └── ⚙️ setup.ts          # Module 4: Customizable AI header & persona setup
 │
 ├── 🔒 engine.ts            # Underlying engine (parsing, try/catch, dispatch)
 └── 📄 README.md            # System documentation
@@ -28,6 +29,7 @@ src/context/chatbot/router/
 | **`config/registry.ts`** | **Registration Manifest** | • Pure dictionary listing all available routes, modals, and tools.<br />• Contains human and AI readable descriptions.<br />• Zero runtime execution logic. |
 | **`config/handlers.ts`** | **Action Handlers** | • Execution definitions for each category and custom action.<br />• Contains business logic without engine boilerplate. |
 | **`config/presets.ts`** | **Preset Keyword Triggers** | • Separate configuration file mapping user input keywords to deterministic actions.<br />• Triggers instantly without waiting for network AI models. |
+| **`config/setup.ts`** | **AI Header Setup** | • Customizable AI persona, tone, rules, and preamble in English, Chinese, and Malay.<br />• Calls `generateRegistryCatalogText()` to automatically attach the dynamic tool list. |
 | **`engine.ts`** | **Execution Engine** | • Background plumbing for JSON parsing and dispatching.<br />• Handles error catching and category matching.<br />• Locked file: does not need daily edits. |
 
 ---
@@ -129,26 +131,46 @@ export const ACTION_HANDLERS = {
 
 <br />
 
-### 2.4 Synchronize with the AI (Trilingual Prompt Generation)
+### 2.4 Customize AI Header Setup & Tool Synchronization
 
-To make your LLM (Gemini, Claude, GPT, or FastAPI backend) aware of your registered services in the user's active language, call `generateAgentInstructionPrompt`:
+You can freely edit the AI's persona, preamble, instructions, and response format rules in **`config/setup.ts`**.
+
+<br />
+
+#### Editing Header Information in `config/setup.ts`
+
+Open **`config/setup.ts`** and adjust `AGENT_HEADER_SETUP` for any language:
 
 ```typescript
-import { generateAgentInstructionPrompt } from "@/context/chatbot/router/config/registry";
+export const AGENT_HEADER_SETUP: LocalizedHeaderSetup = {
+  en: `You are SkillVerse AI Agent, an intelligent career navigator...`,
+  zh: `您是 SkillVerse AI Agent，专注于职业领航与技能重塑的智能顾问...`,
+  ms: `Anda adalah Ejen AI SkillVerse, pakar pintar navigasi kerjaya...`,
+};
+```
 
-// Generates System Instruction compiled for the active locale ("en", "zh", or "ms")
-const systemInstruction = generateAgentInstructionPrompt(locale);
+<br />
+
+#### Automatic Tool Catalog Integration
+
+`compileAgentSystemInstruction(locale)` in `setup.ts` automatically calls `generateRegistryCatalogText(locale)` to generate and attach the latest registered tools, modals, and navigation routes:
+
+```typescript
+import { compileAgentSystemInstruction } from "@/context/chatbot/router/config/setup";
+
+// Generates complete System Instruction: Editable Header + Auto-generated Tool Catalog
+const systemInstruction = compileAgentSystemInstruction(locale);
 ```
 
 <br />
 
 #### Multilingual System Prompts
 
-| Locale | Generated Preamble |
-| :--- | :--- |
-| **`"en"`** | `When answering the user, if you determine an action or navigation is needed, reply ONLY with a JSON object...` |
-| **`"zh"`** | `当回复用户时，如果您判定需要执行操作或页面跳转，请仅以如下格式的 JSON 对象回复：...` |
-| **`"ms"`** | `Semasa menjawab pengguna, jika anda menentukan bahawa tindakan atau navigasi diperlukan, balas HANYA dengan objek JSON...` |
+| Locale | Generated Preamble (from `setup.ts`) | Auto-Attached Tool Catalog (from `registry.ts`) |
+| :--- | :--- | :--- |
+| **`"en"`** | English AI persona and JSON schema guidelines. | English routes, modals, and custom tools. |
+| **`"zh"`** | 中文智能顾问角色设定与 JSON 约束指令。 | 中文页面路由、弹窗与工具清单。 |
+| **`"ms"`** | Persona panduan kerjaya Bahasa Melayu & format JSON. | Laluan, modal, dan alat dalam Bahasa Melayu. |
 
 <br />
 

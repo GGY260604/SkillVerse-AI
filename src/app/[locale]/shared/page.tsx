@@ -36,7 +36,20 @@ export default function SharedPage() {
   // ==========================================
   // Reset heat map state and selected user identifiers when navigating away from the page.
   React.useEffect(() => {
+    const handleHash = () => {
+      if (typeof window !== "undefined") {
+        const hash = window.location.hash;
+        if (hash === "#heatmap" || hash === "#heatmap-view") {
+          setIsHeatMapViewOpen(true);
+        } else if (hash.includes("select")) {
+          setIsHeatMapViewOpen(false);
+        }
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
     return () => {
+      window.removeEventListener("hashchange", handleHash);
       setIsHeatMapViewOpen(false);
       setSelectedHeatMapUserIds([]);
       setSelectedSharedItems([]);
@@ -66,7 +79,7 @@ export default function SharedPage() {
     // Branch A: Multi-Peer Skill Heat Map Comparison Visualization
     // ==========================================
     return (
-      <div className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1">
+      <div id="heatmap" className="animate-fade-in-up max-w-7xl mx-auto py-10 sm:py-14 px-4 sm:px-6 w-full flex-1 scroll-mt-24">
         <HeatMapView
           onBack={handleBackToSharedPlans}
           selectedUserIds={selectedHeatMapUserIds}

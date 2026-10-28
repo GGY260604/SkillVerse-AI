@@ -104,6 +104,7 @@ async def call_gemini_with_fallback(
     timeout: float = 35.0,
     system_instruction: Optional[str] = None,
     max_output_tokens: int = 6000,
+    temperature: float = 0.2,
 ) -> Dict[str, Any]:
     """
     Robust Gemini API caller implementing:
@@ -144,7 +145,7 @@ async def call_gemini_with_fallback(
                     "contents": contents,
                     "generationConfig": {
                         "response_mime_type": "application/json",
-                        "temperature": 0.2,
+                        "temperature": temperature,
                         "maxOutputTokens": max_output_tokens,
                     },
                 }

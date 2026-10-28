@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedUser } from "@/lib/supabase/cookies";
 
 export const SUPPORTED_TABLES = [
   "users",
@@ -37,6 +38,13 @@ export function isSupportedTable(table: string): table is SupportedTable {
   return (SUPPORTED_TABLES as readonly string[]).includes(table);
 }
 
+const USER_ISOLATED_TABLES = new Set([
+  "users",
+  "roadmaps",
+  "roadmap_phases",
+  "shared_roadmaps",
+]);
+
 /**
  * Normalizes input table parameter (supports snake_case and kebab-case).
  */
@@ -71,16 +79,50 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
     const { searchParams } = new URL(request.url);
     const primaryKey = TABLE_PRIMARY_KEYS[table];
 
+    const authResult = await getAuthenticatedUser();
+    const currentUserId = authResult?.user?.id || request.headers.get("x-user-id");
+    const isAgentRequest = request.headers.get("x-agent-request") === "true";
+
+    if (USER_ISOLATED_TABLES.has(table) && !currentUserId) {
+      return NextResponse.json(
+        { success: false, table, error: "Unauthorized. Authentication required to access user-specific data." },
+        { status: 401 }
+      );
+    }
+
     // ==========================================
     // Single Record Lookup by Identifier
     // ==========================================
     const lookupId = searchParams.get("id") || searchParams.get(primaryKey);
     if (lookupId) {
+      if (table === "users" && lookupId !== currentUserId) {
+        return NextResponse.json(
+          { success: false, table, error: "Access denied. You can only read your own user record." },
+          { status: 403 }
+        );
+      }
+
       let query = getTableQuery(admin, table).select("*");
       if (searchParams.has("id")) {
         query = query.eq("id", lookupId);
       } else {
         query = query.eq(primaryKey, lookupId);
+      }
+
+      if (table === "roadmaps") {
+        query = query.eq("user_id", currentUserId);
+      } else if (table === "roadmap_phases") {
+        const { data: userRoadmaps } = await admin.from("roadmaps").select("id").eq("user_id", currentUserId);
+        const allowedRoadmapIds = (userRoadmaps || []).map((r: { id: string }) => r.id);
+        if (allowedRoadmapIds.length === 0) {
+          return NextResponse.json(
+            { success: false, table, error: `Record with identifier '${lookupId}' was not found.` },
+            { status: 404 }
+          );
+        }
+        query = query.in("roadmap_id", allowedRoadmapIds);
+      } else if (table === "shared_roadmaps") {
+        query = query.or(`owner_id.eq.${currentUserId},target_user_id.eq.${currentUserId}`);
       }
 
       const { data, error } = await query.maybeSingle();
@@ -97,6 +139,11 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
           { success: false, table, error: `Record with identifier '${lookupId}' was not found.` },
           { status: 404 }
         );
+      }
+
+      if (isAgentRequest && table === "users" && data) {
+        delete (data as Record<string, unknown>).email;
+        delete (data as Record<string, unknown>).name;
       }
 
       return NextResponse.json({
@@ -123,6 +170,22 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
       "all",
     ]);
 
+    let userRoadmapIds: string[] | null = null;
+    if (table === "roadmap_phases" && currentUserId) {
+      const { data: userRoadmaps } = await admin.from("roadmaps").select("id").eq("user_id", currentUserId);
+      userRoadmapIds = (userRoadmaps || []).map((r: { id: string }) => r.id);
+      if (userRoadmapIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          table,
+          isAll: true,
+          total: 0,
+          count: 0,
+          data: [],
+        });
+      }
+    }
+
     // ==========================================
     // Unbounded Full Dataset Ingestion
     // ==========================================
@@ -140,6 +203,16 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
 
       while (hasMore) {
         let chunkQuery = getTableQuery(admin, table).select("*", { count: "exact" });
+
+        if (table === "users") {
+          chunkQuery = chunkQuery.eq("id", currentUserId);
+        } else if (table === "roadmaps") {
+          chunkQuery = chunkQuery.eq("user_id", currentUserId);
+        } else if (table === "roadmap_phases" && userRoadmapIds) {
+          chunkQuery = chunkQuery.in("roadmap_id", userRoadmapIds);
+        } else if (table === "shared_roadmaps") {
+          chunkQuery = chunkQuery.or(`owner_id.eq.${currentUserId},target_user_id.eq.${currentUserId}`);
+        }
 
         searchParams.forEach((val, key) => {
           if (!reservedParams.has(key) && val.trim() !== "") {
@@ -180,6 +253,13 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
         }
       }
 
+      if (isAgentRequest && table === "users") {
+        allRecords.forEach((r) => {
+          delete r.email;
+          delete r.name;
+        });
+      }
+
       return NextResponse.json({
         success: true,
         table,
@@ -207,7 +287,36 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
       offset = Math.max(parseInt(offsetParam, 10) || 0, 0);
     }
 
+    if (table === "roadmap_phases" && currentUserId) {
+      if (!userRoadmapIds) {
+        const { data: userRoadmaps } = await admin.from("roadmaps").select("id").eq("user_id", currentUserId);
+        userRoadmapIds = (userRoadmaps || []).map((r: { id: string }) => r.id);
+      }
+      if (userRoadmapIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          table,
+          isAll: false,
+          total: 0,
+          limit,
+          offset,
+          count: 0,
+          data: [],
+        });
+      }
+    }
+
     let query = getTableQuery(admin, table).select("*", { count: "exact" });
+
+    if (table === "users") {
+      query = query.eq("id", currentUserId);
+    } else if (table === "roadmaps") {
+      query = query.eq("user_id", currentUserId);
+    } else if (table === "roadmap_phases" && userRoadmapIds) {
+      query = query.in("roadmap_id", userRoadmapIds);
+    } else if (table === "shared_roadmaps") {
+      query = query.or(`owner_id.eq.${currentUserId},target_user_id.eq.${currentUserId}`);
+    }
 
     searchParams.forEach((val, key) => {
       if (!reservedParams.has(key) && val.trim() !== "") {
@@ -231,6 +340,13 @@ export async function handleGetTable(table: SupportedTable, request: NextRequest
         { success: false, table, error: error.message },
         { status: 400 }
       );
+    }
+
+    if (isAgentRequest && table === "users" && Array.isArray(data)) {
+      data.forEach((r: Record<string, unknown>) => {
+        delete r.email;
+        delete r.name;
+      });
     }
 
     return NextResponse.json({

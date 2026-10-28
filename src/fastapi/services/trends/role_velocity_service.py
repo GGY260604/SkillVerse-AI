@@ -11,7 +11,7 @@ from services.http_client import get_shared_client
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# Section 1: Trilingual Localization Constants (Section 7 of ESCO_ROLE_VELOCITY.md)
+# Section 1: Trilingual Localization Constants (Section 7.1 of Summary.md)
 # ==========================================
 ROLE_TREND_STATUS_LABELS: Dict[str, Dict[str, str]] = {
     "on_trend": {
@@ -312,7 +312,7 @@ def compute_role_velocity_metrics(
 ) -> Dict[str, Any]:
     """
     Compute the composite Role Velocity V_role and 3-tier classification according to
-    ESCO_ROLE_VELOCITY.md:
+    Summary.md Section 4.5:
       1. V_skills(R) = (1 / |S|) * sum_{s in S} w_s * V_s(s)
       2. If specialized niche skills fall outside active telemetry, apply/blend
          Tier 3 Sector Macro Multiplier Prior (V_sector).

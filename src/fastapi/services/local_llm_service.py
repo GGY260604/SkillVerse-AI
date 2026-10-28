@@ -104,7 +104,12 @@ async def call_local_llm_json(
         import time
         t0 = time.time()
         keep_alive_val = getattr(settings, "LOCAL_LLM_KEEP_ALIVE", "-1")
-        extra_body = {}
+        extra_body = {
+            "options": {
+                "num_ctx": 8192,
+                "repeat_penalty": 1.15,
+            }
+        }
         if keep_alive_val:
             extra_body["keep_alive"] = -1 if keep_alive_val == "-1" else keep_alive_val
 
@@ -141,6 +146,77 @@ async def call_local_llm_json(
         logger.warning(
             f"[local_llm] Local LLM ({model_name} @ {getattr(settings, 'LOCAL_LLM_BASE_URL', '')}) "
             f"failed or timed out: {type(e).__name__}: {e}. Switching to Gemini fallback."
+        )
+        return None
+
+
+async def call_local_llm_chat(
+    prompt: str,
+    history: Optional[List[Any]] = None,
+    system_instruction: Optional[str] = None,
+    timeout: float = 25.0,
+    temperature: float = 0.3,
+) -> Optional[Dict[str, Any]]:
+    """
+    Executes a multi-turn chat query against the local LLM (Qwen 2.5 via Ollama/vLLM).
+    Returns parsed JSON dictionary or None on failure, triggering Gemini fallback.
+    """
+    client = get_local_client()
+    if not client:
+        return None
+
+    model_name = getattr(settings, "LOCAL_LLM_MODEL", "qwen2.5:7b")
+    sys_prompt = system_instruction or LOCAL_SYSTEM_INSTRUCTION
+
+    try:
+        messages = [{"role": "system", "content": sys_prompt}]
+        for item in (history or []):
+            role_val = getattr(item, "role", None) or (item.get("role") if isinstance(item, dict) else "user")
+            content_val = getattr(item, "content", None) or (
+                item.get("content") or item.get("text", "") if isinstance(item, dict) else str(item)
+            )
+            norm_role = "assistant" if role_val in ["assistant", "bot", "model"] else "user"
+            messages.append({"role": norm_role, "content": content_val})
+
+        messages.append({"role": "user", "content": prompt})
+
+        keep_alive_val = getattr(settings, "LOCAL_LLM_KEEP_ALIVE", "-1")
+        extra_body = {
+            "options": {
+                "num_ctx": 8192,
+                "repeat_penalty": 1.15,
+            }
+        }
+        if keep_alive_val:
+            extra_body["keep_alive"] = -1 if keep_alive_val == "-1" else keep_alive_val
+
+        response = await client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=temperature,
+            timeout=timeout,
+            extra_body=extra_body if extra_body else None,
+        )
+
+        content = response.choices[0].message.content
+        if not content:
+            return None
+
+        cleaned = content.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+
+        return json.loads(cleaned.strip())
+
+    except Exception as e:
+        logger.warning(
+            f"[local_llm] Qwen ({model_name} @ {getattr(settings, 'LOCAL_LLM_BASE_URL', '')}) "
+            f"chat completion failed: {type(e).__name__}: {e}. Falling back to Gemini."
         )
         return None
 

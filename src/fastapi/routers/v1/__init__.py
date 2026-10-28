@@ -4,9 +4,11 @@ from .health import router as health_router
 from .analyze import router as analyze_router
 from .trends import router as trends_router
 from .quiz import router as quiz_router
+from .agent import router as agent_router
 
 v1_router = APIRouter()
 v1_router.include_router(health_router, tags=["Health"])
+v1_router.include_router(agent_router, tags=["Chatbot Agent"])
 v1_router.include_router(extract_router, tags=["Intake & Extraction"])
 v1_router.include_router(analyze_router, tags=["Analysis & Reskilling"])
 v1_router.include_router(trends_router, tags=["Dynamic Trends & Market Signals"])

@@ -12,7 +12,7 @@ from services.trends.role_velocity_service import (
 
 
 def test_classify_role_trend_status_thresholds():
-    """Verify the 3-tier market viability thresholds from ESCO_ROLE_VELOCITY.md Section 2.2."""
+    """Verify the 3-tier market viability thresholds from Summary.md Section 4.5."""
     assert classify_role_trend_status(0.48) == "on_trend"
     assert classify_role_trend_status(0.25) == "on_trend"
     assert classify_role_trend_status(0.249) == "stable"

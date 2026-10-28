@@ -47,9 +47,9 @@ const TOOL_FEEDBACK_MESSAGES: Record<string, { en: string; zh: string; ms: strin
     ms: "Membuka direktori pelan hala tuju kerjaya perkongsian rakan sebaya.",
   },
   get_heatmap_comparison: {
-    en: "Opening multi-peer skill complementarity heat map view.",
-    zh: "正在打开多用户技能互补性热力图对比视图。",
-    ms: "Membuka paparan perbandingan peta haba pelengkap kemahiran berbilang rakan.",
+    en: "Navigating to shared page in heatmap selection mode. Please select peer roadmaps to compare.",
+    zh: "正在跳转至共享页面并开启热力图选择模式，请勾选需要对比的同伴路线图。",
+    ms: "Mengarahkan ke halaman perkongsian dalam mod pemilihan peta haba. Sila pilih pelan hala tuju rakan sebaya.",
   },
   toggle_theme: {
     en: "Platform visual theme toggled successfully.",
@@ -95,36 +95,56 @@ export const ACTION_HANDLERS: Record<
   // ==========================================
   export_report: async (_args: unknown, context: AgentActionContext) => {
     // Export active career roadmap or skill gap analysis as PDF.
-    context.addAssistantMessage?.(getToolMessage("export_report", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("export_report", context.locale));
+    }
     return { exported: true, timestamp: Date.now() };
   },
 
   extract_resume: async (_args: unknown, context: AgentActionContext) => {
     // Open the resume file upload dialog to extract candidate skill profiles.
     context.openModal?.("upload");
-    context.addAssistantMessage?.(getToolMessage("extract_resume", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("extract_resume", context.locale));
+    }
     return { modalOpened: "upload" };
+  },
+
+  upload: async (args: unknown, context: AgentActionContext) => {
+    // Direct modal alias for resume upload.
+    return ACTION_HANDLERS.extract_resume(args, context);
   },
 
   generate_roadmap: async (_args: unknown, context: AgentActionContext) => {
     // Navigate to the analysis dashboard and launch the career roadmap pathway builder.
     context.navigateTo("/analysis");
     context.openModal?.("pathway_select");
-    context.addAssistantMessage?.(getToolMessage("generate_roadmap", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("generate_roadmap", context.locale));
+    }
     return { target: "/analysis", modal: "pathway_select" };
   },
 
   get_roadmaps: async (_args: unknown, context: AgentActionContext) => {
     // Navigate user to their active and historical career roadmap dashboard.
     context.navigateTo("/analysis");
-    context.addAssistantMessage?.(getToolMessage("get_roadmaps", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("get_roadmaps", context.locale));
+    }
     return { target: "/analysis" };
+  },
+
+  roadmaps: async (args: unknown, context: AgentActionContext) => {
+    // Alias for roadmap query.
+    return ACTION_HANDLERS.get_roadmaps(args, context);
   },
 
   share_roadmap: async (_args: unknown, context: AgentActionContext) => {
     // Navigate to shared roadmaps community view.
     context.navigateTo("/shared");
-    context.addAssistantMessage?.(getToolMessage("share_roadmap", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("share_roadmap", context.locale));
+    }
     return { target: "/shared" };
   },
 
@@ -134,15 +154,32 @@ export const ACTION_HANDLERS: Record<
   get_market_trends: async (_args: unknown, context: AgentActionContext) => {
     // Scroll homepage to real-time labor market telemetry and velocity shifts section.
     context.navigateTo("/#labor-market");
-    context.addAssistantMessage?.(getToolMessage("get_market_trends", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("get_market_trends", context.locale));
+    }
     return { target: "/#labor-market" };
   },
 
-  get_skill_radar: async (_args: unknown, context: AgentActionContext) => {
-    // Scroll homepage to live skill trajectory diagnostics radar.
-    context.navigateTo("/#skill-trend-check");
-    context.addAssistantMessage?.(getToolMessage("get_skill_radar", context.locale));
-    return { target: "/#skill-trend-check" };
+  market_trends: async (args: unknown, context: AgentActionContext) => {
+    // Alias for labor market telemetry.
+    return ACTION_HANDLERS.get_market_trends(args, context);
+  },
+
+  get_skill_radar: async (args: any, context: AgentActionContext) => {
+    const skill = (typeof args === "string" ? args : (args?.skill || args?.query || "")) || "Autonomous Agents";
+    context.navigateTo(`/#skill-trend-check?skill=${encodeURIComponent(skill)}`);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("trigger-skill-trend", { detail: { skill } }));
+    }, 100);
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("get_skill_radar", context.locale));
+    }
+    return { target: "/#skill-trend-check", skill };
+  },
+
+  skill_radar: async (args: any, context: AgentActionContext) => {
+    // Alias for skill radar diagnosis.
+    return ACTION_HANDLERS.get_skill_radar(args, context);
   },
 
   // ==========================================
@@ -151,24 +188,60 @@ export const ACTION_HANDLERS: Record<
   get_shared_roadmaps: async (_args: unknown, context: AgentActionContext) => {
     // Navigate to collaborative peer intelligence directory.
     context.navigateTo("/shared");
-    context.addAssistantMessage?.(getToolMessage("get_shared_roadmaps", context.locale));
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("get_shared_roadmaps", context.locale));
+    }
     return { target: "/shared" };
   },
 
+  shared_roadmaps: async (args: unknown, context: AgentActionContext) => {
+    // Alias for peer shared roadmaps.
+    return ACTION_HANDLERS.get_shared_roadmaps(args, context);
+  },
+
   get_heatmap_comparison: async (_args: unknown, context: AgentActionContext) => {
-    // Open multi-peer skill complementarity heat map comparison view.
-    context.navigateTo("/shared#heatmap");
-    context.addAssistantMessage?.(getToolMessage("get_heatmap_comparison", context.locale));
-    return { target: "/shared#heatmap" };
+    // Navigate to shared roadmaps page and enter heatmap selection mode.
+    context.navigateTo("/shared?mode=select#heatmap-select");
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("get_heatmap_comparison", context.locale));
+    }
+    return { target: "/shared?mode=select#heatmap-select" };
+  },
+
+  heatmap: async (args: unknown, context: AgentActionContext) => {
+    // Alias for peer skill heatmap comparison.
+    return ACTION_HANDLERS.get_heatmap_comparison(args, context);
   },
 
   // ==========================================
   // Category 6: Platform Utilities
   // ==========================================
-  toggle_theme: async (_args: unknown, context: AgentActionContext) => {
-    // Broadcast theme toggle trigger.
-    window.dispatchEvent(new CustomEvent("toggle-theme"));
-    context.addAssistantMessage?.(getToolMessage("toggle_theme", context.locale));
-    return { toggled: true };
+  toggle_theme: async (args: any, context: AgentActionContext) => {
+    // Directly invoke ThemeContext switcher via context callback.
+    let targetTheme: string | undefined = undefined;
+    if (typeof args === "string") {
+      targetTheme = args.toLowerCase();
+    } else if (typeof args === "object" && args !== null) {
+      targetTheme = (args.theme || args.mode || args.target)?.toLowerCase();
+    }
+    if (targetTheme && !["dark", "light"].includes(targetTheme)) {
+      targetTheme = undefined;
+    }
+
+    if (context.toggleTheme) {
+      context.toggleTheme(targetTheme);
+    } else {
+      window.dispatchEvent(new CustomEvent("toggle-theme", { detail: { theme: targetTheme } }));
+    }
+
+    if (!context.hasCustomMessage) {
+      context.addAssistantMessage?.(getToolMessage("toggle_theme", context.locale));
+    }
+    return { toggled: true, theme: targetTheme };
+  },
+
+  theme: async (args: any, context: AgentActionContext) => {
+    // Alias for theme toggle.
+    return ACTION_HANDLERS.toggle_theme(args, context);
   },
 };

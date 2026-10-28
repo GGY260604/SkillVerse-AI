@@ -1,6 +1,7 @@
 import { type RouteCategory, findTargetCategory } from "./config/registry";
 import { ACTION_HANDLERS } from "./config/handlers";
 export * from "./config/presets";
+export * from "./config/setup";
 
 // ==========================================
 // Runtime Context and Directive Contracts
@@ -12,6 +13,8 @@ export interface AgentActionContext {
   openModal?: (modalType: string) => void;
   addAssistantMessage?: (text: string) => void;
   locale?: string;
+  hasCustomMessage?: boolean;
+  toggleTheme?: (theme?: string) => void;
 }
 
 // Structured execution result returned after processing an action.
@@ -176,7 +179,7 @@ export async function executeRouteAction(
   // ==========================================
   // Step 2: Execute Custom Handler if Route Has a Specialized Override
   // ==========================================
-  const cleanKey = cleanTarget.replace(/^(modal:|tool:)/, "");
+  const cleanKey = cleanTarget.replace(/^(modal:|tool:|\/+)/, "");
   if (ACTION_HANDLERS[cleanKey]) {
     try {
       const details = await ACTION_HANDLERS[cleanKey](args, context);
@@ -202,7 +205,8 @@ export async function executeRouteAction(
   try {
     const categoryHandler = ACTION_HANDLERS[category];
     if (categoryHandler) {
-      const details = await categoryHandler(cleanTarget, context, args);
+      const targetParam = category === "MODAL" ? cleanKey : cleanTarget;
+      const details = await categoryHandler(targetParam, context, args);
       return {
         success: true,
         category,
@@ -270,7 +274,11 @@ export async function dispatchAgentBranch(
   // ==========================================
   // Step 2: Execute Target Route or Tool via executeRouteAction
   // ==========================================
-  const result = await executeRouteAction(directive.target, directive.args, context);
+  const execContext: AgentActionContext = {
+    ...context,
+    hasCustomMessage: Boolean(directive.message && directive.message.trim().length > 0),
+  };
+  const result = await executeRouteAction(directive.target, directive.args, execContext);
 
   // ==========================================
   // Step 3: Deliver Accompanying Conversational Message to Assistant Message Stream

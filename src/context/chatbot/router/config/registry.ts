@@ -151,9 +151,9 @@ export const ROUTE_REGISTRY: Record<RouteCategory, Record<string, LocalizedDescr
       ms: "Dapatkan metrik halaju pekerjaan masa nyata, kemahiran baru muncul dan menurun.",
     },
     get_skill_radar: {
-      en: "Fetch live skill trajectory benchmarks and market demand radar data.",
-      zh: "获取实时技能轨迹基准与市场需求雷达数据。",
-      ms: "Dapatkan penanda aras trajektori kemahiran langsung dan data radar permintaan pasaran.",
+      en: "Fetch live skill trajectory benchmarks and market demand radar data. (Parameters: { skill: string })",
+      zh: "获取实时技能轨迹基准与市场需求雷达数据。（参数：{ skill: string }）",
+      ms: "Dapatkan penanda aras trajektori kemahiran langsung dan data radar permintaan pasaran. (Parameter: { skill: string })",
     },
 
     // Peer Intelligence
@@ -163,9 +163,9 @@ export const ROUTE_REGISTRY: Record<RouteCategory, Record<string, LocalizedDescr
       ms: "Dapatkan pelan hala tuju kerjaya awam yang dikongsi oleh ahli komuniti rakan sebaya.",
     },
     get_heatmap_comparison: {
-      en: "Compare skills between multiple peer profiles for complementarity analysis.",
-      zh: "对比多个同伴画像之间的技能以进行互补性分析。",
-      ms: "Bandingkan kemahiran antara berbilang profil rakan sebaya untuk analisis pelengkap.",
+      en: "Navigate to shared page and activate selection mode to choose peer roadmaps for skill heatmap.",
+      zh: "跳转至共享页面并激活热力图选择模式，供用户勾选需要对比的同伴路线图。",
+      ms: "Navigasi ke halaman perkongsian dan aktifkan mod pemilihan untuk memilih pelan hala tuju rakan sebaya.",
     },
 
     // System Utilities
@@ -175,9 +175,9 @@ export const ROUTE_REGISTRY: Record<RouteCategory, Record<string, LocalizedDescr
       ms: "Eksport laporan analisis kemahiran semasa sebagai dokumen PDF.",
     },
     toggle_theme: {
-      en: "Toggle platform visual theme between Dark Mode and Light Mode.",
-      zh: "在暗色模式与亮色模式间切换平台视觉主题。",
-      ms: "Tukar tema visual platform antara Mod Gelap dan Mod Cerah.",
+      en: "Switch visual theme between Dark and Light mode. Args: {\"theme\": \"dark\" | \"light\"}",
+      zh: "切换系统深色/浅色视觉主题。参数：{\"theme\": \"dark\" | \"light\"}",
+      ms: "Tukar tema visual antara Mod Gelap dan Mod Cerah. Argumen: {\"theme\": \"dark\" | \"light\"}",
     },
   },
 };
@@ -200,14 +200,16 @@ export function resolveLocalizedDescription(desc: LocalizedDescription, locale: 
 
 // Identify the category to which a target path or action key belongs.
 export function findTargetCategory(target: string): RouteCategory | undefined {
-  if (target in ROUTE_REGISTRY.NAVIGATE || target.startsWith("/")) {
-    return "NAVIGATE";
+  if (!target) return undefined;
+  const clean = target.replace(/^(tool:|modal:|\/+)/, "").trim();
+  if (target in ROUTE_REGISTRY.TOOL || clean in ROUTE_REGISTRY.TOOL || target.startsWith("tool:")) {
+    return "TOOL";
   }
-  if (target in ROUTE_REGISTRY.MODAL || target.startsWith("modal:")) {
+  if (target in ROUTE_REGISTRY.MODAL || clean in ROUTE_REGISTRY.MODAL || target.startsWith("modal:")) {
     return "MODAL";
   }
-  if (target in ROUTE_REGISTRY.TOOL || target.startsWith("tool:")) {
-    return "TOOL";
+  if (target in ROUTE_REGISTRY.NAVIGATE || ("/" + clean) in ROUTE_REGISTRY.NAVIGATE || target.startsWith("/")) {
+    return "NAVIGATE";
   }
   return undefined;
 }
@@ -231,56 +233,39 @@ export function getAllRegisteredEntries(locale: string = "en"): RouteMeta[] {
 }
 
 /**
- * Agent Instruction Prompt Generator
+ * Registry Catalog Text Generator
  *
- * Compiles a structured system instruction prompt describing all available routes, modals, and tools.
- * Feed this prompt to your LLM system prompt so the AI knows what routes and tools exist and how to call them.
+ * Automatically compiles categorized listings of all registered routes, modals, and tools.
  *
  * Workflow:
- * 1. Assemble preamble instructions defining the standard JSON action schema in target language.
- * 2. Append categorized entries with localized descriptions from the active registry manifest.
- * 3. Return compiled system instruction prompt.
+ * 1. Iterate through registered category manifests in ROUTE_REGISTRY.
+ * 2. Format individual path entries with localized descriptions for target locale.
+ * 3. Return compiled markdown catalog text string.
  */
-export function generateAgentInstructionPrompt(locale: string = "en"): string {
+export function generateRegistryCatalogText(locale: string = "en"): string {
   // ==========================================
-  // Step 1: Assemble Preamble Instructions Defining the Standard JSON Action Schema in Target Language
+  // Step 1: Iterate Through Registered Category Manifests in ROUTE_REGISTRY
   // ==========================================
-  const normalizedLocale = locale.toLowerCase();
-  let preamble = "";
-  let availableHeader = "";
+  let catalog = "";
 
-  if (normalizedLocale.startsWith("zh")) {
-    preamble =
-      "当回复用户时，如果您判定需要执行操作或页面跳转，请仅以如下格式的 JSON 对象回复：\n" +
-      "{\n  \"target\": \"<路由路径或操作标识>\",\n  \"message\": \"<对用户的友好解释>\",\n  \"args\": {}\n}\n\n";
-    availableHeader = "可用操作与路由列表：\n";
-  } else if (normalizedLocale.startsWith("ms")) {
-    preamble =
-      "Semasa menjawab pengguna, jika anda menentukan bahawa tindakan atau navigasi diperlukan, balas HANYA dengan objek JSON dalam format ini:\n" +
-      "{\n  \"target\": \"<laluan_atau_nama_tindakan>\",\n  \"message\": \"<penerangan mesra kepada pengguna>\",\n  \"args\": {}\n}\n\n";
-    availableHeader = "Tindakan dan laluan yang tersedia:\n";
-  } else {
-    preamble =
-      "When answering the user, if you determine an action or navigation is needed, reply ONLY with a JSON object in this format:\n" +
-      "{\n  \"target\": \"<route_path_or_action_name>\",\n  \"message\": \"<friendly explanation to the user>\",\n  \"args\": {}\n}\n\n";
-    availableHeader = "Available actions and routes:\n";
-  }
-
-  let prompt = preamble + availableHeader;
-
-  // ==========================================
-  // Step 2: Append Categorized Entries with Localized Descriptions from the Active Registry Manifest
-  // ==========================================
   for (const [category, dict] of Object.entries(ROUTE_REGISTRY)) {
-    prompt += `\n[${category}]:\n`;
+    catalog += `[${category}]:\n`;
+
+    // ==========================================
+    // Step 2: Format Individual Path Entries with Localized Descriptions for Target Locale
+    // ==========================================
     for (const [path, localizedDesc] of Object.entries(dict)) {
       const desc = resolveLocalizedDescription(localizedDesc, locale);
-      prompt += `- "${path}": ${desc}\n`;
+      catalog += `- "${path}": ${desc}\n`;
     }
+    catalog += "\n";
   }
 
   // ==========================================
-  // Step 3: Return Compiled System Instruction Prompt
+  // Step 3: Return Compiled Markdown Catalog Text String
   // ==========================================
-  return prompt;
+  return catalog.trim();
 }
+
+// Re-export customizable header compilation utilities from setup.ts.
+export { compileAgentSystemInstruction, generateAgentInstructionPrompt } from "./setup";

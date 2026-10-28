@@ -225,8 +225,8 @@ export default function Chatbot() {
       />
 
       {/* Persistent Draggable Floating Action Button */}
-      {/* Hide the floating ball on mobile viewports when the chat modal dialog is active. */}
-      {(!isMobile || !isOpen) && (
+      {/* Hide the floating ball whenever the chat modal dialog is open */}
+      {!isOpen && (
         <FloatingBall
           position={position}
           isDragging={isDragging}

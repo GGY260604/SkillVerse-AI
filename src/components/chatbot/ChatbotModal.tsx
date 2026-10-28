@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import Logo from "@/components/Logo";
 import { getSuggestedQuestions } from "./SuggestedQuestion";
+import { ChatMessageMarkdown } from "./ChatMessageMarkdown";
 
 // ==========================================
 // Component Contracts and Message Types
@@ -15,6 +16,17 @@ export interface ChatMessage {
   sender: "user" | "bot";
   text: string;
   timestamp: string;
+  model?: string;
+}
+
+// Format raw model identifier into clean display label (e.g. "gemini", "qwen").
+function formatModelName(model?: string): string {
+  if (!model) return "";
+  const lower = model.toLowerCase();
+  if (lower.includes("gemini")) return "gemini";
+  if (lower.includes("qwen")) return "qwen";
+  if (lower.includes("offline")) return "offline";
+  return model.split(" ")[0].toLowerCase();
 }
 
 // Properties interface for ChatbotModal component.
@@ -94,6 +106,30 @@ export default function ChatbotModal({
     mouseY: 0,
   });
 
+  // Desktop modal dimensions state in screen pixels.
+  const [desktopSize, setDesktopSize] = useState<{ width: number; height: number }>({
+    width: 390,
+    height: 560,
+  });
+  const [isResizingDesktop, setIsResizingDesktop] = useState<boolean>(false);
+  const resizeStartRef = useRef<{
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    startLeft: number;
+    startTop: number;
+    direction: string;
+  }>({
+    startX: 0,
+    startY: 0,
+    startWidth: 390,
+    startHeight: 560,
+    startLeft: 0,
+    startTop: 0,
+    direction: "",
+  });
+
   // Mobile bottom sheet height adjustment states in pixels.
   const [mobileHeight, setMobileHeight] = useState<number | null>(null);
   const [isDraggingHeight, setIsDraggingHeight] = useState<boolean>(false);
@@ -109,21 +145,24 @@ export default function ChatbotModal({
   const suggestedQuestions = getSuggestedQuestions(locale);
 
   // Restrict modal dialog drag coordinates within visible screen limits on desktop.
-  const clampModalPosition = useCallback((x: number, y: number) => {
-    const chatWidth = 380;
-    const chatHeight = 540;
-    const padding = 16;
+  const clampModalPosition = useCallback(
+    (x: number, y: number) => {
+      const chatWidth = desktopSize.width;
+      const chatHeight = desktopSize.height;
+      const padding = 16;
 
-    const minX = padding;
-    const maxX = Math.max(minX, window.innerWidth - chatWidth - padding);
-    const minY = padding;
-    const maxY = Math.max(minY, window.innerHeight - chatHeight - padding);
+      const minX = padding;
+      const maxX = Math.max(minX, window.innerWidth - chatWidth - padding);
+      const minY = padding;
+      const maxY = Math.max(minY, window.innerHeight - chatHeight - padding);
 
-    return {
-      x: Math.min(Math.max(x, minX), maxX),
-      y: Math.min(Math.max(y, minY), maxY),
-    };
-  }, []);
+      return {
+        x: Math.min(Math.max(x, minX), maxX),
+        y: Math.min(Math.max(y, minY), maxY),
+      };
+    },
+    [desktopSize]
+  );
 
   // Dynamically calculate the minimum mobile sheet height ensuring the last message is fully visible.
   const calculateMinHeight = useCallback(() => {
@@ -150,8 +189,8 @@ export default function ChatbotModal({
   useEffect(() => {
     if (typeof window === "undefined" || isMobile) return;
 
-    const chatWidth = 380;
-    const chatHeight = 540;
+    const chatWidth = desktopSize.width;
+    const chatHeight = desktopSize.height;
     const padding = 16;
 
     const initialLeft = ballPosition
@@ -162,8 +201,8 @@ export default function ChatbotModal({
       ? Math.max(padding, Math.min(window.innerHeight - chatHeight - padding, ballPosition.y - chatHeight - 14))
       : Math.max(padding, window.innerHeight - chatHeight - 24);
 
-    setModalPosition({ x: initialLeft, y: initialTop });
-  }, [ballPosition, isMobile]);
+    setModalPosition((prev) => prev || { x: initialLeft, y: initialTop });
+  }, [ballPosition, isMobile, desktopSize.width, desktopSize.height]);
 
   // Set initial default height for mobile bottom sheet on mount.
   useEffect(() => {
@@ -292,6 +331,122 @@ export default function ChatbotModal({
     };
   }, [isDraggingModal, isMobile, handleHeaderPointerMove, handleHeaderPointerUp]);
 
+  // ==========================================
+  // Desktop Free Window Resizing Lifecycle Handlers
+  // ==========================================
+  // Start adjusting desktop window size by dragging borders or corners.
+  const handleResizePointerDown = (
+    e: React.MouseEvent | React.TouchEvent,
+    direction: string
+  ) => {
+    if (isMobile) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+    const currentLeft = modalPosition?.x ?? Math.max(16, window.innerWidth - desktopSize.width - 24);
+    const currentTop = modalPosition?.y ?? Math.max(16, window.innerHeight - desktopSize.height - 24);
+
+    resizeStartRef.current = {
+      startX: clientX,
+      startY: clientY,
+      startWidth: desktopSize.width,
+      startHeight: desktopSize.height,
+      startLeft: currentLeft,
+      startTop: currentTop,
+      direction,
+    };
+    setIsResizingDesktop(true);
+  };
+
+  // Adjust desktop modal dimensions dynamically during active resize gesture.
+  const handleResizePointerMove = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!isResizingDesktop || isMobile) return;
+
+      const { startX, startY, startWidth, startHeight, startLeft, startTop, direction } =
+        resizeStartRef.current;
+
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      const minWidth = 320;
+      const maxWidth = Math.max(minWidth, window.innerWidth - 32);
+      const minHeight = 380;
+      const maxHeight = Math.max(minHeight, window.innerHeight - 32);
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newLeft = startLeft;
+      let newTop = startTop;
+
+      // Handle horizontal boundary expansion/shrinkage
+      if (direction.includes("e")) {
+        newWidth = Math.max(minWidth, Math.min(startWidth + dx, maxWidth - startLeft));
+      } else if (direction.includes("w")) {
+        const candidateWidth = Math.max(minWidth, Math.min(startWidth - dx, startLeft + startWidth - 16));
+        newWidth = candidateWidth;
+        newLeft = startLeft + (startWidth - candidateWidth);
+      }
+
+      // Handle vertical boundary expansion/shrinkage
+      if (direction.includes("s")) {
+        newHeight = Math.max(minHeight, Math.min(startHeight + dy, maxHeight - startTop));
+      } else if (direction.includes("n")) {
+        const candidateHeight = Math.max(minHeight, Math.min(startHeight - dy, startTop + startHeight - 16));
+        newHeight = candidateHeight;
+        newTop = startTop + (startHeight - candidateHeight);
+      }
+
+      setDesktopSize({ width: Math.round(newWidth), height: Math.round(newHeight) });
+      setModalPosition({ x: Math.round(newLeft), y: Math.round(newTop) });
+    },
+    [isResizingDesktop, isMobile]
+  );
+
+  // Terminate desktop resize gesture on pointer release.
+  const handleResizePointerUp = useCallback(() => {
+    if (!isResizingDesktop) return;
+    setIsResizingDesktop(false);
+  }, [isResizingDesktop]);
+
+  // Bind window-level event listeners for desktop resizing.
+  useEffect(() => {
+    if (!isResizingDesktop || isMobile) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      handleResizePointerMove(e.clientX, e.clientY);
+    };
+
+    const onMouseUp = () => {
+      handleResizePointerUp();
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleResizePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const onTouchEnd = () => {
+      handleResizePointerUp();
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isResizingDesktop, isMobile, handleResizePointerMove, handleResizePointerUp]);
+
   // Bind window-level event listeners for mobile sheet height resizing.
   useEffect(() => {
     if (!isDraggingHeight || !isMobile) return;
@@ -342,8 +497,20 @@ export default function ChatbotModal({
     return () => clearInterval(interval);
   }, [isTyping]);
 
-  // Compute animated dots string.
+  // Compute animated dots string and localized thinking label.
   const thinkingDots = ".".repeat(dotCount);
+  const thinkingLabel = (() => {
+    try {
+      const trans = t("messages.thinking");
+      if (trans && trans !== "messages.thinking") return trans;
+    } catch {
+      // Fallback
+    }
+    const loc = (locale || "").toLowerCase();
+    if (loc.startsWith("zh")) return "思考中";
+    if (loc.startsWith("ms")) return "Sedang berfikir";
+    return "Thinking";
+  })();
 
   // ==========================================
   // Step 4: Synchronize Auto-Scrolling to the Latest Message in the Conversation Viewport
@@ -384,20 +551,15 @@ export default function ChatbotModal({
         maxHeight: "92vh",
         transition: isDraggingHeight ? "none" : "height 0.22s ease-out",
       }
-    : modalPosition
-    ? {
-        position: "fixed",
-        left: `${modalPosition.x}px`,
-        top: `${modalPosition.y}px`,
-        width: "380px",
-        maxHeight: "85vh",
-      }
     : {
         position: "fixed",
-        right: "24px",
-        bottom: "88px",
-        width: "380px",
-        maxHeight: "85vh",
+        left: `${modalPosition ? modalPosition.x : Math.max(16, window.innerWidth - desktopSize.width - 24)}px`,
+        top: `${modalPosition ? modalPosition.y : Math.max(16, window.innerHeight - desktopSize.height - 24)}px`,
+        width: `${desktopSize.width}px`,
+        height: `${desktopSize.height}px`,
+        maxWidth: "calc(100vw - 32px)",
+        maxHeight: "calc(100vh - 32px)",
+        transition: isDraggingModal || isResizingDesktop ? "none" : "box-shadow 0.2s ease",
       };
 
   return (
@@ -407,9 +569,82 @@ export default function ChatbotModal({
       className={`pointer-events-auto flex flex-col bg-bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 text-text-primary ${
         isMobile
           ? "w-full rounded-t-2xl rounded-b-none border-t border-border-subtle"
-          : "h-135 w-95 rounded-2xl border border-border-subtle transition-all duration-300"
-      } ${isDraggingModal && !isMobile ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] scale-[1.01]" : ""}`}
+          : "rounded-2xl border border-border-subtle select-none"
+      } ${
+        isDraggingModal && !isMobile
+          ? "shadow-[0_25px_60px_rgba(0,0,0,0.85)] scale-[1.005]"
+          : isResizingDesktop
+          ? "shadow-2xl ring-1 ring-accent/40"
+          : ""
+      }`}
     >
+      {/* Desktop Window Border and Corner Resizing Handles */}
+      {!isMobile && (
+        <>
+          {/* Top Edge */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "n")}
+            onTouchStart={(e) => handleResizePointerDown(e, "n")}
+            className="absolute top-0 left-3 right-3 h-2 cursor-ns-resize z-40 select-none"
+            title="Drag to resize vertically"
+          />
+          {/* Bottom Edge */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "s")}
+            onTouchStart={(e) => handleResizePointerDown(e, "s")}
+            className="absolute bottom-0 left-3 right-3 h-2 cursor-ns-resize z-40 select-none"
+            title="Drag to resize vertically"
+          />
+          {/* Left Edge */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "w")}
+            onTouchStart={(e) => handleResizePointerDown(e, "w")}
+            className="absolute left-0 top-3 bottom-3 w-2 cursor-ew-resize z-40 select-none"
+            title="Drag to resize horizontally"
+          />
+          {/* Right Edge */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "e")}
+            onTouchStart={(e) => handleResizePointerDown(e, "e")}
+            className="absolute right-0 top-3 bottom-3 w-2 cursor-ew-resize z-40 select-none"
+            title="Drag to resize horizontally"
+          />
+          {/* Top-Left Corner */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "nw")}
+            onTouchStart={(e) => handleResizePointerDown(e, "nw")}
+            className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-40 select-none"
+          />
+          {/* Top-Right Corner */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "ne")}
+            onTouchStart={(e) => handleResizePointerDown(e, "ne")}
+            className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-40 select-none"
+          />
+          {/* Bottom-Left Corner */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "sw")}
+            onTouchStart={(e) => handleResizePointerDown(e, "sw")}
+            className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-40 select-none"
+          />
+          {/* Bottom-Right Corner & Grip Indicator */}
+          <div
+            onMouseDown={(e) => handleResizePointerDown(e, "se")}
+            onTouchStart={(e) => handleResizePointerDown(e, "se")}
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-40 flex items-end justify-end p-0.5 select-none text-text-muted hover:text-accent transition-colors"
+            title="Drag to resize"
+          >
+            <svg className="w-2.5 h-2.5 opacity-60" viewBox="0 0 10 10" fill="currentColor">
+              <circle cx="8.5" cy="8.5" r="1" />
+              <circle cx="5" cy="8.5" r="1" />
+              <circle cx="8.5" cy="5" r="1" />
+              <circle cx="1.5" cy="8.5" r="1" />
+              <circle cx="5" cy="5" r="1" />
+              <circle cx="8.5" cy="1.5" r="1" />
+            </svg>
+          </div>
+        </>
+      )}
       {/* ========================================== */}
       {/* Step 5: Render Responsive Dialog Header with Mobile Pull Handle, Brand Title, and Dismissal Controls */}
       {/* ========================================== */}
@@ -528,10 +763,15 @@ export default function ChatbotModal({
               ) : (
                 /* Branch B: Assistant Response Bubble */
                 <div className="max-w-[85%] rounded-2xl rounded-bl-xs px-3.5 py-2.5 text-xs leading-relaxed shadow-sm bg-bg-elevated border border-border-subtle text-text-primary">
-                  {msg.text}
+                  <ChatMessageMarkdown content={msg.text} />
                 </div>
               )}
-              <span className="mt-1 px-1 text-[9px] text-text-muted">{msg.timestamp}</span>
+              <div className="mt-1 flex items-center gap-1.5 px-1 text-[9px] text-text-muted">
+                <span>{msg.timestamp}</span>
+                {msg.sender === "bot" && msg.model && (
+                  <span className="font-mono opacity-80">{formatModelName(msg.model)}</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -540,7 +780,7 @@ export default function ChatbotModal({
         {isTyping && (
           <div className="flex items-center px-1 py-1 text-xs text-text-muted animate-fade-in select-none">
             <span>
-              {t("messages.thinking")}
+              {thinkingLabel}
               {thinkingDots}
             </span>
           </div>

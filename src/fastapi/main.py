@@ -64,6 +64,10 @@ app.add_middleware(
 # Register API v1 Routers
 app.include_router(v1_router, prefix=settings.API_V1_PREFIX)
 
+# Direct root /agent route for chatbot integration
+from routers.v1.agent import router as root_agent_router
+app.include_router(root_agent_router, tags=["Chatbot Agent"])
+
 
 @app.get("/", tags=["Root"])
 async def root():

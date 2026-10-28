@@ -138,6 +138,21 @@ export default function SharedPlansView({ onOpenHeatMap }: SharedPlansViewProps 
   // Synchronize targeted peer roadmap when specified via URL query parameters.
   const searchParams = useSearchParams();
   const queryUserId = searchParams.get("userId") || searchParams.get("ownerId");
+  const isSelectModeQuery = searchParams.get("mode") === "select" || searchParams.get("select") === "true";
+
+  useEffect(() => {
+    const checkSelectMode = () => {
+      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      if (isSelectModeQuery || hash.includes("select")) {
+        setIsHeatMapSelectionMode(true);
+      }
+    };
+    checkSelectMode();
+    window.addEventListener("hashchange", checkSelectMode);
+    return () => {
+      window.removeEventListener("hashchange", checkSelectMode);
+    };
+  }, [isSelectModeQuery]);
 
   useEffect(() => {
     if (!isLoading && queryUserId && !activeSharedId && !loadingPeerUserId && sharedRoadmaps.length > 0) {

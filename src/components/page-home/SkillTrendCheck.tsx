@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useId } from "react";
+import { useState, useMemo, useId, useCallback, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 
 // --- Schema ---
@@ -114,7 +114,7 @@ export default function SkillTrendCheck() {
   // Step 2: Fetch Skill Trend Telemetry from Backend Search API
   // ==========================================
   // Query backend Next.js API route (/api/page-home/skilltrend) for skill trend telemetry.
-  const handleSearch = async (searchTarget?: string) => {
+  const handleSearch = useCallback(async (searchTarget?: string) => {
     const rawTarget = typeof searchTarget === "string" ? searchTarget : query;
     const cleanSkill = rawTarget.trim();
 
@@ -153,7 +153,38 @@ export default function SkillTrendCheck() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [query, locale, t]);
+
+  useEffect(() => {
+    const handleTrigger = (e: Event) => {
+      const customEvent = e as CustomEvent<{ skill?: string }>;
+      const targetSkill = customEvent.detail?.skill || "Autonomous Agents";
+      setQuery(targetSkill);
+      handleSearch(targetSkill);
+    };
+
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const skillParam = urlParams.get("skill");
+      if (skillParam) {
+        setQuery(skillParam);
+        handleSearch(skillParam);
+      } else if (window.location.hash.includes("skill-trend-check")) {
+        const queryIdx = window.location.hash.indexOf("?");
+        if (queryIdx !== -1) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(queryIdx));
+          const s = hashParams.get("skill");
+          if (s) {
+            setQuery(s);
+            handleSearch(s);
+          }
+        }
+      }
+    }
+
+    window.addEventListener("trigger-skill-trend", handleTrigger);
+    return () => window.removeEventListener("trigger-skill-trend", handleTrigger);
+  }, [handleSearch]);
 
   // ==========================================
   // Step 3: Compute SVG Chart Coordinates and Trajectory Splines
@@ -337,15 +368,8 @@ export default function SkillTrendCheck() {
   return (
     <section
       id="skill-trend-check"
-      className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24 relative"
+      className="max-w-7xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20 w-full scroll-mt-24 relative overflow-x-clip"
     >
-      {/* Outer Ambient Glow Mesh for Light and Dark Modes */}
-      <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-10 -left-10 w-96 h-96 rounded-full bg-accent/25 dark:bg-accent/10 blur-3xl" />
-        <div className="absolute -bottom-10 -right-10 w-96 h-96 rounded-full bg-indigo-500/25 dark:bg-indigo-500/10 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-175 h-80 rounded-full bg-linear-to-r from-accent/20 via-teal-400/10 to-indigo-500/20 dark:from-accent/5 dark:to-indigo-500/5 blur-3xl" />
-      </div>
-
       {/* Gradient Border Frame */}
       <div className="relative rounded-2xl sm:rounded-3xl p-px bg-linear-to-b from-accent/40 via-border-subtle to-indigo-500/40 shadow-xl dark:shadow-2xl">
         {/* Main Content Card */}

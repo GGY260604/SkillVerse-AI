@@ -2,6 +2,9 @@
 // Preset Input Triggers Configuration
 // ==========================================
 
+// Global feature toggle to enable or disable deterministic preset keyword matching.
+export const ENABLE_PRESETS = false;
+
 import type { AgentDirective } from "../engine";
 
 // Multilingual text description structure supporting English, Chinese, and Malay.
@@ -259,6 +262,10 @@ export function matchPresetTrigger(userInput: string, locale: string = "en"): Ag
   // ==========================================
   // Step 1: Normalize User Inquiry String to Lowercase Trim
   // ==========================================
+  if (!ENABLE_PRESETS) {
+    return null;
+  }
+
   const normalized = userInput.trim().toLowerCase();
   if (!normalized) {
     return null;
@@ -269,7 +276,12 @@ export function matchPresetTrigger(userInput: string, locale: string = "en"): Ag
   // ==========================================
   for (const rule of PRESET_INPUT_RULES) {
     for (const keyword of rule.keywords) {
-      if (normalized.includes(keyword.toLowerCase())) {
+      const kw = keyword.toLowerCase().trim();
+      const isExact = normalized === kw || normalized === `/${kw}`;
+      const isSlashCmd = kw.startsWith("/") && normalized.startsWith(kw);
+      const isShortDirect = normalized.length <= kw.length + 3 && (normalized.startsWith(kw) || normalized.endsWith(kw));
+
+      if (isExact || isSlashCmd || isShortDirect) {
         // ==========================================
         // Step 3: Resolve Localized Action Response Message and Return Directive
         // ==========================================
